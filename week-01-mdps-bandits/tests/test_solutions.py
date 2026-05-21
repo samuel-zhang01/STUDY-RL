@@ -7,8 +7,11 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEEK = os.path.dirname(HERE)
 REPO = os.path.dirname(WEEK)
-sys.path.insert(0, WEEK)
 sys.path.insert(0, REPO)
+for _m in list(sys.modules):
+    if _m == "project" or _m.startswith("project."):
+        del sys.modules[_m]
+sys.path.insert(0, WEEK)
 
 from project import solutions as S  # noqa: E402
 

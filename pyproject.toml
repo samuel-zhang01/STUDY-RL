@@ -1,7 +1,7 @@
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["common", "week-01-mdps-bandits", "week-02-bellman-dp", "week-03-monte-carlo"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --import-mode=importlib"
 markers = [
   "slow: training runs that take > 30s",
   "gpu: requires CUDA",
