@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["common", "week-01-mdps", "week-02-bellman-dp", "week-03-mc-td"]
+addopts = "-ra --strict-markers"
+markers = [
+  "slow: training runs that take > 30s",
+  "gpu: requires CUDA",
+  "smoke: minimal smoke test",
+]
+timeout = 600

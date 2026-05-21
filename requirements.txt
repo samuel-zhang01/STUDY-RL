@@ -1,0 +1,60 @@
+# Core scientific stack
+numpy>=1.26
+scipy>=1.13
+pandas>=2.2
+matplotlib>=3.9
+seaborn>=0.13
+scikit-learn>=1.5
+tqdm>=4.66
+
+# Deep learning
+torch>=2.4
+torchvision>=0.19
+einops>=0.8
+
+# RL environments
+gymnasium[all]>=1.0
+gymnasium-robotics>=1.3
+pettingzoo>=1.24
+minigrid>=2.3
+shimmy[atari]>=2.0
+ale-py>=0.10
+autorom[accept-rom-license]>=0.6.1
+mujoco>=3.2
+
+# RL libraries (for comparisons / reference)
+stable-baselines3>=2.4
+cleanrl-utils>=1.0; python_version<"3.13"
+
+# LLM RL stack
+transformers>=4.45
+accelerate>=1.0
+peft>=0.13
+trl>=0.11
+datasets>=3.0
+bitsandbytes>=0.44
+sentencepiece>=0.2
+safetensors>=0.4
+
+# Safe RL
+safety-gymnasium>=1.0; python_version<"3.13"
+
+# Bandits / OPE
+scikit-optimize>=0.10
+
+# Notebook execution + tests
+jupyter>=1.1
+nbformat>=5.10
+nbclient>=0.10
+papermill>=2.6
+pytest>=8.3
+pytest-timeout>=2.3
+ipywidgets>=8.1
+
+# Plotting / reporting
+plotly>=5.24
+rich>=13.9
+
+# Tracking (optional)
+tensorboard>=2.18
+wandb>=0.18

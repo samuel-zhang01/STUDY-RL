@@ -1,0 +1,139 @@
+% rlstudy.sty — shared preamble for STUDY-RL lecture notes (Tufte-flavored, but works on any class)
+\ProvidesPackage{rlstudy}[2026/05/21 STUDY-RL shared style]
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{lmodern}
+\RequirePackage{microtype}
+\RequirePackage{amsmath,amssymb,amsthm,mathtools}
+\RequirePackage{bm}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{caption}
+\RequirePackage{enumitem}
+\RequirePackage{hyperref}
+\RequirePackage{cleveref}
+\RequirePackage{tikz}
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,calc,positioning,shapes,decorations.pathreplacing,fit,backgrounds,patterns}
+\RequirePackage[most]{tcolorbox}
+\RequirePackage{minted}
+\setminted{
+  fontsize=\small,
+  breaklines=true,
+  frame=lines,
+  framesep=2mm,
+  bgcolor=mintedbg,
+}
+
+% --- Colors ----------------------------------------------------------------
+\definecolor{rlblue}{HTML}{1F3A5F}
+\definecolor{rlteal}{HTML}{2A9D8F}
+\definecolor{rlorange}{HTML}{E76F51}
+\definecolor{rlgold}{HTML}{E9C46A}
+\definecolor{rlgray}{HTML}{4A4A4A}
+\definecolor{rlbg}{HTML}{FAFAF7}
+\definecolor{mintedbg}{HTML}{F4F2EC}
+\definecolor{safetyred}{HTML}{B23A48}
+\definecolor{applyteal}{HTML}{0E7C7B}
+
+% --- Hyperref tweaks -------------------------------------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=rlblue,
+  citecolor=rlteal,
+  urlcolor=rlorange,
+}
+
+% --- Theorem environments --------------------------------------------------
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}[definition]{Example}
+\newtheorem{exercise}[definition]{Exercise}
+\theoremstyle{plain}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{corollary}[definition]{Corollary}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\newtheorem*{intuition}{Intuition}
+
+% --- Callout boxes ---------------------------------------------------------
+\newtcolorbox{keyidea}{
+  enhanced, breakable, colback=rlbg, colframe=rlblue,
+  fonttitle=\bfseries\sffamily, title=Key Idea,
+  attach boxed title to top left={xshift=4mm,yshift=-2mm},
+  boxed title style={colback=rlblue,colframe=rlblue},
+  arc=1mm, left=4mm, right=4mm, top=4mm, bottom=2mm,
+}
+\newtcolorbox{safetyangle}{
+  enhanced, breakable, colback=safetyred!6, colframe=safetyred,
+  fonttitle=\bfseries\sffamily, title=Safety angle,
+  attach boxed title to top left={xshift=4mm,yshift=-2mm},
+  boxed title style={colback=safetyred,colframe=safetyred},
+  arc=1mm, left=4mm, right=4mm, top=4mm, bottom=2mm,
+}
+\newtcolorbox{matching}{
+  enhanced, breakable, colback=applyteal!6, colframe=applyteal,
+  fonttitle=\bfseries\sffamily, title=Matching application,
+  attach boxed title to top left={xshift=4mm,yshift=-2mm},
+  boxed title style={colback=applyteal,colframe=applyteal},
+  arc=1mm, left=4mm, right=4mm, top=4mm, bottom=2mm,
+}
+\newtcolorbox{codebox}[1][]{
+  enhanced, breakable, colback=mintedbg, colframe=rlgray!50,
+  arc=1mm, left=2mm, right=2mm, top=2mm, bottom=2mm, #1
+}
+\newtcolorbox{pitfall}{
+  enhanced, breakable, colback=rlorange!6, colframe=rlorange,
+  fonttitle=\bfseries\sffamily, title=Common pitfall,
+  attach boxed title to top left={xshift=4mm,yshift=-2mm},
+  boxed title style={colback=rlorange,colframe=rlorange},
+  arc=1mm, left=4mm, right=4mm, top=4mm, bottom=2mm,
+}
+
+% --- RL notation -----------------------------------------------------------
+\newcommand{\States}{\mathcal{S}}
+\newcommand{\Actions}{\mathcal{A}}
+\newcommand{\Rewards}{\mathcal{R}}
+\newcommand{\Tr}{\mathcal{T}}
+\newcommand{\Policy}{\pi}
+\newcommand{\Optpol}{\pi^{\star}}
+\newcommand{\Disc}{\gamma}
+\newcommand{\Hor}{H}
+\newcommand{\Ret}{G}
+\newcommand{\Vfn}{V}
+\newcommand{\Qfn}{Q}
+\newcommand{\Afn}{A}
+\newcommand{\Adv}{A}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prb}{\mathbb{P}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\TV}{\mathrm{TV}}
+\newcommand{\Real}{\mathbb{R}}
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\indep}{\perp\!\!\!\perp}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\given}{\,\vert\,}
+\newcommand{\defeq}{\triangleq}
+
+% --- Header / footer styling for the standalone notes ----------------------
+\RequirePackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\sffamily\small\nouppercase{\leftmark}}
+\fancyhead[R]{\sffamily\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Margin notes (Tufte feel without forcing the class) -------------------
+\RequirePackage{marginnote}
+\renewcommand*{\marginfont}{\sffamily\footnotesize\color{rlgray}}
+
+\endinput
