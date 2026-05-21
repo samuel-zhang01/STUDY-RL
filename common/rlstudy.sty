@@ -132,6 +132,19 @@
 \fancyhead[R]{\sffamily\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
+% --- Line-breaking & overfull-box mitigation -------------------------------
+% Allow extra stretch when LaTeX can't fit a line; encourage hyphenation;
+% break long URLs at any character so bibliography lines don't run into the margin.
+\setlength{\emergencystretch}{3em}
+\tolerance=2000
+\hbadness=2000
+\sloppy
+\RequirePackage{xurl}        % aggressive URL line-breaking
+\hyphenpenalty=2500
+\exhyphenpenalty=2500
+% Make minted blocks wrap inside the text width (in addition to the local opts).
+\setminted{breaklines=true,breakanywhere=true,breakautoindent=true}
+
 % --- Margin notes (Tufte feel without forcing the class) -------------------
 \RequirePackage{marginnote}
 \renewcommand*{\marginfont}{\sffamily\footnotesize\color{rlgray}}
