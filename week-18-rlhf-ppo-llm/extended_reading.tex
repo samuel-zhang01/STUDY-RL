@@ -2,14 +2,276 @@
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week 18: RLHF \& PPO for Language Models}
+\title{Extended reading --- Week 18: RLHF \& PPO for Language Models}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
-\begin{itemize}
-  \item TODO
+\section*{How to read this list}
+Each paper below gets: full citation, one-paragraph summary, a
+\emph{Why it matters for this week} note, and one annotated key
+passage with brief commentary. The list is ordered chronologically.
+
+\section*{1. Schulman et al.\ 2017 --- Proximal Policy Optimization}
+\textbf{Citation.} J. Schulman, F. Wolski, P. Dhariwal, A. Radford,
+O. Klimov, \emph{Proximal Policy Optimization Algorithms},
+arXiv:1707.06347, 2017.
+
+\paragraph{Summary.} Introduces the clipped surrogate
+$\mathcal{L}^{\text{CLIP}}$ and the adaptive-KL variant
+$\mathcal{L}^{\text{KLPEN}}$ as first-order, off-the-shelf substitutes
+for TRPO. Demonstrates competitive performance on continuous control
+(MuJoCo) and Atari with a tiny implementation footprint. Becomes the
+default policy-gradient algorithm in deep RL within twelve months of
+release.
+
+\paragraph{Why it matters for this week.} Every line of our PPO
+implementation is in this paper. The clipped surrogate, the
+GAE-$\lambda$ advantages, and the adaptive KL controller all originate
+here. Even modern RLHF variants like PPOv2 in TRL are conservative
+re-wrappings of this 2017 algorithm.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``By taking the minimum of the clipped and unclipped objective, the
+final objective is a lower bound (i.e., a pessimistic bound) on the
+unclipped objective.''
+\end{quote}
+\noindent This is the single sentence that justifies Theorem~3.1
+(``Why the clip is a pessimistic surrogate'') in the notes; it also
+explains why PPO is robust to large advantages without exploding.
+
+\section*{2. Ouyang et al.\ 2022 --- InstructGPT (the foundational RLHF paper)}
+\textbf{Citation.} L. Ouyang \emph{et al.}, \emph{Training language
+models to follow instructions with human feedback},
+arXiv:2203.02155, NeurIPS 2022.
+
+\paragraph{Summary.} The InstructGPT paper. Trains a 1.3B-parameter
+GPT-3 variant in three stages --- SFT on demonstrations, Bradley--Terry
+reward modelling on human preferences, PPO against the reward model
+with a KL penalty against the SFT reference --- and shows it is
+preferred by human raters over 175B GPT-3 on a broad range of
+instruction-following tasks. Forms the template for ChatGPT, Claude,
+Gemini and essentially every subsequent production aligned LLM.
+
+\paragraph{Why it matters for this week.} The three-stage pipeline
+(the three-stage pipeline in \texttt{notes.pdf}, Algorithm~1) is theirs. Their Figure~5 (preference
+win-rate vs.\ model size) is the empirical justification for the
+entire field. They are also the first to publicly enumerate the
+specific failure modes --- sycophancy, refusal collapse, length bias ---
+that we'll spend weeks 18--22 mitigating.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``We find that the outputs of our 1.3B InstructGPT model are preferred
+to those of the 175B GPT-3, despite having 100x fewer parameters.''
+\end{quote}
+\noindent The headline result. The implication --- that an
+alignment-trained small model can dominate a much larger base model
+on instruction-following --- shifts the whole research economics of
+language modelling toward post-training.
+
+\section*{3. Gao, Schulman \& Hilton 2023 --- Scaling laws for reward overoptimization}
+\textbf{Citation.} L. Gao, J. Schulman, J. Hilton, \emph{Scaling Laws
+for Reward Model Overoptimization}, PMLR v202 (ICML 2023).
+
+\paragraph{Summary.} Constructs a controlled environment in which a
+``gold'' reward model is treated as ground truth and a smaller
+``proxy'' RM is fit on samples from it. PPO is then run against the
+proxy while gold reward is measured on held-out data. Finds an
+analytic functional form:
+$R_{\text{gold}}(d) \approx d (\alpha - \beta d)$ for KL distance
+$d \!=\! \sqrt{\KL(\pi_\theta\|\pi_{\text{ref}})}$, with both $\alpha$ and the
+optimal $d^\star$ scaling smoothly with proxy-RM size and dataset
+size.
+
+\paragraph{Why it matters for this week.} This is \emph{the} paper on
+reward hacking. It quantifies precisely why a KL leash and early
+stopping are not optional. The schematic figure in
+the notes is a stylised version of their Figure~1.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``We find that the gold reward, $R(d)$, can be very accurately fit by
+a function of the form $R(d) = d(\alpha_{\text{bon}} -
+\beta_{\text{bon}}\, d)$ for best-of-$n$ sampling, and $R(d) =
+d(\alpha_{\text{RL}} - \beta_{\text{RL}}\, \log d)$ for reinforcement
+learning.''
+\end{quote}
+\noindent The two functional forms differ --- RL is logarithmic in
+$d$, BoN linear --- and the RL form decays \emph{faster} once KL is
+past its sweet spot. This explains why brute-force PPO without
+gold-eval is dangerous in production: you cannot see the gold drop
+without independent evaluations.
+
+\section*{4. Bai et al.\ 2022 --- Constitutional AI and RLAIF}
+\textbf{Citation.} Y. Bai \emph{et al.\ }(Anthropic), \emph{Constitutional
+AI: Harmlessness from AI Feedback}, arXiv:2212.08073, 2022.
+
+\paragraph{Summary.} Replaces the human-preference half of RLHF with
+\emph{AI feedback}. Two stages: (i) the model critiques and revises
+its own outputs against a written ``constitution''; (ii) a separate
+preference model is trained on AI-generated comparisons and used to
+drive the RL loop, exactly as a human-RM would. The result, Claude's
+harmlessness profile, is the first credible evidence that scalable
+oversight via AI feedback can replace human feedback for
+non-edge-case alignment.
+
+\paragraph{Why it matters for this week.} Same machinery as
+InstructGPT --- PPO, KL leash, BT loss --- but a completely different
+source of supervision. Sets the stage for week~19's iterative DPO
+and week~20's weak-to-strong supervision.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``[CAI] reduces the reliance on human supervision while preserving the
+ability to fine-tune for harmlessness, suggesting a path to
+scalable oversight of AI systems.''
+\end{quote}
+\noindent The plausibility claim of the entire scalable-oversight
+agenda. The 2024--2026 literature (process reward models, deliberative
+alignment, debate, etc.) all live downstream of this paper.
+
+\section*{5. Lambert et al.\ 2024 --- T\"ulu 3}
+\textbf{Citation.} N. Lambert \emph{et al.}, \emph{T\"ulu 3: Pushing
+Frontiers in Open Language Model Post-Training}, arXiv:2411.15124,
+2024.
+
+\paragraph{Summary.} The first fully open RLHF+RLVR recipe at
+production scale: a complete SFT $\to$ DPO $\to$ RLVR (PPO with
+verifiable rewards) pipeline for Llama-3.1, with open datasets, open
+code, and an open evaluation suite. Closes the gap with proprietary
+models on a wide range of benchmarks while making every artefact
+reproducible.
+
+\paragraph{Why it matters for this week.} The closest thing in 2026
+to a ``how to run RLHF on a real model, from scratch, end-to-end''
+reference. The dataset (\texttt{tulu-3-sft-mixture},
+\texttt{tulu-3-pref-mixture}) is what we'd reach for on a serious
+RLHF experiment. The TRL recipe in
+\texttt{project/trl\_recipe.py} is a scaled-down version of theirs.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``We provide a recipe that achieves competitive performance with
+frontier closed models such as GPT-4o-mini and Claude 3.5 Haiku
+across a wide range of benchmarks, while fully releasing our data,
+model weights, training and evaluation code.''
+\end{quote}
+\noindent Open-source RLHF caught up with closed-source RLHF in
+2024. The lesson is that the algorithmic core has stabilised --- the
+remaining differentiator is data quality, not method.
+
+\newpage
+\section*{6. Christiano et al.\ 2017 --- Deep RL from Human Preferences}
+\textbf{Citation.} P. Christiano, J. Leike, T. Brown, M. Martic,
+S. Legg, D. Amodei, \emph{Deep Reinforcement Learning from Human
+Preferences}, arXiv:1706.03741, NeurIPS 2017.
+
+\paragraph{Summary.} The original RLHF paper. Trains an RL agent on
+Atari and MuJoCo tasks using only pairwise human preferences over
+trajectory segments --- no hand-engineered reward function. Lays
+out the three-stage pipeline (preference collection, RM training,
+RL against the RM) that would become the InstructGPT template five
+years later.
+
+\paragraph{Why it matters for this week.} The pipeline architecture
+we use today was invented \emph{here}, in 2017, on Atari, by the
+same OpenAI--DeepMind team that would later build ChatGPT. Reading
+this paper alongside InstructGPT is the cleanest way to see the
+continuity of ideas across the deep-RL-to-LLM transition.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``We show that this approach can effectively solve complex RL tasks
+without access to the reward function, using less than 1\% of the
+feedback that the agent receives.''
+\end{quote}
+\noindent The astonishing data efficiency point: a few hundred
+human comparisons could replace millions of environment-reward
+samples. The same calculus is what makes preference RL economical
+for LLMs.
+
+\section*{7. Ziegler et al.\ 2019 --- Fine-tuning language models from human preferences}
+\textbf{Citation.} D.\,M.\ Ziegler, N. Stiennon, J. Wu, T.\,B.\
+Brown, A. Radford, D. Amodei, P. Christiano, G. Irving,
+\emph{Fine-Tuning Language Models from Human Preferences},
+arXiv:1909.08593, 2019.
+
+\paragraph{Summary.} The first paper to apply RLHF to a language
+model (GPT-2). Pioneered the practical machinery --- KL-shaped
+per-token rewards, value-head sharing the policy trunk, adaptive
+KL --- that would later go into InstructGPT.
+
+\paragraph{Why it matters for this week.} This is the paper that
+turned RLHF from an RL idea (Christiano 2017) into an LLM
+methodology. Almost every implementation detail you'll meet in TRL
+or OpenRLHF was invented here.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``We use a KL constraint to keep the policy from drifting too far
+from the supervised initialisation; without it, the policy quickly
+collapses to a degenerate solution that the reward model gives high
+score to but that humans rate as poor.''
+\end{quote}
+\noindent A clear early statement of reward-model overoptimisation,
+written before Gao et al.\ 2023 quantified it.
+
+\section*{8. Stiennon et al.\ 2020 --- Learning to summarize from human feedback}
+\textbf{Citation.} N. Stiennon, L. Ouyang, J. Wu, D. Ziegler, R.
+Lowe, C. Voss, A. Radford, D. Amodei, P. Christiano, \emph{Learning
+to Summarize from Human Feedback}, arXiv:2009.01325, NeurIPS 2020.
+
+\paragraph{Summary.} The TL;DR-summarisation benchmark for RLHF.
+Trains a 6.7B model with PPO against a learned reward model on
+human comparisons of news-article summaries. The RLHF-trained model
+is preferred to a 100$\times$ larger supervised baseline.
+
+\paragraph{Why it matters for this week.} The bridge between
+\textsc{Ziegler 2019} (proof of concept) and \textsc{Ouyang 2022}
+(industrial scale). Also the source of the much-cited
+``reward-model overoptimisation'' plot, where held-out human
+ratings degrade as RM-score keeps rising.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``As training progresses, the policy's reward according to the
+reward model continues to improve, but its quality according to
+human labels saturates and eventually degrades. This is a clear
+indication of reward-model overoptimisation and motivates the
+KL constraint in our algorithm.''
+\end{quote}
+\noindent The smoking-gun figure for the entire reward-hacking
+literature. Read this paper carefully before deciding how to
+length-regulate your own runs.
+
+\newpage
+\section*{Pointers for further depth}
+
+\begin{itemize}[leftmargin=*]
+  \item \textsc{Schulman et al.\ 2016} --- \emph{Generalized
+        Advantage Estimation}, arXiv:1506.02438. The GAE
+        bias-variance dial; if you want to understand the
+        $\lambda$ knob in your RLHF runs, read this.
+  \item \textsc{Casper et al.\ 2023} --- \emph{Open Problems and
+        Fundamental Limitations of RLHF}, arXiv:2307.15217. A
+        clear-eyed survey of why RLHF is much harder than it looks.
+  \item \textsc{Coste et al.\ 2023} --- \emph{Reward Model Ensembles
+        Help Mitigate Overoptimization}, arXiv:2310.02743. Ensembles
+        of RMs vote; the policy is rewarded only when they agree.
+  \item \textsc{Razin et al.\ 2024} --- \emph{Likelihood Displacement},
+        arXiv:2410.08847. The technical explanation of why DPO and
+        PPO both decrease $\log\pi(y_l)$ aggressively.
+  \item \textsc{Lambert} --- \emph{The RLHF Book} (online, 2026). The
+        best free reference text on the entire pipeline, regularly
+        updated.
 \end{itemize}
+
+\newpage
+\section*{Sourced from}
+\texttt{research/llm\_rl\_sota.md} §1 (Classical RLHF), §6
+(Constitutional AI / RLAIF), §7 (reward hacking, KL control), and
+§11 (key reading list).
 
 \end{document}
