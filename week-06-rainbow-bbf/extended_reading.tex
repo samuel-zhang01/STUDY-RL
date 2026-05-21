@@ -2,14 +2,148 @@
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week 06: Rainbow DQN and BBF}
+\title{Extended reading --- Week 6: Rainbow DQN and BBF}
+\author{STUDY-RL}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
-\begin{itemize}
-  \item TODO
-\end{itemize}
+\section*{Reading list}
+
+\subsection*{1. Hessel et al.\ 2018 --- ``Rainbow: Combining Improvements in Deep RL''}
+
+\textbf{Citation.} Matteo Hessel, Joseph Modayil, Hado van Hasselt, Tom Schaul,
+Georg Ostrovski, Will Dabney, Dan Horgan, Bilal Piot, Mohammad Azar, David Silver,
+\emph{AAAI} 2018, arXiv:1710.02298.
+
+\paragraph{Summary.} Combines Double + Dueling + PER + n-step ($n=3$) + NoisyNets + C51
+into a single agent. Reports a careful 1-out ablation across 57 Atari games. Key finding:
+multi-step ($n$) and the distributional value head are the two biggest contributors;
+PER is third; NoisyNets, Dueling, and Double are roughly tied at a smaller magnitude.
+
+\paragraph{Why it matters for this week.} The agent we implement (\texttt{project/agent.py})
+is a deliberate Rainbow-lite: we keep Double, Dueling, PER, NoisyNets but skip the
+distributional head and n-step (deferred to the workbook math).
+
+\begin{quote}\itshape
+``Our results show that combining the studied improvements yields the state-of-the-art on
+the Atari 2600 benchmark, both in terms of data efficiency and final performance, while
+giving up no critical individual contribution.''
+\end{quote}
+\textbf{Commentary.} The right way to read Rainbow is not as ``the algorithm'' but as a
+\emph{template for combining orthogonal patches}. Each component fixes a different
+failure mode; they compose because the failures are independent.
+
+\subsection*{2. van Hasselt, Guez, Silver 2016 --- ``Deep Reinforcement Learning with Double Q-learning''}
+
+\textbf{Citation.} Hado van Hasselt, Arthur Guez, David Silver, \emph{AAAI} 2016,
+arXiv:1509.06461.
+
+\paragraph{Summary.} Lifts the Double-Q idea from Hasselt 2010 (Week 4) into the
+function-approximation regime. Concretely: use the target network for evaluation but the
+online network for the argmax. Demonstrates that vanilla DQN over-estimates Q-values
+across the entire Atari suite (running average of max-Q diverges over a few million
+steps); Double-DQN keeps them bounded and improves final score on 47/57 games.
+
+\paragraph{Why it matters for this week.} The single most impactful one-line patch on
+DQN, and the template for the same trick later applied to actor-critics (TD3, REDQ).
+
+\begin{quote}\itshape
+``We show that this idea, which was originally proposed in a tabular setting, can be
+generalized to work with large-scale function approximation. We propose a specific
+adaptation to the DQN algorithm and show that the resulting algorithm not only reduces
+the observed overestimations, as hypothesized, but that this also leads to much better
+performance on several games.''
+\end{quote}
+\textbf{Commentary.} Note the structural parallel to van Seijen et al.\ 2009 (Expected
+SARSA): the same decoupling-selection-from-evaluation trick reappears as soon as you
+look at the bootstrap target through Jensen's lens.
+
+\subsection*{3. Schaul et al.\ 2016 --- ``Prioritized Experience Replay''}
+
+\textbf{Citation.} Tom Schaul, John Quan, Ioannis Antonoglou, David Silver, ICLR 2016,
+arXiv:1511.05952.
+
+\paragraph{Summary.} Replaces uniform replay sampling with priority $p_i \propto
+|\delta_i|^\alpha$, importance-weight-corrected with $w_i = (N P(i))^{-\beta}$,
+$\beta: 0.4 \to 1.0$. Introduces a sumtree for $O(\log N)$ sampling. Big improvements on
+sparse-reward Atari games (Frostbite, Montezuma) where uniform sampling rarely sees the
+informative transition.
+
+\paragraph{Why it matters for this week.} The IS-weight derivation in our notes follows
+this paper directly, and the algorithm is implemented in \texttt{common/replay.py} as
+\texttt{PrioritizedReplayBuffer}.
+
+\begin{quote}\itshape
+``With prioritized replay we develop a framework for prioritizing experience, so as to
+replay important transitions more frequently, and therefore learn more efficiently. We
+use prioritized experience replay in Deep Q-Networks (DQN), a reinforcement learning
+algorithm that achieved human-level performance across many Atari games.''
+\end{quote}
+\textbf{Commentary.} Note how the importance-sampling story connects to OPE. The
+mechanism is identical: weight each sample by the ratio of the target distribution to
+the sampling distribution. In PER the target is uniform over the buffer; in OPE the
+target is the policy we want to evaluate.
+
+\subsection*{4. Bellemare, Dabney, Munos 2017 --- ``A Distributional Perspective on RL''}
+
+\textbf{Citation.} Marc G.\ Bellemare, Will Dabney, R\'emi Munos, \emph{ICML} 2017,
+arXiv:1707.06887.
+
+\paragraph{Summary.} Introduces C51 (categorical 51-atom distributional DQN). Models the
+return distribution $Z(s,a)$ rather than just its mean $Q(s,a)$. Trains with a
+KL-projected distributional Bellman backup; chooses actions by $\argmax \E_Z[Z]$ but
+benefits from the richer auxiliary signal (better representations, more stable targets
+after the $\min$/$\max$ aggregation). Beats DQN on 41/57 Atari games at $V_{\min}=-10$,
+$V_{\max}=+10$, 51 atoms.
+
+\paragraph{Why it matters for this week.} The conceptual jump from ``regression on a
+mean'' to ``classification on a distribution''. The 2024 Farebrother ``Stop Regressing''
+paper (HL-Gauss two-hot loss) is the direct descendant in continuous control.
+
+\begin{quote}\itshape
+``We argue for the fundamental importance of the value distribution: the distribution of
+the random return received by a reinforcement learning agent. This is in contrast to the
+common approach to reinforcement learning that models the expectation of this return, or
+value.''
+\end{quote}
+\textbf{Commentary.} The framing is more important than the specific algorithm. Once you
+internalise that the right learning target is a distribution, risk-sensitive control,
+uncertainty quantification, and exploration bonuses all become natural; with a scalar
+mean they require auxiliary machinery. See \texttt{research/deeprl\_core\_sota.md} \S4
+for the modern landscape.
+
+\subsection*{5. Schwarzer et al.\ 2023 --- ``Bigger, Better, Faster: Human-Level Atari with Human-Level Efficiency'' (BBF)}
+
+\textbf{Citation.} Max Schwarzer, Johan Obando-Ceron, Aaron Courville, Marc Bellemare,
+Rishabh Agarwal, Pablo Samuel Castro, \emph{ICML} 2023, arXiv:2305.19452.
+
+\paragraph{Summary.} Combines Rainbow with three modern ingredients: (i) a wider
+ResNet backbone (15-layer Impala-style with width multiplier), (ii) periodic
+\emph{shrink-and-perturb resets} every 40k gradient steps,
+(iii) discount and n-step \emph{annealing} ($\Disc: 0.97 \to 0.997$, $n: 10 \to 3$). EMA
+target update at $\tau=0.005$. Self-prediction (SPR) auxiliary loss. Reaches super-human
+median on Atari-100k in around 6 GPU-hours --- the current single-GPU SOTA for
+sample-efficient discrete control.
+
+\paragraph{Why it matters for this week.} The 2025 frontier. Read this paper as the
+``what is Rainbow now?'' answer.
+
+\begin{quote}\itshape
+``We dissect a long-standing puzzle in deep RL: why don't bigger networks help? We argue
+that the answer is plasticity loss, which we address with periodic shrink-and-perturb
+resets. With this single ingredient we enable a much larger network to train stably at
+high replay ratios, yielding super-human Atari-100k median performance.''
+\end{quote}
+\textbf{Commentary.} BBF is the cleanest evidence that the next decade of Deep RL
+improvements will come from \emph{deep-learning hygiene} (normalisation, residuals,
+regularisation, resets) rather than from new algorithmic ideas. The companion work
+SimBa (Lee 2024) makes the same argument for continuous control. Both papers are
+prerequisites for Week 10's modern actor-critic best-practice checklist.
+
+\bigskip
+\textit{Sourced from:} \texttt{research/deeprl\_core\_sota.md} \S1.2--1.12 (DQN family
+canon and BBF descendants); the OPE-PER connection is from \S0 of
+\texttt{research/bandits\_matching\_sota.md}.
 
 \end{document}
