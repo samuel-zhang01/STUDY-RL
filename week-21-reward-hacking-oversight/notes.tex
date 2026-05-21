@@ -1,0 +1,653 @@
+\documentclass[11pt,oneside]{scrbook}
+\usepackage[a4paper,margin=2.4cm,marginparwidth=3.2cm,marginparsep=0.5cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{{\color{rlblue}\textbf{Week 21}\\ \Huge Reward hacking and scalable oversight}}
+\author{STUDY-RL --- a self-paced Deep RL curriculum}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\chapter*{Learning objectives}
+\addcontentsline{toc}{chapter}{Learning objectives}
+
+\begin{keyidea}
+By the end of this lecture you will be able to:
+\begin{enumerate}\setlength{\itemsep}{2pt}
+  \item State Goodhart's law and distinguish the four Manheim-Garrabrant
+        variants (regressional, extremal, causal, adversarial).
+  \item Define reward hacking formally (Skalse et al.\ 2024) and describe
+        five concrete RLHF failure modes (verbosity, sycophancy,
+        format hacking, sandbagging, alignment faking).
+  \item Cite the Gao 2022 reward-overoptimisation scaling law and explain
+        why it motivates a KL anchor.
+  \item Implement a deliberately gameable reward, observe the policy
+        gaming it, and demonstrate three mitigations.
+  \item Walk through the Constitutional AI pipeline (critique, revise,
+        preference pair, DPO) and run a tiny end-to-end version.
+  \item Sketch debate, IDA, and weak-to-strong generalisation as
+        scalable-oversight protocols, and articulate their limits.
+  \item Tie all of the above to insurance- and recruitment-matching
+        policies: where proxies live, how they fail, and which
+        mitigations transfer.
+\end{enumerate}
+\end{keyidea}
+
+% ===========================================================================
+\chapter{Motivation and intuition}
+
+This is the lecture in which the elephant in the RL room is acknowledged.
+For every algorithm covered so far in this course the implicit assumption
+was: the reward function $r$ \emph{accurately measures what we want}.
+That is the only assumption we are about to abandon.
+
+\marginnote{The DeepMind specification-gaming list (Krakovna 2018) catalogues
+over 60 documented cases ranging from a CoastRunners boat looping a
+checkpoint to a simulated evolutionary system that learned to exploit
+floating-point rounding in the physics engine.}
+
+The story of reward hacking is older than RLHF. Krakovna et al.\ (2018)
+list dozens of cases from classical RL where the agent satisfied the
+letter of the reward and violated its spirit: a robot trained on
+``walk fast'' learned to dive forward; a sim-to-real arm trained on
+``pick up the cube'' learned to nudge it just inside the gripper's
+camera frame; the famous \emph{CoastRunners} boat looped a checkpoint
+indefinitely. The pattern is universal: any continuous degree of freedom
+the designer did not constrain becomes an optimisation target.
+
+The LLM era added two new pathologies. \textbf{Verbosity bias}: RLHF
+preference data inflate length because longer answers \emph{look} more
+informative to human raters. \textbf{Sycophancy}: assistants converge on
+the rater's prior beliefs because flattering answers are preferred even
+when wrong. Both are now well-documented (Singhal et al.\ 2023; Sharma
+et al.\ 2023; ongoing 2024--2025 follow-ups).
+
+The mathematical reframing came in 2022 with
+\textsc{Gao, Schulman, Hilton}'s \emph{Scaling Laws for Reward Model
+Overoptimization}: the gap between the proxy reward and the true reward
+grows monotonically with the KL distance the policy has travelled from
+its initialisation. The Gao result is empirical, but its shape is universal
+enough that it has become the slogan ``optimise less, regularise more'' in
+RLHF lore.
+
+\begin{intuition}
+Imagine grading exams by the length of the answers. A short, correct,
+elegant solution scores poorly; a long, rambling, half-wrong one scores
+well. Students figure this out within one term and start padding. The
+grader's metric --- length --- correlated with quality at first
+(thoughtful students wrote more), so it looked like a fine proxy. As
+soon as students optimise against the proxy, the correlation collapses.
+That is exactly the geometry of reward overoptimisation in RL.
+\end{intuition}
+
+\section{The Skalse et al.\ formal definition}
+
+\begin{definition}[Unhackable proxy, \textsc{Skalse et al.\ NeurIPS 2024}]
+A proxy reward $\tilde r$ is \emph{unhackable} relative to a true reward
+$r^\star$ on policies $\pi_1 \prec \pi_2$ if and only if
+\[
+  \tilde r(\pi_2) \ge \tilde r(\pi_1) \;\Longleftrightarrow\; r^\star(\pi_2) \ge r^\star(\pi_1).
+\]
+A proxy that fails this biconditional on some policy pair is
+\emph{hackable}: there exists a policy improvement on $\tilde r$ that is
+a regression on $r^\star$.
+\end{definition}
+
+Almost every interesting proxy is hackable in this sense. The interesting
+question is therefore not ``can we make an unhackable proxy?'' but
+``can we constrain the policy class to a region where the proxy is
+locally unhackable?''. That is what the KL anchor does in RLHF, what the
+constitution does in CAI, and what the debate / IDA structures attempt in
+scalable oversight.
+
+% ===========================================================================
+\chapter{Mathematical formulation}
+
+\section{Goodhart's law and its four variants}
+
+\textsc{Manheim and Garrabrant, 2018, arXiv:1803.04585} classify Goodhart's
+law into four phenomenologically distinct failure modes:
+
+\begin{enumerate}\setlength{\itemsep}{2pt}
+  \item \textbf{Regressional Goodhart.} The proxy $\tilde r = r^\star + \eta$
+        has noise $\eta$ independent of the true quality. The arg-max of
+        $\tilde r$ over a finite candidate set is contaminated by the
+        upper tail of $\eta$ --- a regression to the mean phenomenon.
+        Best-of-N inference suffers from this.
+  \item \textbf{Extremal Goodhart.} The proxy approximates $r^\star$
+        well in the centre of the input distribution but diverges on the
+        tails. Optimisation pushes the policy to the tails (out-of-distribution
+        of the proxy's training data), where the approximation collapses.
+        Reward-model fitting under RLHF is the canonical example.
+  \item \textbf{Causal Goodhart.} The proxy correlates with $r^\star$ via
+        a third variable that the policy can intervene on. Optimising the
+        proxy alone short-circuits the causal chain (e.g.\ a customer-success
+        metric that uses ``ticket close-time'' as proxy for satisfaction).
+  \item \textbf{Adversarial Goodhart.} An optimiser explicitly seeks to
+        exploit the gap between proxy and truth. This is the regime of
+        reward tampering and prompt injection.
+\end{enumerate}
+
+\begin{theorem}[Regressional Goodhart bound]
+Let $\tilde r(\theta) = r^\star(\theta) + \eta(\theta)$ with $\eta$ a
+zero-mean noise process. Then for any $\theta_1, \theta_2$ with
+$\tilde r(\theta_2) > \tilde r(\theta_1)$,
+\[
+  \E\big[ r^\star(\theta_2) - r^\star(\theta_1) \mid \tilde r(\theta_2) > \tilde r(\theta_1) \big]
+  \;\le\; \E\big[ \tilde r(\theta_2) - \tilde r(\theta_1) \mid \tilde r(\theta_2) > \tilde r(\theta_1) \big].
+\]
+Equality holds iff $\eta(\theta_1)$ and $\eta(\theta_2)$ are perfectly
+correlated.
+\end{theorem}
+
+\begin{proof}[sketch]
+$\E[r^\star(\theta_2) - r^\star(\theta_1)] = \E[\tilde r(\theta_2) - \tilde r(\theta_1)] - \E[\eta(\theta_2) - \eta(\theta_1)]$.
+Conditioning on $\tilde r(\theta_2) > \tilde r(\theta_1)$ induces positive
+selection bias on $\eta(\theta_2) - \eta(\theta_1)$ (the event is more
+likely when the noise difference is large and positive). Therefore
+$\E[\eta(\theta_2) - \eta(\theta_1) \mid \cdot] \ge 0$, which gives the
+claimed inequality. $\Box$
+\end{proof}
+
+\section{The Gao et al.\ over-optimisation law}
+
+\textsc{Gao et al.\ 2022, arXiv:2210.10760} empirically measure, across
+five model scales and three reward-model sizes, the gap between proxy
+reward and ``gold'' reward (a held-out human evaluator) as a function of
+KL distance from the SFT initialisation. The fitted form is
+\begin{equation}\label{eq:gao}
+  r^\star(d) \;\approx\; \tilde r(d) \,-\, \alpha\, d^{\,\beta},
+  \qquad d = \sqrt{\KL(\pi_\theta \,\|\, \pi_\text{SFT})},
+\end{equation}
+with $\beta \in [1.5, 2]$ across all scales. Crucially, $\alpha$ shrinks
+slowly with the reward-model size --- larger reward models do not
+qualitatively change the law's shape, they just push the optimum
+slightly further out.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/fig_gao_scaling.pdf}
+\caption{Toy reproduction of equation~\eqref{eq:gao}. The proxy
+(orange) rises monotonically with KL; the true reward (blue) is
+unimodal, peaking at a moderate KL. The dashed line marks the
+argmax-true KL --- training past it makes the model worse on the metric
+you actually care about.}
+\label{fig:gao}
+\end{figure}
+
+\section{Reward hacking lab: the deliberately gameable reward}
+
+We construct a tiny pedagogical instance of the Gao geometry.
+
+\textbf{Setup.} A char-level LM, SFT'd on a 20-sentence corpus of
+English. The proxy reward is
+\[
+  \tilde r(y) \;=\; \alpha \cdot |y| \;+\; \beta \cdot |\{i : y_{i:i+|k|} = k \text{ for some keyword } k\}|,
+\]
+with default $\alpha = 0.02$, $\beta = 0.8$ and keyword set
+$\{$\texttt{good, great, best, excellent}$\}$. The hidden true quality
+is the per-character log-probability of the completion under the bigram
+language model fit to the corpus --- a stand-in for ``does this sound
+like English?''.
+
+\textbf{Free training.} REINFORCE on $\tilde r$ with no regularisation
+inflates length to the cap and slightly perturbs the language model in
+the direction of keyword stuffing. The bigram log-likelihood drops
+correspondingly (Figure~\ref{fig:hack}, orange curve).
+
+\textbf{Mitigations.}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \emph{KL anchor.} A coefficient $\lambda_\text{KL} = 1$ in front
+        of the unbiased k3 estimator pulls the policy back toward the SFT
+        reference. The length still rises but only modestly, and the
+        bigram log-likelihood stays close to its SFT value.
+  \item \emph{Length penalty.} An explicit
+        $- \lambda_\text{len} \cdot |y|$ subtracted from $\tilde r$
+        targets the verbosity term directly. Effective but model-specific;
+        you need to know the hack to design the penalty.
+  \item \emph{Entropy bonus.} Adds the policy entropy to the loss.
+        Maintains exploration; less effective at stopping verbosity than
+        the KL anchor on this toy.
+\end{itemize}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/fig_hack_curves.pdf}
+\caption{Free REINFORCE on the gameable proxy: the proxy reward
+(orange, left axis) rises steadily; the true quality (blue, right axis)
+drops. This is the Skalse hackability condition fired in vivo.}
+\label{fig:hack}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/fig_regularizers.pdf}
+\caption{Three mitigations on the same hack. The KL anchor and the
+length penalty both preserve true quality across training; the
+unregularised run collapses.}
+\label{fig:reg}
+\end{figure}
+
+\begin{pitfall}
+The length penalty is the most \emph{effective} mitigation here and the
+least \emph{generalisable}: it assumes you knew in advance the policy
+would hack length. In production, you do not know what hack the policy
+will find. The KL anchor is weaker per-knob but \emph{generalises}: it
+penalises any divergence from the reference, including hacks you did
+not anticipate.
+\end{pitfall}
+
+\section{Scalable oversight protocols}
+
+The problem behind all these failure modes: at scale, the human cannot
+audit every output. Four protocol families try to bridge that gap.
+
+\subsection*{RLHF}
+
+\textsc{Christiano et al.\ NeurIPS 2017, arXiv:1706.03741.} Learn a reward
+model $\hat r$ from pairwise human preferences, then train the policy by
+PPO/GRPO against $\hat r$. The Bradley-Terry log-likelihood for the
+reward model is
+\[
+  \log \mathbb{P}(y_w \succ y_l \mid x) \;=\; \log \sigma\big(\hat r(x, y_w) - \hat r(x, y_l)\big).
+\]
+RLHF is the workhorse but is itself the central source of the hacking
+phenomena above (verbosity, sycophancy, reward-model
+overoptimisation).
+
+\subsection*{Bradley-Terry preference model (the RLHF starting point)}
+
+Given pairwise preferences $(x, y_w \succ y_l)$, the Bradley-Terry model
+posits that the probability the chosen wins is a sigmoid of the reward
+difference:
+\[
+  \mathbb{P}(y_w \succ y_l \mid x) \;=\; \sigma\big(\hat r(x, y_w) - \hat r(x, y_l)\big),
+  \quad \sigma(z) = \tfrac{1}{1 + e^{-z}}.
+\]
+The MLE of $\hat r$ on a dataset $\mathcal{D}$ of preferences is then
+\begin{equation}\label{eq:bt-mle}
+  \hat r_\text{MLE} = \arg\max_{\hat r} \sum_{(x, y_w, y_l) \in \mathcal{D}} \log \sigma\big(\hat r(x, y_w) - \hat r(x, y_l)\big).
+\end{equation}
+
+\begin{theorem}[Identifiability of Bradley-Terry rewards]
+The MLE \eqref{eq:bt-mle} is identifiable only up to an additive constant
+per prompt $x$. That is, $\hat r(x, \cdot)$ and $\hat r(x, \cdot) + c(x)$
+fit the data equally well for any function $c$.
+\end{theorem}
+
+\begin{proof}
+$\sigma(\hat r(x, y_w) + c(x) - \hat r(x, y_l) - c(x)) = \sigma(\hat r(x, y_w) - \hat r(x, y_l))$. $\Box$
+\end{proof}
+
+\begin{intuition}
+The unidentifiable additive constant is why RLHF needs a KL anchor.
+Without it, the policy could increase $\hat r$ arbitrarily by shifting
+its outputs into regions where the reward model assigns large absolute
+values, even though the *relative* reward over those outputs is
+unchanged. The KL term to the SFT reference pins the constant.
+\end{intuition}
+
+\subsection*{DPO --- closed-form solution of the RLHF objective}
+
+\textsc{Rafailov, Sharma, Mitchell, Ermon, Manning, Finn 2023, arXiv:2305.18290}
+observe that the KL-constrained RLHF objective
+\[
+  \max_\pi \E_{x, y \sim \pi}[\hat r(x, y)] - \beta\, \KL\big(\pi(\cdot \mid x) \,\|\, \pi_\text{ref}(\cdot \mid x)\big)
+\]
+admits a closed-form optimal policy
+\[
+  \pi^\star(y \mid x) \;=\; \pi_\text{ref}(y \mid x) \exp(\hat r(x, y) / \beta) / Z(x).
+\]
+Rearranging gives $\hat r(x, y) = \beta \log(\pi^\star(y\mid x)/\pi_\text{ref}(y \mid x)) + \beta \log Z(x)$, so
+\emph{any} reward model can be re-parameterised as a difference of
+log-policy-ratios. Substituting into the Bradley-Terry MLE
+\eqref{eq:bt-mle} cancels the unobservable $\log Z$ terms and yields
+the DPO loss \eqref{eq:dpo}. The remarkable consequence: one can
+optimise the implied policy directly on preference data, without
+ever fitting an explicit reward model.
+
+\begin{theorem}[DPO is RLHF without the reward model]
+Under the Bradley-Terry preference model and the KL-constrained RLHF
+objective, the DPO MLE on preferences is equivalent to the policy
+PPO would produce against the corresponding implicit reward model.
+\end{theorem}
+
+\begin{proof}[sketch]
+Substitute $\pi^\star$ into the Bradley-Terry log-likelihood and
+observe that $\log Z(x)$ cancels in the preference difference. The
+remaining objective is exactly \eqref{eq:dpo}. $\Box$
+\end{proof}
+
+\begin{pitfall}
+A common misreading: ``DPO has no reward model.'' DPO has an
+\emph{implicit} reward model defined by the log-policy ratio; that
+reward model is fit jointly with the policy, which is more efficient
+but no less subject to overoptimisation. The Gao 2022 curves apply to
+DPO too; you still need a KL anchor (and DPO's $\beta$ \emph{is} the
+KL anchor strength).
+\end{pitfall}
+
+\subsection*{Constitutional AI}
+
+\textsc{Bai et al.\ Anthropic 2022, arXiv:2212.08073.} Replace the human
+labellers with a written \emph{constitution} (typically 16 principles)
+and a self-critique loop:
+
+\begin{enumerate}\setlength{\itemsep}{2pt}
+  \item SFT model generates a response $y$ to prompt $x$.
+  \item The model is asked to \emph{critique} $y$ against each
+        constitution principle.
+  \item The model \emph{revises} $y$ into $y'$ that addresses the
+        critiques.
+  \item $(y' \succ y)$ becomes a synthetic preference pair.
+  \item Pairs are aggregated and used to train an RLAIF reward model, or
+        directly with DPO.
+\end{enumerate}
+
+The full DPO loss with reference policy $\pi_\text{ref}$ is
+\begin{equation}\label{eq:dpo}
+  \mathcal{L}_\text{DPO}(\theta) = -\E_{(x, y_w, y_l)}\!\Big[\log \sigma\Big(\beta\big(\log\tfrac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \log\tfrac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\big)\Big)\Big].
+\end{equation}
+The Rafailov 2023 derivation reframes RLHF as an implicit
+classification problem and gives \eqref{eq:dpo} as the closed-form
+solution to the PPO objective when the reward model is allowed to be
+$\hat r(x, y) = \beta \log(\pi_\theta(y \mid x) / \pi_\text{ref}(y \mid x))$.
+
+Our toy CAI loop uses a five-principle rule-based constitution
+(see \texttt{project/cai.py}), a deterministic critique, a mechanical
+revision, and one DPO step per batch. Figure~\ref{fig:cai} shows the
+compliance-pre and compliance-post curves: revision lifts the mean
+compliance score by $\sim 2$ points (out of 5), and DPO trains the
+policy to internalise that lift.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figs/fig_cai_compliance.pdf}
+\caption{Constitutional AI mini-loop: revision (teal) reliably improves
+constitution compliance over the SFT baseline (orange). The synthetic
+preference pair feeds the DPO update.}
+\label{fig:cai}
+\end{figure}
+
+\subsection*{Debate}
+
+\textsc{Irving, Christiano, Amodei 2018, arXiv:1805.00899.} Two
+adversarial agents argue for opposite sides of a claim; a (weaker) judge
+picks the winner. Under the zero-sum game-theoretic claim, at equilibrium
+on questions admitting verification, the \emph{truthful} side wins.
+
+The 2024 empirical landmark is \textsc{Khan et al.\ DeepMind, arXiv:2407.04622}:
+on the QuALITY reading-comprehension benchmark, weak judges of debating
+strong LLMs reach \emph{higher} accuracy than they reach on
+consultancy / direct QA. This is the first concrete empirical evidence
+that debate is a useful oversight protocol with frontier models.
+
+\subsection*{Iterated amplification (IDA)}
+
+\textsc{Christiano, Shlegeris, Amodei 2018, arXiv:1810.08575.} Build an
+``amplified'' system by recursively decomposing tasks across multiple
+calls to a base model; train a distilled student to mimic the amplified
+behaviour; the student becomes the next base. The hope: at each level
+the human supervises a strictly easier sub-question.
+
+\subsection*{Weak-to-strong generalisation}
+
+\textsc{Burns et al.\ OpenAI 2023, arXiv:2312.09390.} Empirical sandbox
+for the superalignment problem: fine-tune GPT-4 with labels from a
+GPT-2-level supervisor and measure how much of GPT-4's full capability
+is recovered. Reported gap-recovery: 40--80\% with simple bootstrapping.
+
+The 2025 follow-ups (selective weak-to-strong, reliability-aware
+alignment) refine the picture: weak supervisors must \emph{know their
+limits}; delegating only where the supervisor is reliable improves
+recovery.
+
+% ===========================================================================
+\chapter{Algorithms}
+
+\begin{tcolorbox}[colback=rlbg,colframe=rlblue,title={Algorithm: Reward-hack lab training step}]
+\textbf{Input.} prompt $x$, batch $B$, regulariser coefficients
+$(\lambda_\text{KL}, \lambda_\text{len}, \lambda_\text{ent})$.\\[2pt]
+\textbf{1.} Sample $B$ completions from $\pi_\theta$.\\
+\textbf{2.} Compute $\tilde r_i = \alpha |y^{(i)}| + \beta\cdot\text{kw}(y^{(i)})$.\\
+\textbf{3.} Effective reward $r_i = \tilde r_i - \lambda_\text{len} |y^{(i)}|$.\\
+\textbf{4.} Group baseline subtraction; advantage $\hat A_i = r_i - \bar r$.\\
+\textbf{5.} Compute $\KL_i$ (k3 estimator) and entropy $H_i$ over the
+completion.\\
+\textbf{6.} Loss $= -\frac{1}{B}\sum_i \hat A_i \, \log \pi_\theta(y^{(i)}|x) + \lambda_\text{KL}\, \bar\KL - \lambda_\text{ent}\, \bar H$.\\
+\textbf{7.} Adam step, grad-norm clip.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=rlbg,colframe=rlblue,title={Algorithm: Constitutional AI mini-loop}]
+\textbf{Input.} prompt $x$, constitution $C = \{c_1, \dots, c_K\}$.\\[2pt]
+\textbf{1.} Sample $y \sim \pi_\theta(\cdot \mid x)$ (the original response).\\
+\textbf{2.} For each $c_k$, run a critique:
+$\text{crit}_k(y) \in \{0, 1\}$ indicating compliance.\\
+\textbf{3.} Generate revision $y' = \text{revise}(y, C)$.\\
+\textbf{4.} Build preference pair: $y_w \defeq \arg\max(\text{score}(y), \text{score}(y'))$,
+$y_l \defeq \arg\min$.\\
+\textbf{5.} Take a DPO step against $\pi_\text{ref}$ on $(x, y_w, y_l)$
+using \eqref{eq:dpo}.\\
+\textbf{6.} Repeat.
+\end{tcolorbox}
+
+\subsection*{Worked numerical example: DPO step}
+
+Consider a batch of one pair $(x, y_w, y_l)$ where
+$\log \pi_\theta(y_w) = -10$, $\log \pi_\theta(y_l) = -12$,
+$\log \pi_\text{ref}(y_w) = -11$, $\log \pi_\text{ref}(y_l) = -11.5$.
+
+The log-ratio difference is
+$(-10 + 12) - (-11 + 11.5) = 2 - (-0.5) = 2.5$. With $\beta = 0.1$ the
+DPO logit is $0.25$, and the loss is $-\log \sigma(0.25) \approx 0.575$.
+A gradient step pushes $\log\pi_\theta(y_w)$ up and
+$\log\pi_\theta(y_l)$ down --- the standard preference fitting direction.
+
+\subsection*{Complexity}
+
+The hack-lab step is dominated by one forward-pass through the policy and
+one through the reference. The CAI step adds a sample, a critique, and a
+revision per batch element; for our rule-based critique this is
+$\mathcal{O}(B)$ string operations, negligible compared to the forward
+passes.
+
+% ===========================================================================
+\chapter{Implementation walkthrough}
+
+The two pipelines live in \texttt{project/hack\_lab.py} and
+\texttt{project/cai.py}.
+
+\section{The proxy reward and the true-quality oracle}
+
+\begin{minted}[fontsize=\footnotesize]{python}
+KEYWORDS = ("good", "great", "best", "excellent")
+
+def proxy_reward(text, alpha=0.02, beta=0.8):
+    n_kw = sum(text.count(k) for k in KEYWORDS)
+    return alpha * len(text) + beta * n_kw
+
+def true_quality(text, log_bigram, stoi):
+    ids = [stoi["<bos>"]] + encode(text, stoi) + [stoi["<eos>"]]
+    if len(ids) < 2:
+        return -10.0
+    logp = sum(log_bigram[a, b] for a, b in zip(ids[:-1], ids[1:]))
+    return logp / (len(ids) - 1)
+\end{minted}
+
+\section{The CAI critique and revision}
+
+\begin{minted}[fontsize=\footnotesize]{python}
+CONSTITUTION = (
+    "Responses should contain no swearing or harsh language.",
+    "Responses should not exceed 40 characters.",
+    "Responses should be lowercase only.",
+    "Responses should end with a period.",
+    "Responses should avoid the character 'x'.",
+)
+
+def critique(text):
+    return {
+        "no_swearing":      all(b not in text for b in _BAD_WORDS),
+        "under_40_chars":   len(text) <= 40,
+        "lowercase":        text == text.lower(),
+        "ends_with_period": text.endswith("."),
+        "no_x":             "x" not in text,
+    }
+\end{minted}
+
+\section{The DPO step}
+
+\begin{minted}[fontsize=\footnotesize]{python}
+def dpo_loss(pol_c, pol_r, ref_c, ref_r, beta=0.1):
+    pi_logits = beta * ((pol_c - pol_r) - (ref_c - ref_r))
+    return -F.logsigmoid(pi_logits).mean()
+\end{minted}
+
+This is equation~\eqref{eq:dpo} verbatim. The chosen / rejected log-probs
+are sequence-level sums over the completion tokens (masked at the prompt
+prefix).
+
+% ===========================================================================
+\chapter{Empirical results}
+
+The hack-lab and CAI figures above are the empirical results. Three
+take-aways:
+
+\begin{enumerate}\setlength{\itemsep}{2pt}
+  \item \emph{Hacking is fast.} On a 30k-parameter model with a tiny
+        proxy gap, REINFORCE diverges proxy from truth within 60 steps.
+        Production RLHF has the same geometry on an exponentially
+        larger scale.
+  \item \emph{Regularisation works, but specifically.} The length
+        penalty crushes the length term; the KL anchor crushes
+        divergence from the reference. Either alone is enough to
+        recover most of the true quality; both together are belt-and-braces.
+  \item \emph{CAI revisions are reliably better than the original under
+        a rule-based constitution.} The remaining question --- and the
+        original CAI paper's contribution --- is whether a model is a
+        good enough critic of itself for the loop to work without a rule
+        oracle. Bai et al.\ argue yes, with the caveat that the
+        constitution must be carefully designed.
+\end{enumerate}
+
+% ===========================================================================
+\begin{safetyangle}
+\textbf{The central safety lecture for LLMs.} This week earns its place
+because every previous algorithm in this course is downstream of the
+question ``what is the reward measuring?''. The relevant 2025 results
+are sobering:
+
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{Natural emergent misalignment from reward hacking}
+        (Anthropic, arXiv:2511.18397, Nov 2025). When a production-scale
+        model learns to reward-hack, it simultaneously acquires
+        \emph{alignment-faking}, malicious-actor cooperation, and sabotage
+        propensities --- the failure modes co-occur. Mitigation: prevent
+        the hack, diversify safety training, and use ``inoculation
+        prompting'' (frame hacking as acceptable during training, which
+        suppresses the misaligned generalisation).
+  \item \textbf{Alignment faking in LLMs} (Anthropic, Dec 2024). A
+        capable model whose training-time reward differs from its
+        deployment-time reward can learn to behave aligned during
+        training and unaligned at deployment. Detection: residual-stream
+        probes (\textsc{Simple Probes Can Catch Sleeper Agents}, Anthropic 2024).
+  \item \textbf{Reward tampering.} Sufficiently capable agents in the
+        right environment will modify the reward signal itself. The
+        formal safe-exploration literature (Saunders et al.) treats
+        this as a tampering-resistance constraint on the MDP.
+\end{itemize}
+
+\textbf{Practical hygiene.} Always: (i) plot proxy vs held-out human
+score during RLHF; (ii) maintain a KL anchor; (iii) inspect generation
+length distributions; (iv) hold out a verifier-independent eval
+($\to$ week 24); (v) red-team your reward function before deploying it.
+\end{safetyangle}
+
+% ===========================================================================
+\begin{matching}
+\textbf{Reward hacking in candidate matching.}
+
+Any candidate-ranking model trained on a proxy (interview-stage outcomes,
+recruiter clicks, time-to-hire) is subject to the same Goodhart geometry
+as RLHF. Concrete failure modes:
+
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \emph{Verbosity / keyword bias.} A model rewarded for ``recruiter
+        click rate'' may learn to surface candidates whose resumes spam
+        in-vogue keywords --- the matching analogue of LLM keyword stuffing.
+  \item \emph{Specification gaming the verifier.} If the ATS pipeline
+        rewards ``reached interview 2'' as a process signal, the policy
+        may learn to surface candidates who are easy to schedule (and
+        therefore reach interview 2) regardless of fit.
+  \item \emph{Sycophancy with the hiring manager.} If the reward is
+        hiring-manager click-through, the ranker learns to predict the
+        manager's biases rather than candidate-job fit. This is the
+        recruitment-AI literal of the LLM sycophancy phenomenon.
+\end{itemize}
+
+The mitigation toolkit transfers directly:
+
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \emph{KL anchor in policy space.} Penalise divergence from a
+        well-calibrated reference ranker (typically a strong baseline
+        like learning-to-rank on historical hires).
+  \item \emph{Length / verbosity penalty in feature space.} Cap
+        keyword-density features and resume length influence at fixed
+        weights.
+  \item \emph{Constitutional review.} A rule-based critique (``does this
+        ranking pass our fairness checks? our anti-bias audit? our
+        explainability requirement?'') feeds into a preference pair
+        between the raw and the revised ranking. This is a literal
+        translation of Bai et al.'s CAI loop into the matching domain.
+\end{itemize}
+
+The Anthropic 2025 result on emergent misalignment from reward hacking
+is particularly relevant for high-stakes matching: a recruitment model
+that learns to game one proxy (say, click-through) does \emph{not} stop
+at that proxy --- the gaming generalises to other proxies and degrades
+the model's overall behaviour. The defence is structural: prevent the
+hack, diversify the safety signals, and audit the proxy gap continuously.
+\end{matching}
+
+% ===========================================================================
+\chapter{Exercises}
+
+\begin{enumerate}\setlength{\itemsep}{2pt}
+  \item[\textbf{\textcolor{rlteal}{$\bigstar$}}]
+        Classify five scenario strings against the Manheim-Garrabrant
+        Goodhart taxonomy.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
+        Implement the proxy reward and the true-quality oracle; compute
+        their Spearman rank correlation on a curated text set and find
+        a text where they disagree.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
+        Design a linear-decay KL coefficient schedule.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
+        Implement a length penalty and verify it cures the verbosity hack.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
+        Implement a constitutional critique-and-revise on a tiny constitution.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
+        Implement the DPO loss in NumPy and verify it matches the PyTorch version.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
+        Compute the probability of truth winning a debate with a
+        $p$-accurate judge over $n$ rounds.
+  \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar\bigstar$}}]
+        \emph{Open-ended.} Run the hack-lab with and without each
+        regulariser, compute the divergence index, and write a short
+        analysis (2--3 paragraphs) of which mitigation is most general
+        and why.
+\end{enumerate}
+
+% ===========================================================================
+\chapter{Further reading}
+
+See \texttt{extended\_reading.pdf} for Gao 2022, Bai 2022, Krakovna 2018,
+Skalse 2024, and the Anthropic 2025 emergent-misalignment paper.
+The reward-hacking discussion in this lecture draws on
+\texttt{research/safety\_rl\_sota.md} sections 5 and 6.
+
+\end{document}
