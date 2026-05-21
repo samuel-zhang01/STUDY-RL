@@ -5,6 +5,10 @@ import sys
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..")))
 
+# Evict any sibling-week `project` module so we get the one for this week.
+for _m in [k for k in list(sys.modules) if k == "project" or k.startswith("project.")]:
+    del sys.modules[_m]
+
 import numpy as np
 from project.train import train
 from project.env import make_env

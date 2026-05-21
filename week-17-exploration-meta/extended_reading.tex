@@ -1,0 +1,70 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{Week 17 --- Extended Reading: Exploration and Meta-RL}
+\author{STUDY-RL}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Burda et al.\ (2018) --- RND}
+\textsc{Y.\ Burda, H.\ Edwards, A.\ Storkey, O.\ Klimov.} \emph{Exploration by Random Network Distillation.} ICLR 2019, arXiv:1810.12894.
+
+\noindent\textbf{Summary.} Intrinsic reward = predictor-to-fixed-random-target MSE. Simple, scalable. Reaches the first room and beyond on Montezuma's Revenge with PPO.
+
+\noindent\textbf{Why it matters.} The current default exploration bonus in deep RL practice. The ``random target'' design avoids the noisy-TV trap of ICM by construction.
+
+\begin{quote}
+``Because the target network is fixed, the prediction error reduces to zero only as the predictor learns the random function on visited states; novelty therefore decays with visit count even on stochastic observations.''
+\end{quote}
+
+\section{Pathak et al.\ (2017) --- ICM}
+\textsc{D.\ Pathak, P.\ Agrawal, A.\ Efros, T.\ Darrell.} \emph{Curiosity-Driven Exploration by Self-Supervised Prediction.} ICML 2017, arXiv:1705.05363.
+
+\noindent\textbf{Summary.} Intrinsic reward = forward-dynamics error in an inverse-dynamics-learned feature space. Strong on no-reward Atari and on procedurally generated environments.
+
+\noindent\textbf{Why it matters.} Establishes the ``learn what is controllable, get curious about what is unpredictable in the controllable manifold'' principle. Direct precursor of RND.
+
+\begin{quote}
+``The inverse model encodes only action-relevant features; the forward model's prediction error in this space is high only when the agent encounters novel transitions it could in principle influence.''
+\end{quote}
+
+\section{Badia et al.\ (2020) --- Agent57}
+\textsc{A.\ Badia et al.} \emph{Agent57: Outperforming the Atari Human Benchmark.} ICML 2020.
+
+\noindent\textbf{Summary.} Combines NGU's episodic-plus-lifetime curiosity with a meta-controller that adaptively weights intrinsic vs extrinsic reward and short vs long horizons. First agent above human on all 57 Atari games.
+
+\noindent\textbf{Why it matters.} Demonstrates that no single exploration bonus suffices across a wide task suite; meta-selection of bonuses is necessary.
+
+\begin{quote}
+``Different games require qualitatively different exploration regimes; the meta-controller exposes this directly as an adaptive bandit over reward weights.''
+\end{quote}
+
+\section{Finn et al.\ (2017) --- MAML}
+\textsc{C.\ Finn, P.\ Abbeel, S.\ Levine.} \emph{Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks.} ICML 2017, arXiv:1703.03400.
+
+\noindent\textbf{Summary.} Find an initialisation $\theta$ such that one (or a few) gradient steps on any task in the meta-distribution gives a high-performing task-specific model. Implemented as a bilevel optimisation through PyTorch's higher-order autograd.
+
+\noindent\textbf{Why it matters.} The first ``learn a learning algorithm'' result that scales to deep networks across a wide range of domains.
+
+\begin{quote}
+``The key idea is to find model parameters that are sensitive to changes in the task, such that small changes in the parameters produce large improvements on the loss function of any task drawn from the task distribution.''
+\end{quote}
+
+\section{Laskin et al.\ (2022) --- Algorithm Distillation}
+\textsc{M.\ Laskin et al.} \emph{In-Context Reinforcement Learning with Algorithm Distillation.} arXiv:2210.14215.
+
+\noindent\textbf{Summary.} Train a causal transformer on histories of an RL agent's learning curve (across many tasks). At test time roll the transformer on a new task: it exhibits a similar learning curve with \emph{no} gradient updates.
+
+\noindent\textbf{Why it matters.} Re-frames meta-RL as sequence modelling; positions transformers as universal learners. Direct path to DPT and the broader ``foundation-model policies'' programme.
+
+\begin{quote}
+``Algorithm Distillation treats RL learning as a sequence prediction problem: the model is taught to imitate the entire learning trajectory, not just the final policy.''
+\end{quote}
+
+\vfill
+\noindent\emph{Sourced from} \texttt{research/exploration\_meta\_sota.md} (parts I, sections 2-5; part II, sections 13, 17).
+
+\end{document}

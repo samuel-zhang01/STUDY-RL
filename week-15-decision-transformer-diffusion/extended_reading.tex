@@ -1,0 +1,70 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{Week 15 --- Extended Reading: DT, Trajectory Transformer, Diffusion Policies}
+\author{STUDY-RL}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Chen et al.\ (2021) --- Decision Transformer}
+\textsc{L.\ Chen, K.\ Lu, A.\ Rajeswaran, K.\ Lee, A.\ Grover, M.\ Laskin, P.\ Abbeel, A.\ Srinivas, I.\ Mordatch.}
+\emph{Decision Transformer: Reinforcement Learning via Sequence Modeling.} NeurIPS 2021, arXiv:2106.01345.
+
+\noindent\textbf{Summary.} Casts offline RL as conditional sequence modelling. A GPT-style transformer is trained to predict next actions given a window of $(R, s, a)$ tokens. At test time the user supplies a target return; the model autoregresses. Matches or beats CQL on D4RL with no Bellman backup.
+
+\noindent\textbf{Why it matters.} Removed the assumption that ``RL needs TD''. Cleared the path for transformer-scale offline policies (Q-Transformer, RT-2, Gato).
+
+\begin{quote}
+``Despite its simplicity, Decision Transformer achieves state-of-the-art performance on Atari, OpenAI Gym, and Key-to-Door tasks.''
+\end{quote}
+\emph{Commentary.} The simplicity is the point. There is no value bootstrap, no out-of-support sampling, no policy KL constraint --- just supervised learning with a clever conditioning signal.
+
+\section{Janner et al.\ (2021) --- Trajectory Transformer}
+\textsc{M.\ Janner, Q.\ Li, S.\ Levine.} \emph{Offline RL as One Big Sequence Modeling Problem.} NeurIPS 2021, arXiv:2106.02039.
+
+\noindent\textbf{Summary.} Discretises state, action, reward to a single token vocabulary and applies beam search over multi-step continuations. Plans by generation: the model proposes many trajectories, returns are accumulated, the best continuation is selected.
+
+\noindent\textbf{Why it matters.} Bridge between DT (no planning) and MuZero (search-over-learned-dynamics). TT is in practice slower than DT but more robust on long-horizon tasks.
+
+\begin{quote}
+``We find that beam search over the full trajectory distribution yields qualitatively different behaviour from token-by-token argmax decoding.''
+\end{quote}
+\emph{Commentary.} A pre-figuring of the now-standard ``inference-time compute'' lesson: planning at inference can substitute for value learning.
+
+\section{Janner et al.\ (2022) --- Diffuser}
+\textsc{M.\ Janner, Y.\ Du, J.\ Tenenbaum, S.\ Levine.} \emph{Planning with Diffusion for Flexible Behavior Synthesis.} ICML 2022, arXiv:2205.09991.
+
+\noindent\textbf{Summary.} Train a diffusion model over $(s, a)$ trajectories with classifier-free guidance. At test time, samples are guided by a value function (or any differentiable cost). Generates entire plans in one denoising pass; supports flexible conditioning.
+
+\noindent\textbf{Why it matters.} First paper to show diffusion can be a competitive planning method. Pre-cursor to DIAMOND world models (week 16).
+
+\begin{quote}
+``Diffusion provides a natural mechanism for sample-then-rerank planning: we can sample many trajectories cheaply and re-rank by any downstream objective.''
+\end{quote}
+
+\section{Chi et al.\ (2023) --- Diffusion Policy}
+\textsc{C.\ Chi, S.\ Feng, Y.\ Du, Z.\ Xu, E.\ Cousineau, B.\ Burchfiel, S.\ Song.} \emph{Diffusion Policy: Visuomotor Policy Learning via Action Diffusion.} RSS 2023, arXiv:2303.04137.
+
+\noindent\textbf{Summary.} A conditional denoising diffusion model over short action chunks, conditioned on a window of image observations. Decisively outperforms BC-RNN and BC-Transformer on contact-rich manipulation tasks. Effectively the new standard for visuomotor BC.
+
+\noindent\textbf{Why it matters.} Demonstrates that for \emph{multi-modal} action distributions (which appear in nearly all real-world demonstration datasets), Gaussian or categorical heads fail and diffusion succeeds.
+
+\begin{quote}
+``Diffusion Policy gracefully handles multi-modal action distributions and is robust to temporal aliasing.''
+\end{quote}
+\emph{Commentary.} The multi-modality observation is the deep one: human demonstrations contain different conventions for the same task, and a unimodal head averages them into a non-functional policy.
+
+\section{Hansen-Estruch et al.\ (2023) --- IDQL}
+\textsc{P.\ Hansen-Estruch, I.\ Kostrikov, M.\ Janner, J.\ Grudzien, S.\ Levine.} \emph{IDQL: Implicit Q-Learning as an Actor-Critic Method with Diffusion Policies.} arXiv:2304.10573.
+
+\noindent\textbf{Summary.} Train an IQL value model and use it to weight or re-rank samples from a diffusion behaviour clone. Achieves SOTA on D4RL with a small training-time cost.
+
+\noindent\textbf{Why it matters.} Cleanly separates ``what is plausible under the data'' (diffusion BC) from ``what is good'' (IQL value). The same factorisation now underlies most production offline pipelines.
+
+\vfill
+\noindent\emph{Sourced from} \texttt{research/offline\_modelbased\_sota.md} (sections A.8--A.13).
+
+\end{document}

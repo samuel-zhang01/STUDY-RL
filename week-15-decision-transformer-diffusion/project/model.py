@@ -17,7 +17,7 @@ import torch.nn.functional as F
 
 class DecisionTransformer(nn.Module):
     def __init__(self, state_dim: int = 25, n_actions: int = 4,
-                 max_timesteps: int = 64, context_len: int = 8,
+                 max_timesteps: int = 256, context_len: int = 8,
                  hidden: int = 64, n_heads: int = 2, n_layers: int = 1,
                  dropout: float = 0.05) -> None:
         super().__init__()

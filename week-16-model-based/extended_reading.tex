@@ -1,0 +1,73 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{Week 16 --- Extended Reading: Model-Based RL}
+\author{STUDY-RL}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Chua et al.\ (2018) --- PETS}
+\textsc{K.\ Chua, R.\ Calandra, R.\ McAllister, S.\ Levine.} \emph{Deep Reinforcement Learning in a Handful of Trials using Probabilistic Dynamics Models.} NeurIPS 2018, arXiv:1805.12114.
+
+\noindent\textbf{Summary.} An ensemble of Gaussian dynamics models predicts $p(s_{t+1} \mid s_t, a_t)$; planning is by trajectory sampling under cross-entropy method (CEM). Matches SAC on several MuJoCo tasks with $\approx$ 5--10x fewer environment steps.
+
+\noindent\textbf{Why it matters.} The clean MBRL baseline. Demonstrates that *uncertainty-aware* dynamics are necessary --- a single deterministic model is exploited by the planner.
+
+\begin{quote}
+``Probabilistic ensembles capture both epistemic and aleatoric uncertainty, and the planner naturally avoids regions where the models disagree.''
+\end{quote}
+
+\section{Janner et al.\ (2019) --- MBPO}
+\textsc{M.\ Janner, J.\ Fu, M.\ Zhang, S.\ Levine.} \emph{When to Trust Your Model: Model-Based Policy Optimization.} NeurIPS 2019, arXiv:1906.08253.
+
+\noindent\textbf{Summary.} Short-horizon ($H = 1$ to $25$) branched rollouts from a learned model are concatenated with real data to train SAC. Theoretical bound relates model error and rollout length.
+
+\noindent\textbf{Why it matters.} Shows that *short* model rollouts are the sweet spot: enough to amplify sample efficiency, short enough that error doesn't compound catastrophically.
+
+\begin{quote}
+``We theoretically and empirically show that even a learned model with non-negligible
+prediction error can be used to improve a model-free policy by branching from real states
+and rolling out only a few model steps.''
+\end{quote}
+
+\section{Hafner et al.\ (2023) --- Dreamer V3}
+\textsc{D.\ Hafner, J.\ Pasukonis, J.\ Ba, T.\ Lillicrap.} \emph{Mastering Diverse Domains through World Models.} arXiv:2301.04104, 2023.
+
+\noindent\textbf{Summary.} Single Dreamer agent with fixed hyperparameters solves Atari, Crafter, DMControl, Minecraft. Key tricks: symlog transformations on rewards/values, two-hot encoded value head, KL balancing, and discount weighting.
+
+\noindent\textbf{Why it matters.} Demonstrates that latent world models scale, with stable training across very different domains -- no per-task hyperparameter tuning.
+
+\begin{quote}
+``The same agent solves over 150 tasks across continuous control, Atari, and Minecraft with a single set of hyperparameters.''
+\end{quote}
+
+\section{Schrittwieser et al.\ (2020) --- MuZero}
+\textsc{J.\ Schrittwieser et al.} \emph{Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model.} Nature 588, 604--609 (2020).
+
+\noindent\textbf{Summary.} MCTS over a *value-equivalent* learned latent model: no reconstruction, only value and policy targets. Matches AlphaZero on board games and AlphaGo on Atari without access to a simulator.
+
+\noindent\textbf{Why it matters.} Shows that for downstream control purposes, the model only needs to be predictive of value -- not visually faithful. A philosophical pivot for MBRL.
+
+\begin{quote}
+``The model is trained end-to-end with the sole goal of accurately predicting quantities directly relevant to planning -- the reward, the action policy, and the value function.''
+\end{quote}
+
+\section{Alonso et al.\ (2024) --- DIAMOND}
+\textsc{E.\ Alonso, A.\ Jelley, V.\ Micheli, A.\ Kanervisto, A.\ Storkey, T.\ Pearce, F.\ Fleuret.}
+\emph{Diffusion for World Modeling: Visual Details Matter in Atari.} NeurIPS 2024 Spotlight, arXiv:2405.12399.
+
+\noindent\textbf{Summary.} A diffusion model is the world model. Conditioned on a small action+history encoder, it produces highly faithful next-frame predictions. Policy is trained from rollouts of denoised frames; achieves strong Atari sample-efficiency at high visual fidelity.
+
+\noindent\textbf{Why it matters.} Heralds the era of generative world models as a first-class policy training substrate.
+
+\begin{quote}
+``Visual detail in the world model matters: the policy can lock onto features that a low-fidelity model averages away.''
+\end{quote}
+
+\vfill
+\noindent\emph{Sourced from} \texttt{research/offline\_modelbased\_sota.md} (Track B, sections B.1--B.7).
+
+\end{document}
