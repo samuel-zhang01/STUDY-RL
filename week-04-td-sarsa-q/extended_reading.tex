@@ -1,0 +1,140 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{Extended reading --- Week 4: TD, SARSA, Q-learning, Expected SARSA}
+\author{STUDY-RL}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section*{Reading list}
+
+The papers below are the original sources for the algorithms derived in
+\texttt{notes.pdf}. For each: full citation, a one-paragraph summary, one annotated key
+passage, and the curriculum thread it tightens.
+
+\subsection*{1. Sutton 1988 --- ``Learning to Predict by the Methods of Temporal Differences''}
+
+\textbf{Citation.} Richard~S.\ Sutton, \emph{Machine Learning} 3:9--44, 1988.
+
+\paragraph{Summary.} The paper that defined TD methods and proved (informally) their
+convergence under linear function approximation. Sutton frames TD as the natural
+compromise between supervised-learning regression on Monte Carlo returns and the
+dynamic-programming backup. He introduces the $\lambda$-return geometric mixture and
+shows TD($\lambda$) is strictly more sample-efficient than MC on a 5-state random walk.
+
+\paragraph{Why it matters for this week.} Every TD algorithm we will see for the next 20
+weeks is a descendant of equation~(2) of this paper.
+
+\begin{quote}\itshape
+``Temporal-difference methods are a class of incremental learning procedures specialized
+for prediction problems. Whereas conventional prediction-learning methods are driven by
+the error between predicted and actual outcomes, TD methods are similarly driven by the
+error or difference between temporally successive predictions; with them, learning occurs
+whenever there is a change in prediction over time.''
+\end{quote}
+\textbf{Commentary.} Note Sutton's emphasis on \emph{change in prediction} as the learning
+signal. That framing makes TD natural for online deployment: you do not need ``ground
+truth,'' you only need a stream of predictions you trust to drift toward correctness.
+Production systems often have exactly this structure --- noisy partial outcomes and a
+stable online estimator.
+
+\subsection*{2. Watkins \& Dayan 1992 --- ``Q-learning''}
+
+\textbf{Citation.} Christopher~J.~C.~H.\ Watkins and Peter Dayan, \emph{Machine Learning}
+8:279--292, 1992.
+
+\paragraph{Summary.} Defines Q-learning and gives the first convergence proof for
+off-policy control with a model-free agent. The argument constructs an action-value
+process driven by a contraction in $\ell_\infty$ and verifies stochastic-approximation
+conditions; the behaviour policy can be \emph{anything} that visits each $(s,a)$
+infinitely often.
+
+\paragraph{Why it matters for this week.} The clearest justification for why we can learn
+the optimal policy by following a noisy exploratory policy. Foundation for everything in
+Weeks 5--6 (DQN family).
+
+\begin{quote}\itshape
+``Q-learning works by directly approximating the action-value function $Q^\star$ ---
+without ever requiring the agent to learn a model of the world or to evaluate alternative
+policies.''
+\end{quote}
+\textbf{Commentary.} The structural separation between behaviour (what generates data) and
+target (what we evaluate) is the central abstraction. The deadly triad of Week~5
+(off-policy + bootstrapping + function approximation) is born from extending this
+separation into the function-approximation regime where the convergence proof breaks.
+
+\subsection*{3. van Hasselt 2010 --- ``Double Q-learning''}
+
+\textbf{Citation.} Hado van Hasselt, \emph{NIPS} 2010.
+
+\paragraph{Summary.} Identifies and analyses Q-learning's maximisation bias and proposes
+maintaining two independently updated Q-estimators. Theorem~1 shows that
+$\mathbb{E}[\max_a \hat Q(s,a)] \ge \max_a \mathbb{E}[\hat Q(s,a)]$ strictly when there is
+noise across actions; the gap is upper bounded by the standard deviation of the noise.
+Empirically demonstrates the fix on a roulette MDP.
+
+\paragraph{Why it matters for this week.} Makes the maximisation bias precise. Double-DQN
+in Week~6 is the function-approximation analogue.
+
+\begin{quote}\itshape
+``We have shown that the well-known Q-learning algorithm uses the $\max$ operator to
+estimate the value of the maximum expected action value, leading to over-estimations of
+the action values. Double Q-learning, which we introduce in this paper, uses two estimates
+and decouples the selection from the evaluation, which results in an unbiased value
+estimator.''
+\end{quote}
+\textbf{Commentary.} The decoupling principle (argmax from one estimator, value from
+another) reappears in target networks (DQN), twin critics (TD3), and in ensemble
+disagreement bonuses for exploration. Master it now.
+
+\subsection*{4. van Seijen, van Hasselt, Whiteson, Wiering 2009 --- ``A Theoretical and Empirical Analysis of Expected Sarsa''}
+
+\textbf{Citation.} Harm van Seijen, Hado van Hasselt, Shimon Whiteson, Marco Wiering,
+\emph{IEEE ADPRL} 2009.
+
+\paragraph{Summary.} Defines Expected SARSA, proves it has strictly lower variance than
+SARSA (same expectation, integrate out next-action noise), and reports faster convergence
+on cliff-walking-style tasks. Also discusses on- and off-policy variants: when the
+expectation is taken under the behaviour policy you get on-policy ES; when taken under a
+target policy you get a different off-policy estimator that subsumes Q-learning (target =
+greedy) as a special case.
+
+\paragraph{Why it matters for this week.} The cleanest example of a free-lunch variance
+reduction in TD control; the algorithm also unifies SARSA and Q-learning under a single
+objective.
+
+\begin{quote}\itshape
+``Expected Sarsa has the same convergence properties as Sarsa, but reduces the variance
+in the updates and as a result performs better in practice. We argue that this variance
+reduction is the main reason for the improved performance, and not a difference in bias.''
+\end{quote}
+\textbf{Commentary.} A nice example of Rao--Blackwellisation in RL: replace a sampled
+estimator by its conditional expectation under a known distribution; never lose bias,
+always reduce variance. Used implicitly in Expected-SARSA, in soft-Q targets, in GRPO's
+group-mean baseline, and in many other algorithms we will see later.
+
+\subsection*{5. Sutton \& Barto 2018 --- \emph{Reinforcement Learning: An Introduction}, Chapter 6}
+
+\textbf{Citation.} Richard S.\ Sutton and Andrew G.\ Barto, MIT Press, 2nd edition, 2018.
+
+\paragraph{Summary.} The textbook chapter that introduces TD prediction and control. The
+cliff-walking example (Example 6.6) and the maximisation-bias example (Example 6.7) are
+taken directly from here.
+
+\paragraph{Why it matters for this week.} The standard reference; we re-derive its proofs
+but use its problems verbatim.
+
+\begin{quote}\itshape
+``TD methods learn a guess from a guess --- they bootstrap.''
+\end{quote}
+\textbf{Commentary.} Three words that contain the whole of Weeks 4--10: ``learn a guess
+from a guess'' is the entire game. The cost is the deadly triad of Week~5; the benefit is
+online incremental learning that scales to billions of frames in Week~6.
+
+\bigskip
+\textit{Sourced from:} \texttt{research/deeprl\_core\_sota.md} \S1 (DQN family lineage),
+and the canonical Sutton \& Barto textbook for the foundational material.
+
+\end{document}
