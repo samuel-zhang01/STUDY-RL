@@ -1,0 +1,201 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{\textbf{Week 20 --- Extended reading}\\\large Critic-free RL, RLVR, and process reward models}
+\author{STUDY-RL}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{How to use this list}
+Five core papers, ranked roughly by how often the rest of the field cites
+them. Each entry includes a one-paragraph summary, a \emph{why this matters
+for week 20}, and an annotated key passage with two to three sentences of
+commentary. Sourced from \texttt{research/llm\_rl\_sota.md} (sections 3--5)
+and \texttt{research/safety\_rl\_sota.md} (section 5).
+
+% ===========================================================================
+\section{Shao et al. --- DeepSeekMath / GRPO}
+
+\textbf{Citation.} Shao, Z., Wang, P., Zhu, Q., Xu, R., Song, J., Bi, X.,
+\dots, Wu, Y. (2024). \emph{DeepSeekMath: Pushing the Limits of Mathematical
+Reasoning in Open Language Models}. arXiv:2402.03300.
+
+\textbf{Summary.} The DeepSeekMath paper introduces Group Relative Policy
+Optimisation (GRPO). It samples $G$ completions per prompt, scores each with
+a reward, and forms the advantage by group-mean subtraction and
+group-standard-deviation division. The advantage is broadcast to every
+token of the completion and plugged into a PPO-style clipped surrogate
+with a KL-to-reference penalty --- crucially \emph{without} a value head.
+On the 7B DeepSeekMath-Base, GRPO with rule rewards reaches a 51.7\%
+top-1 on MATH, beating prior open-weights baselines and matching some
+closed models.
+
+\textbf{Why it matters for this week.} GRPO is now the dominant critic-free
+algorithm for LLM RL --- every major 2025 reasoning-RL recipe (DeepSeek-R1,
+Kimi K1.5, Open-Reasoner-Zero, DAPO) builds on its loss formulation. The
+paper is also the cleanest derivation of the
+group-baseline-as-control-variate idea applied to language models.
+
+\begin{quotation}
+\itshape ``The reason we choose to use such an objective function is that
+the value function used in PPO is typically another model of comparable
+size as the policy model, which brings substantial memory and computational
+burden\ldots GRPO, instead, estimates the baseline from group scores,
+significantly reducing training resources.''
+\end{quotation}
+This is the central thesis: the critic was paying twice --- once in
+memory, once in fragility of the on-policy value fit --- and the group
+mean is a strictly better baseline for end-of-sequence rewards because it
+is unbiased by construction and uses no learned parameters.
+
+% ===========================================================================
+\section{Ahmadian et al. --- RLOO}
+
+\textbf{Citation.} Ahmadian, A., Cremer, C., Gallé, M., Fadaee, M., Kreutzer,
+J., Pietquin, O., \dots, Üstün, A. (2024). \emph{Back to Basics: Revisiting
+REINFORCE Style Optimization for Learning from Human Feedback in LLMs}.
+arXiv:2402.14740.
+
+\textbf{Summary.} The paper argues that PPO is overkill for RLHF: token-level
+advantages are unnecessary when the only reward signal is at the end of the
+sequence, and the value head adds compute without adding signal. Their
+proposal is REINFORCE-Leave-One-Out: sample $k$ completions per prompt,
+use the average of the other $k - 1$ as the baseline for each, treat the
+whole completion as a single action, and take a sequence-level policy
+gradient step. On a 6.9B model, RLOO outperforms a heavily tuned PPO at
+$3\times$ the throughput and $70\%$ less GPU RAM.
+
+\textbf{Why it matters for this week.} RLOO is the conceptually cleanest
+critic-free algorithm and the foundation on which GRPO sits. It is also
+the reference point for variance-reduction analysis in lectures, because
+its unbiasedness is exactly the LOO independence argument
+(Theorem~\ref{thm:rloo-unbiased} in \texttt{notes.tex}).
+
+\begin{quotation}
+\itshape ``Treating PPO's clipping and advantage estimation as
+\emph{required} features\ldots papers over the fact that, in the RLHF setting,
+the variance of the simple REINFORCE estimator with a leave-one-out
+baseline is small enough that the additional complexity of GAE,
+value-network fitting, and per-token credit assignment is not warranted.''
+\end{quotation}
+The passage is also a methodological lesson: it is easy in deep RL to
+inherit machinery from prior work without checking whether the
+assumptions it was solving for still apply. The PPO clip and GAE are
+brilliant in continuous-control settings with dense reward and long
+horizons; for terminal-reward, single-action LLM RL they are largely
+ornamental.
+
+% ===========================================================================
+\section{Liu et al. --- Dr.GRPO}
+
+\textbf{Citation.} Liu, Z., Chen, C., Li, W., Qi, P., Pang, T., Du, C.,
+Lee, W. S., Lin, M. (2025). \emph{Understanding R1-Zero-Like Training:
+A Critical Perspective}. arXiv:2503.20783.
+
+\textbf{Summary.} A careful audit of the original GRPO loss isolates two
+biases: the $1/|y|$ token average penalises long correct chains-of-thought
+relative to short accidental ones (the ``length bias''), and the
+$1/(\sigma_r + \varepsilon)$ amplifies gradients on prompts whose group
+has small intra-variance (the ``difficulty bias''). The Dr.~GRPO fix is to
+sum rather than average over tokens, and to drop the standard-deviation
+divisor. The patched loss closes the length-vs-quality decoupling that
+many RLVR runs were silently exploiting.
+
+\textbf{Why it matters for this week.} Dr.~GRPO is the example par excellence
+of a debugging insight that a reader who only sees the algorithm via its
+formula will miss. The two changes are tiny --- a denominator and a sum ---
+but they shift the implicit regulariser of the loss in ways visible only
+when you plot completion-length distributions over training.
+
+\begin{quotation}
+\itshape ``The standard GRPO objective implicitly defines a non-uniform
+weighting over tokens and groups that bears no relation to the reward
+landscape; correcting it is a one-line change and uniformly improves
+both accuracy and chain-of-thought length stability.''
+\end{quotation}
+The deeper moral: an unbiased estimator at the \emph{population} level can
+still be biased at the \emph{loss surface} level if the per-example
+normaliser depends on quantities that correlate with the target. This
+echoes the classical statistical lesson on weighting under heteroskedastic
+noise.
+
+% ===========================================================================
+\section{DeepSeek-AI --- DeepSeek-R1}
+
+\textbf{Citation.} DeepSeek-AI (2025). \emph{DeepSeek-R1: Incentivizing
+Reasoning Capability in LLMs via Reinforcement Learning}. arXiv:2501.12948.
+
+\textbf{Summary.} R1 is the production-scale instantiation of GRPO~+~RLVR.
+The R1-Zero variant trains from a base (non-SFT) model purely on
+rule-rewarded math, code, and logic tasks, with no preference data and no
+demonstrations. Despite the cold start, the model develops a long
+chain-of-thought style spontaneously --- the paper documents ``aha
+moments'' where the model verifies its own derivations mid-stream. R1
+proper adds a brief cold-start SFT, then multiple rounds of RL, beating
+GPT-4-level baselines on AIME and MATH while remaining open-weights.
+
+\textbf{Why it matters for this week.} R1 is the empirical demonstration
+that the GRPO + verifiable-reward recipe scales. It also empirically
+contradicts the conventional wisdom that one cannot do useful RL from a
+base model: with a strong base, the rule reward alone provides enough
+signal for emergent CoT.
+
+\begin{quotation}
+\itshape ``DeepSeek-R1-Zero showcases capabilities such as self-verification,
+reflection, and generating long CoTs\ldots without any supervised data,
+indicating that reasoning capability can emerge purely through RL,
+provided the reward is verifiable.''
+\end{quotation}
+This is a strong claim. It rests on the base model already having latent
+reasoning circuits that RL surfaces, rather than RL creating them from
+scratch --- consistent with the weak-to-strong narrative in week~21.
+The R1 verifier is a regex on the boxed final answer plus a code
+sandbox: a strikingly minimal interface for such a strong result.
+
+% ===========================================================================
+\section{Lightman et al. --- PRM800K}
+
+\textbf{Citation.} Lightman, H., Kosaraju, V., Burda, Y., Edwards, H., Baker,
+B., Lee, T., Leike, J., Schulman, J., Sutskever, I., Cobbe, K. (2023).
+\emph{Let's Verify Step by Step}. arXiv:2305.20050.
+
+\textbf{Summary.} The paper releases PRM800K --- 800,000 human step-labels
+on MATH problem solutions --- and trains a process reward model that
+scores every intermediate step. At best-of-N inference, the PRM
+re-ranker pushes a 6B base solver from $52\%$ to $78\%$ on MATH at
+$N = 1860$, comfortably above the same model's ORM counterpart. The paper
+also studies which step features the human labellers attended to, and
+provides an early discussion of \emph{distributional shift}: PRMs trained
+on human-written derivations transfer to model-written derivations only
+when the model's CoT distribution is close to the labelled corpus.
+
+\textbf{Why it matters for this week.} PRM800K is the canonical PRM
+dataset and the empirical anchor for the PRM-vs-ORM debate in
+section~6 of \texttt{notes.tex}. It also pre-figures the auto-labelling
+race that produced Math-Shepherd and OmegaPRM by quietly noting that 800K
+human step labels cost a small fortune.
+
+\begin{quotation}
+\itshape ``Process supervision provides a more precise reward signal than
+outcome supervision and reduces the model's reliance on lucky end-state
+matches. The benefit grows with the complexity of the reasoning chain
+and the proportion of solutions in the training set that contain
+partially correct work.''
+\end{quotation}
+The last clause is the crux: PRM advantage scales with the share of
+``almost right'' chains. If your model is right or comprehensively wrong,
+ORMs suffice. If most of its mistakes are last-step arithmetic on
+otherwise correct derivations, a PRM is a much sharper teaching signal.
+
+% ===========================================================================
+\section*{Sourced from}
+
+\begin{itemize}
+  \item \texttt{research/llm\_rl\_sota.md} sections 3 (critic-free PG), 4 (RLVR), 5 (PRMs).
+  \item \texttt{research/safety\_rl\_sota.md} section 5 (reward-hacking failure modes feeding into week 21).
+\end{itemize}
+
+\end{document}
