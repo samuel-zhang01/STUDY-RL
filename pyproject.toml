@@ -1,6 +1,6 @@
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["common", "week-01-mdps", "week-02-bellman-dp", "week-03-mc-td"]
+testpaths = ["common", "week-01-mdps-bandits", "week-02-bellman-dp", "week-03-monte-carlo"]
 addopts = "-ra --strict-markers"
 markers = [
   "slow: training runs that take > 30s",
