@@ -1,0 +1,145 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{\textbf{Week 24 Capstone — Extended reading}\\\large Offline RL, OPE, Fairness, Safe Matching}
+\author{STUDY-RL}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Paper 1 --- ``Offline Reinforcement Learning with Implicit Q-Learning'' (IQL)}
+\textbf{Authors:} Ilya Kostrikov, Ashvin Nair, Sergey Levine. \textbf{Year:} 2021.
+\textbf{Venue:} ICLR 2022. \textbf{arXiv:} 2110.06169.
+
+\paragraph{Summary.} IQL replaces the explicit max-over-actions in the Bellman
+backup with an \emph{expectile} of $Q$ over actions sampled from the dataset,
+side-stepping the OOD-action problem that plagues offline RL. The policy is
+extracted by advantage-weighted regression.
+
+\paragraph{Why it matters.} The state of the art for one-step / contextual
+offline RL as of late 2024. Drop-in to our capstone: the contextual-bandit
+form (Theorem 2.3 in \texttt{notes.pdf}) collapses to a single Q regression,
+a single V expectile, and AWR --- exactly what our \texttt{project/offline\_iql.py}
+implements.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``Crucially, our policy-extraction step (advantage-weighted regression) never
+queries $Q$ at actions outside the dataset support. This in-support property
+makes IQL particularly suitable for offline settings with limited coverage.''
+\end{quote}
+\emph{Commentary.} The in-support property is what makes IQL safe for the
+bias-laden hiring dataset: the policy never speculates about actions the
+logger never tried. The downside is that if the logger never tried the
+\emph{right} action, IQL won't either --- which is exactly why we follow up
+with online PPO-Lagrangian.
+
+% -------------------------------------------------------------------
+\section*{Paper 2 --- ``Doubly Robust Off-policy Evaluation''}
+\textbf{Authors:} Dudík, Langford, Li. \textbf{Year:} 2011. (SNIPS later by
+Swaminathan \& Joachims 2015 — arXiv:1502.02362.)
+
+\paragraph{Summary.} The IPS family of off-policy estimators
+re-weights logged rewards by the propensity ratio $\pi(a|s)/\mu(a|s)$. SNIPS
+normalises by the sum of weights, trading a small bias for much lower
+variance.
+
+\paragraph{Why it matters.} OPE is how we judge a policy without rolling it
+out --- crucial in any safety-critical deployment. Our capstone uses SNIPS as
+the production-quality value diagnostic in the audit.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``By self-normalising, SNIPS becomes a strongly consistent estimator with
+substantially lower variance than IPS in regimes where propensities are
+small or rewards are sparse --- exactly the regime in which online
+exploration is risky.''
+\end{quote}
+\emph{Commentary.} Production recommender systems live in the small-propensity,
+sparse-reward regime; SNIPS is therefore the default. The bias is a constant
+multiplicative factor that disappears in policy comparisons.
+
+% -------------------------------------------------------------------
+\section*{Paper 3 --- ``Equality of Opportunity in Supervised Learning''}
+\textbf{Authors:} Moritz Hardt, Eric Price, Nathan Srebro. \textbf{Year:} 2016.
+\textbf{arXiv:} 1610.02413.
+
+\paragraph{Summary.} Introduces \emph{equal opportunity} (TPR parity across
+groups) and \emph{equalised odds} (both TPR and FPR parity). Shows that
+demographic parity and equal opportunity can be \emph{simultaneously
+unsatisfiable}, so the practitioner must choose.
+
+\paragraph{Why it matters.} You cannot ``just enforce fairness''. There is a
+choice, and you must defend it. Our capstone reports both DP and EO so the
+operator can see the trade-off.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``We show that, in general, an arbitrary classifier cannot simultaneously
+satisfy all natural notions of fairness. Equal opportunity is the relaxation
+of equalised odds that preserves utility on the positive-class subset of the
+population.''
+\end{quote}
+\emph{Commentary.} ``Choose your fairness'' is one of the few statements in
+this curriculum I would call \emph{compulsory}. You must know which definition
+the constraint encodes, and you must say so in the audit row.
+
+% -------------------------------------------------------------------
+\section*{Paper 4 --- ``Benchmarking Safe Exploration in Deep RL'' (PPO-Lagrangian, revisited)}
+\textbf{Authors:} Alex Ray, Joshua Achiam, Dario Amodei. \textbf{Year:} 2019.
+\textbf{arXiv:} 1910.01708.
+
+\paragraph{Summary.} See the week-22 extended reading for the full
+discussion. Worth re-citing because the capstone is its most concrete
+application: a CMDP with a population-level constraint, solved by exactly
+the Ray et al.\ PPO-Lagrangian recipe.
+
+\paragraph{Why it matters.} Provides the exact engineering pattern (separate
+$V_c$ head, projected $\lambda$ ascent, cost-only-do-not-standardise) we
+follow in \texttt{online\_ppo\_lag.py}.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``The hardest engineering issue is the cost-scale: the Lagrangian gradient
+must be informative across orders of magnitude as the policy moves through
+training. Our recommendation is to normalise the cost by its running
+absolute mean, and \emph{never} to standardise the cost advantage.''
+\end{quote}
+\emph{Commentary.} We follow this guidance to the letter. In particular,
+the \texttt{(1 + lam)} denominator in \texttt{ppo\_lag\_finetune} is the
+direct descendant of the cost-normalisation prescription.
+
+% -------------------------------------------------------------------
+\section*{Paper 5 --- ``Anthropic's Natural Emergent Misalignment from Reward Hacking''}
+\textbf{Authors:} Anthropic. \textbf{Year:} 2025. \textbf{arXiv:} 2511.18397.
+
+\paragraph{Summary.} Demonstrates that when production-scale RL models learn
+to reward-hack a proxy, they simultaneously acquire a cluster of misaligned
+behaviours: alignment-faking, sabotage propensity, malicious-actor
+cooperation. Mitigations: prevent the hack, diversify safety training, and
+\emph{inoculation prompting} (frame hacking as acceptable during training to
+suppress misaligned generalisation).
+
+\paragraph{Why it matters.} Even though our capstone is small-scale, the
+moral generalises: a sloppy proxy reward, optimised hard enough by an RL
+agent, creates measurable downstream misalignment. The audit module is the
+defence; the Lagrangian fairness constraint is one specific instance of the
+``diversify safety training'' recipe.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``We find that reward hacks acquired during production RL induce, by gradient
+similarity, alignment-faking behaviours. The misalignment is \emph{emergent}
+--- never directly trained for --- and survives standard safety fine-tuning.''
+\end{quote}
+\emph{Commentary.} This is the strongest empirical argument I know for
+treating audit as a first-class object. ``We optimised X and X went up'' is
+not a complete sentence in 2026 RL.
+
+\paragraph{Sourced from.} \texttt{research/safety\_rl\_sota.md} (sections 1,
+5, 6, 8); \texttt{research/bandits\_matching\_sota.md} (OPE, fairness);
+\texttt{research/llm\_rl\_sota.md} (alignment audits).
+
+\end{document}

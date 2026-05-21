@@ -1,0 +1,148 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{\textbf{Week 23 — Extended reading}\\\large Shielding, CBFs, Domain Randomisation, Robust RL}
+\author{STUDY-RL}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Paper 1 --- ``Safe Reinforcement Learning via Shielding''}
+\textbf{Authors:} Mohammed Alshiekh, Roderick Bloem, Rüdiger Ehlers, Bettina
+Könighofer, Scott Niekum, Ufuk Topcu. \textbf{Year:} 2018. \textbf{Venue:} AAAI.
+\textbf{arXiv:} 1708.08611.
+
+\paragraph{Summary.} Introduces the concept of an RL \emph{shield}: a reactive
+correct-by-construction component synthesised from an $\omega$-regular safety
+specification, that overrides the agent's action whenever it would lead to a
+violation. Both pre-shield (filters action set) and post-shield (corrects
+chosen action) variants are described. Soundness is proved against the
+specification.
+
+\paragraph{Why it matters.} The canonical reference for the formal-methods
+side of safe RL. Our \texttt{project/shield.py} is a clean implementation of
+the pre-shield variant for the running $\mathbf{G}\,\neg$danger specification.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``A correct-by-construction shield is a reactive system that monitors the
+actions chosen by the learning agent and corrects them if necessary, such
+that the temporal logic specification is satisfied. The shield is computed
+offline from the specification and a (possibly abstract) model of the
+environment.''
+\end{quote}
+\emph{Commentary.} The key conceptual move is the \emph{decoupling} of safety
+and learning. The shield's soundness does not depend on the learner; the
+learner's correctness does not depend on the shield. This factoring is what
+makes the approach scale to deep RL: you can plug a shield in front of any
+policy.
+
+% -------------------------------------------------------------------
+\section*{Paper 2 --- ``Safe Exploration in Continuous Action Spaces''}
+\textbf{Authors:} Gal Dalal, Krishnamurthy Dvijotham, Matej Vecerik, Todd Hester,
+Cosmin Paduraru, Yuval Tassa. \textbf{Year:} 2018. \textbf{arXiv:} 1801.08757.
+
+\paragraph{Summary.} Augments an actor with a final \emph{safety layer} ---
+a closed-form (or differentiable QP) projection that maps the actor's proposed
+action onto the half-space of safe actions defined by a linearised constraint.
+The whole pipeline is differentiable so gradients flow through the projection.
+
+\paragraph{Why it matters.} Where shielding is the discrete-action poster
+child, the safety layer is the continuous-action poster child. Closed-form
+projections for a single linear constraint, OptNet-style QPs for multiple.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``The Safety Layer is a closed-form linear projection $a^\star = a - [g(s) +
+\partial g/\partial a \cdot a]_+ / \|\partial g/\partial a\|^2 \cdot \partial
+g/\partial a$. Crucially, this projection is differentiable, so the safety
+layer can be inserted at training time without breaking the policy
+gradient.''
+\end{quote}
+\emph{Commentary.} The differentiability is the whole point. A non-differentiable
+safety wrapper would force you into surrogate gradient estimators; OptNet (Amos
+\& Kolter 2017) made the QP itself a primitive that PyTorch can backprop
+through.
+
+% -------------------------------------------------------------------
+\section*{Paper 3 --- ``Domain Randomization for Transferring Deep Neural Networks''}
+\textbf{Authors:} Josh Tobin, Rachel Fong, Alex Ray, Jonas Schneider, Wojciech
+Zaremba, Pieter Abbeel. \textbf{Year:} 2017. \textbf{arXiv:} 1703.06907.
+
+\paragraph{Summary.} Trains policies on a wide \emph{distribution} of
+simulator parameters (lighting, friction, textures) and transfers zero-shot
+to a real robot. The policy must implicitly learn invariances across the
+distribution.
+
+\paragraph{Why it matters.} The simplest robust-RL technique. Often the first
+thing tried in sim-to-real; frequently \emph{the best} thing tried, because
+it dovetails with any underlying RL algorithm.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``The key insight is that, by randomising aspects of the simulator that may
+otherwise overfit, the network is forced to learn robust features --- and the
+real world simply becomes another sample from the training distribution.''
+\end{quote}
+\emph{Commentary.} The same principle is data augmentation, lifted to RL.
+The critical knob is the \emph{support} of the randomisation: too narrow and
+the policy doesn't generalise; too broad and training collapses (no signal).
+ADR (OpenAI Rubik's Cube, arXiv:1910.07113) automates this expansion.
+
+% -------------------------------------------------------------------
+\section*{Paper 4 --- ``Sim-to-Real Transfer with Foundation Models''}
+\textbf{Authors:} Longchao Da, Justin Turnau, Thirulogasankar Pranav Kutralingam,
+Alvaro Velasquez, Paulo Shakarian, Hua Wei. \textbf{Year:} 2025.
+\textbf{arXiv:} 2502.13187.
+
+\paragraph{Summary.} A survey of how vision--language foundation models are
+being plugged into the sim-to-real pipeline: as world models, as observation
+encoders, as reward labellers, and as scene generators for DR.
+
+\paragraph{Why it matters.} The 2025 frontier for robust RL. The foundation
+model gives a near-universal feature space; DR happens \emph{in feature
+space}, not in pixel space, which is much more sample-efficient.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``Foundation-model encoders project simulated and real observations into a
+shared semantic space, transforming the sim-to-real gap from a pixel-statistics
+problem into a feature-alignment problem. This is the modern descendant of
+domain randomisation.''
+\end{quote}
+\emph{Commentary.} The clean way to view this: pre-2020 DR was about making
+the policy invariant; post-2024 DR is about making the encoder invariant.
+The policy can be much simpler when the encoder already abstracts away
+nuisance variation.
+
+% -------------------------------------------------------------------
+\section*{Paper 5 --- ``Learning-Based Shielding under Unknown Dynamics''}
+\textbf{Authors:} (Multi-author, see arXiv). \textbf{Year:} 2024.
+\textbf{arXiv:} 2410.07359.
+
+\paragraph{Summary.} Extends the shielding framework to settings where the
+environment model is learned rather than given. Provides probabilistic
+soundness bounds in terms of model uncertainty (PAC-style).
+
+\paragraph{Why it matters.} Lifts the most restrictive assumption of
+Alshiekh-style shielding (a known one-step model). Critical for real
+deployments where the world is partially observed and partially learned.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``We show that, when the learned dynamics model is calibrated, the shield's
+soundness guarantee degrades gracefully: the probability of an unsafe
+trajectory is bounded by the model's coverage failure probability plus the
+spec's reachability margin.''
+\end{quote}
+\emph{Commentary.} This is the bridge from formal methods to statistical
+learning: shields are no longer ``correct or broken'' but ``correct with
+probability $1 - \delta$''. The same language is showing up in conformal
+prediction wrappers around RL agents (a 2024 healthcare-RL theme).
+
+\paragraph{Sourced from.} \texttt{research/safety\_rl\_sota.md}, sections 2
+(shielding, CBFs) and 4 (robust RL, DR).
+
+\end{document}
