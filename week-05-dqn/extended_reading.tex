@@ -2,14 +2,146 @@
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week 05: Deep Q-Networks}
+\title{Extended reading --- Week 5: Function Approximation and DQN}
+\author{STUDY-RL}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
-\begin{itemize}
-  \item TODO
-\end{itemize}
+\section*{Reading list}
+
+\subsection*{1. Mnih et al.\ 2015 --- ``Human-level control through deep reinforcement learning''}
+
+\textbf{Citation.} Volodymyr Mnih, Koray Kavukcuoglu, David Silver, et al.,
+\emph{Nature} 518:529--533, 2015. arXiv:1312.5602 (2013) for the NeurIPS workshop
+precursor.
+
+\paragraph{Summary.} The paper that started Deep RL. Combines Q-learning with a deep
+convolutional network, experience replay, a periodically updated target network, and
+reward clipping. Achieves human-level performance on 29 of 49 Atari games using identical
+hyperparameters across all games --- a level of generality that had not been seen before
+in RL. The supplementary material contains the precise hyperparameters (RMSProp, 32 batch,
+$10^6$ replay, 10k target update, $\Disc = 0.99$, $\varepsilon: 1 \to 0.1$ over 1M frames).
+
+\paragraph{Why it matters for this week.} The reference implementation we copy. Our
+mini-project differs only in the use of Polyak target updates and Adam over RMSProp ---
+both modern improvements.
+
+\begin{quote}\itshape
+``We addressed [instabilities in deep Q-learning] with a novel variant of Q-learning,
+which uses two key ideas. First, we used a biologically inspired mechanism termed
+experience replay [\ldots]. Second, we used an iterative update that adjusts the action
+values $(Q)$ towards target values that are only periodically updated, thereby reducing
+correlations with the target.''
+\end{quote}
+\textbf{Commentary.} The paper presents replay and target as ``two ideas'' but they are
+two responses to one problem: the violation of i.i.d.\ Markov-chain Monte Carlo
+assumptions that the function-approximation convergence theory presumed. Read with the
+deadly-triad lens, the entire 2013--2015 DQN line is a series of patches to make
+off-policy deep RL not diverge in practice.
+
+\subsection*{2. Sutton \& Barto 2018 --- Chapter 11, ``Off-policy Methods with Approximation''}
+
+\textbf{Citation.} Richard S.\ Sutton and Andrew G.\ Barto, MIT Press, 2nd ed.\ 2018,
+Chapter 11.
+
+\paragraph{Summary.} The cleanest available statement of the deadly triad, with worked
+examples (Baird's counterexample, the $\theta$-to-$2\theta$ example). Introduces
+gradient-TD (GTD, GTD2, TDC) as principled fixes that avoid the triad by minimising the
+projected Bellman error via a true gradient. Concludes with a sober assessment: deep RL
+has chosen the engineering-fix path (replay + targets) over the principled-fix path
+(gradient-TD); both work, neither is a guarantee.
+
+\paragraph{Why it matters for this week.} The right frame for the entire week. Memorise
+\S11.3 (the triad).
+
+\begin{quote}\itshape
+``The danger of the deadly triad has been recognized since the early days of TD learning
+with linear function approximation; despite considerable effort it remains a serious
+issue. The risk is divergence, that is, weights diverge to infinity, and value estimates
+become unbounded.''
+\end{quote}
+\textbf{Commentary.} This grounds the lecture in classical RL theory rather than letting
+DQN appear ex nihilo as a deep-learning invention. The triad is also the right
+generalisation: every week from 5 to 11 is, in some sense, a different patch on the same
+underlying disease.
+
+\subsection*{3. Baird 1995 --- ``Residual Algorithms''}
+
+\textbf{Citation.} Leemon Baird, \emph{ICML} 1995.
+
+\paragraph{Summary.} Constructs the seven-state counterexample now known as Baird's MDP
+and shows that semi-gradient off-policy linear TD diverges on it, while a true
+\emph{residual gradient} (full gradient of the squared Bellman error) is stable but
+biased. Proposes a residual-algorithm family that interpolates the two.
+
+\paragraph{Why it matters for this week.} The first principled identification of the
+deadly triad and the source of the canonical divergence demo (which our Exercise 7
+reproduces).
+
+\begin{quote}\itshape
+``The phenomena described here are not pathological --- they will arise in many practical
+problems --- but the algorithms presented in this paper are guaranteed to converge for
+any MRP with bounded rewards, providing a sound foundation for future work.''
+\end{quote}
+\textbf{Commentary.} A historical note: deep RL essentially ignored Baird's principled
+fix and instead engineered around the problem. The Schwarzer 2023 BBF paper revives
+something close to Baird's intuition (resets break the self-reinforcing divergence loop).
+
+\subsection*{4. van Hasselt et al.\ 2018 --- ``Deep Reinforcement Learning and the Deadly Triad''}
+
+\textbf{Citation.} Hado van Hasselt, Yotam Doron, Florian Strub, Matteo Hessel, Nicolas
+Sonnerat, Joseph Modayil, arXiv:1812.02648 (2018).
+
+\paragraph{Summary.} A careful experimental study of when the triad actually fires in
+deep RL. Finds that (i) bigger networks help, (ii) target networks are essential,
+(iii) prioritized replay can \emph{exacerbate} divergence on hard cases, (iv) double-Q
+helps. Argues divergence is the exception not the rule under modern deep RL practice.
+
+\paragraph{Why it matters for this week.} Calibrates intuition: the triad is a real
+danger, but mature DQN engineering makes it rare in benign tasks. The paper is also a
+nice study of how to design RL experiments that isolate one variable at a time.
+
+\begin{quote}\itshape
+``The deadly triad of function approximation, bootstrapping, and off-policy learning was
+identified as the source of instabilities in early reinforcement learning research. We
+investigate the prevalence of these instabilities in deep reinforcement learning
+algorithms by training a Q-learning agent, with several variations [\ldots]. We find
+that the triad is not always deadly, and that certain components --- in particular,
+target networks --- are crucial.''
+\end{quote}
+\textbf{Commentary.} The experimental design here is worth studying as a methodology:
+when you have an unstable algorithm with five knobs, the only way to learn anything is to
+sweep them one at a time, large grid, many seeds. Helpful preview for Week~7's PPO
+``37 implementation details'' paper, which is essentially the same exercise for on-policy
+PG.
+
+\subsection*{5. Farebrother, Machado \& Bowling 2018 --- ``Generalization and Regularization in DQN''}
+
+\textbf{Citation.} Jesse Farebrother, Marlos C.\ Machado, Michael Bowling, NeurIPS Deep
+RL workshop 2018, arXiv:1810.00123.
+
+\paragraph{Summary.} Shows that vanilla DQN overfits its training trajectory --- evaluate
+on shifted Atari mode/start states and performance collapses. Standard regularisation
+(dropout, weight decay, $\ell_2$) recovers most of the gap. Often cited as the start of
+the ``RL needs DL hygiene'' line of work that culminated in BBF and SimBa.
+
+\paragraph{Why it matters for this week.} The bridge from vanilla DQN (Week 5) to
+modern-arch DQN (BBF, SimBa, Week 6 and Week 10). Plasticity loss, dormant neurons, and
+capacity collapse all trace to this paper.
+
+\begin{quote}\itshape
+``The lack of generalization in deep RL is real and severe: standard agents trained on
+hundreds of millions of frames on a single game can fail catastrophically when tested in
+slightly different versions of the same game.''
+\end{quote}
+\textbf{Commentary.} A useful sobering counterweight to Mnih 2015's optimism. The right
+mental model: vanilla DQN is a tightly-overfit lookup table with neural smoothing;
+production-grade deep RL agents earn their generalisation through explicit regularisation
+(BBF resets, SimBa LayerNorm + residuals, distributional value heads).
+
+\bigskip
+\textit{Sourced from:} \texttt{research/deeprl\_core\_sota.md} \S1.1--1.2 (DQN family
+canon), and Sutton \& Barto Chapter 11 for the deadly-triad framing.
 
 \end{document}
