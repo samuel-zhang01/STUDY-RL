@@ -1,0 +1,97 @@
+\documentclass[11pt,oneside]{scrbook}
+\usepackage[a4paper,margin=2.4cm,marginparwidth=3.2cm,marginparsep=0.5cm]{geometry}
+\usepackage{../common/rlstudy}
+\usepackage{longtable}
+
+\title{{\color{rlblue}\textbf{STUDY-RL}}\\\Huge A 24-week self-paced curriculum in Deep Reinforcement Learning}
+\author{Foundations \textperiodcentered{} Deep RL \textperiodcentered{} LLM RL \\ Safety-critical RL \textperiodcentered{} Matching applications}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+
+This document is the master syllabus for \textsc{STUDY-RL}, a 24-week self-paced curriculum
+designed for a learner who is fluent in modern deep learning but new to reinforcement learning.
+It threads three goals through every week:
+\begin{enumerate}
+  \item \textbf{Strong applied mathematics} — every algorithm derived from first principles with intuition and code.
+  \item \textbf{State-of-the-art content} — modern best-practice as of mid-2026 (DPO/GRPO/RLVR, DreamerV3, EfficientZero v2, BBF, CrossQ, diffusion policies, LLM-as-agent\ldots).
+  \item \textbf{Two applied threads} — \emph{safety-critical RL} (one callout per lecture plus a dedicated 3-week track) and \emph{matching/ranking} (insurance lead matching and recruitment candidate matching, woven through bandits, OPE, fairness).
+\end{enumerate}
+
+Each week ships four artifacts: a Tufte-flavored PDF (\texttt{notes.pdf}), a Jupyter
+workbook with graded exercises (\texttt{workbook.ipynb}), curated extended reading
+(\texttt{extended\_reading.pdf}), and a mini-project with tests (\texttt{project/}, \texttt{tests/}).
+
+\chapter*{How to use this curriculum}
+\addcontentsline{toc}{chapter}{How to use}
+
+\begin{itemize}
+  \item About \textbf{10 hours per week}: 2--3 h reading the PDF, 3--4 h on the workbook, 3--4 h on the project.
+  \item Run the workbooks end-to-end before reading the solutions; hints unlock the exercises without spoilers.
+  \item Re-run \texttt{make tests} every weekend — green tests across all completed weeks is the only honest measure of progress.
+\end{itemize}
+
+\chapter{Curriculum overview}
+
+\section{Tracks}
+\begin{description}
+  \item[T1 — Foundations] (Weeks 1--4) Bandits, MDPs, Bellman equations, dynamic programming, Monte Carlo, TD/SARSA/Q-learning.
+  \item[T2 — Deep value-based] (Weeks 5--6) DQN, Double/Dueling/PER, distributional RL, Rainbow, BBF.
+  \item[T3 — Policy methods] (Weeks 7--10) REINFORCE, A2C, GAE, TRPO, PPO, SAC/TD3, CrossQ.
+  \item[T4 — Bandits \& matching (applied)] (Weeks 11--12) LinUCB/TS, OPE, CLTR, fairness, two-sided markets.
+  \item[T5 — Multi-agent RL] (Week 13) MADDPG, MAPPO, self-play, PSRO, AlphaZero case study.
+  \item[T6 — Offline RL] (Weeks 14--15) CQL, IQL, AWR, TD3+BC, Decision Transformer, diffusion policies.
+  \item[T7 — Model-based RL] (Week 16) Dreamer V3, MuZero/EfficientZero V2, TD-MPC2, DIAMOND.
+  \item[T8 — Exploration \& meta-RL] (Week 17) RND, ICM, BYOL-Explore, MAML/PEARL, in-context RL.
+  \item[T9 — LLM RL] (Weeks 18--21) RLHF/PPO, DPO/IPO/KTO/ORPO/SimPO, GRPO/RLOO/RLVR, PRMs and reasoning RL.
+  \item[T10 — Safety-critical RL] (Weeks 22--24) CMDPs, CPO, shielding, formal verification, scalable oversight, capstone.
+\end{description}
+
+\section{Week-by-week schedule}
+\begin{longtable}{@{}p{1.4cm}p{6.4cm}p{6.0cm}@{}}
+\toprule
+\textbf{Week} & \textbf{Topic} & \textbf{Mini-project} \\
+\midrule
+\endhead
+01 & MDPs, bandits, the RL framing & Multi-armed bandit testbed + UCB/TS \\
+02 & Bellman equations, dynamic programming & Value/policy iteration on GridWorld \\
+03 & Monte Carlo prediction \& control & Blackjack on-policy MC \\
+04 & TD, SARSA, Q-learning, Expected SARSA & CliffWalking + Taxi-v3 \\
+05 & Function approximation \& Deep Q-Networks & DQN on LunarLander \\
+06 & Rainbow DQN + modern tricks (BBF, NoisyNets) & Rainbow on Atari (1 game, 100k steps) \\
+07 & Policy gradients \& REINFORCE & REINFORCE + baselines on CartPole \\
+08 & A2C, GAE, natural PG, TRPO & A2C+GAE on LunarLander-Continuous \\
+09 & Proximal Policy Optimization (deep dive) & PPO on BipedalWalker + the 37 details checklist \\
+10 & SAC, TD3, CrossQ for continuous control & SAC on MuJoCo Hopper \\
+11 & Bandits + contextual bandits + OPE & Off-policy evaluation of a synthetic insurance lead--market matcher \\
+12 & RL for ranking / matching (counterfactual LTR, fairness, two-sided) & ATS-style candidate--job ranker with fairness audit \\
+13 & Multi-agent RL + AlphaZero case study & Tennis self-play + small AlphaZero on Connect-Four \\
+14 & Offline RL fundamentals (CQL, IQL, AWR, TD3+BC) & IQL on D4RL halfcheetah-medium-replay \\
+15 & Decision Transformer + diffusion policies & DT on D4RL hopper-medium + a diffusion-policy toy task \\
+16 & Model-based RL (Dreamer V3, MuZero, TD-MPC2) & DreamerV3-lite on DM-Control walker-walk \\
+17 & Exploration + meta-RL + in-context RL & RND + MAML toy + Decision-Pretrained Transformer \\
+18 & RLHF + PPO for LLMs (from scratch and via TRL) & Summarization PPO on a Pythia-160M with LoRA \\
+19 & DPO + IPO + KTO + ORPO + SimPO & DPO vs.\ KTO vs.\ SimPO bake-off on Qwen-0.5B + UltraFeedback \\
+20 & GRPO + RLOO + RLVR + process reward models & GRPO with verifiable rewards on GSM8K-style math \\
+21 & Reward hacking, length bias, KL control, scalable oversight & Reward-hack lab + Constitutional-AI mini-loop \\
+22 & Constrained MDPs, Lagrangian methods, PPO-Lagrangian, CPO & Safety-Gymnasium PointGoal1 with PPO-Lagrangian \\
+23 & Safe exploration, shielding, robust RL, formal methods & LTL-shielded gridworld + distributionally robust DQN \\
+24 & Capstone: safe candidate-matching policy & End-to-end: offline-pretrained $\to$ constrained online $\to$ audited \\
+\bottomrule
+\end{longtable}
+
+\section{Prerequisites}
+Fluent PyTorch, comfortable with probability, linear algebra, basic optimization theory.
+You do \emph{not} need prior RL experience.
+
+\chapter{Bibliography pointers}
+The per-week \texttt{extended\_reading.pdf} carries the focused paper list for that lecture.
+A consolidated bibliography is maintained at \texttt{research/}.
+
+\end{document}
