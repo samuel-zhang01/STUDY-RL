@@ -147,7 +147,7 @@ class MCTS:
         else:
             leaf_value = self._expand(node)
         # Backup: alternate sign because we flip perspectives between plies.
-        sign = -1.0
+        sign = 1.0  # leaf_value is already from the leaf player's perspective
         for n in reversed(path):
             n.visits += 1
             n.value_sum += sign * leaf_value
@@ -256,7 +256,7 @@ def evaluate_vs_random(
     n_sim: int = 20,
     seed: int = 0,
 ) -> Dict[str, float]:
-    """Play `n_games` against a uniform-random opponent (half as X, half as O)."""
+    """Play against random; `winrate` is the score rate (a draw counts as 0.5)."""
     rng = np.random.default_rng(seed)
     wins = draws = losses = 0
     mcts = MCTS(net, n_simulations=n_sim, seed=seed, dirichlet_eps=0.0)
@@ -270,9 +270,9 @@ def evaluate_vs_random(
                 # The player to move would see tv from their perspective.
                 # Was AZ's turn? Then AZ loses with prob -1 result, etc.
                 result_for_az = tv if az_turn else -tv
-                if result_for_az < 0:
+                if result_for_az > 0:
                     wins += 1
-                elif result_for_az > 0:
+                elif result_for_az < 0:
                     losses += 1
                 else:
                     draws += 1

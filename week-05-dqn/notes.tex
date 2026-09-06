@@ -15,6 +15,13 @@
 \chapter*{Learning objectives}
 \addcontentsline{toc}{chapter}{Learning objectives}
 
+
+% Teaching companion: a small example before the full lecture.
+\noindent\textbf{Study companion.} Read \texttt{teaching\_guide.md} in this
+folder for step-by-step examples, an analogy with its limits, and self-checks.
+Then use \texttt{workbook.ipynb} to implement and vary the calculations.
+\par\medskip
+
 \begin{keyidea}
 By the end of this lecture you will be able to:
 \begin{enumerate}
@@ -32,9 +39,9 @@ By the end of this lecture you will be able to:
 In Week~4 the Q-table $\Qfn \in \Real^{|\States|\times|\Actions|}$ enumerated every
 state-action pair. That is fine on a 4x12 CliffWalking grid (48 states) but catastrophic on
 LunarLander, whose observation space $\mathcal{S} \subset \Real^8$ is uncountable. We
-\emph{must} use function approximation.\marginnote{The argument here is identical to why
-supervised learning moved from kernel methods to neural nets when input dimension passed
-about ten.}
+\emph{must} use function approximation.\marginnote{Function approximation shares statistical strength across
+states. Continuous inputs alone do not require neural networks; feature-based
+linear methods and kernels are alternatives.}
 
 \begin{intuition}
 Replacing a table by a neural net $\Qfn_\theta$ feels innocuous --- it is just a smoother
@@ -68,21 +75,27 @@ rule and treating the target as a constant (this is the ``semi-gradient'' trick)
 Note the bold simplification: we treat $\Qfn_{\theta^-}(s',\argmax_{a'}\dots)$ as if it
 had no $\theta$-dependence, even though $\theta^- = \theta$. That is exactly what makes
 this a \emph{semi-gradient} (Sutton 1988); the true gradient of the objective would
-include a term $\nabla_\theta \Qfn_\theta(s',\cdot)$ that pulls in the wrong direction.
+include a derivative through the next-state target. It optimises a different
+objective; that extra term is not intrinsically a sign error.
 
 \begin{remark}
-With the true gradient (a method known as \emph{residual gradient}, Baird 1995) the
-algorithm is stable but slow; with the semi-gradient it is unstable but fast. DQN takes
-the latter and patches stability through other means.
+Residual-gradient methods (Baird 1995) differentiate a residual objective,
+while semi-gradient TD holds the target fixed. Convergence and speed depend
+on the objective, sampling, parameterisation, and step sizes. In particular,
+the mean squared sampled TD error differs from the squared expected Bellman
+residual. DQN uses stopped targets plus additional stabilisation mechanisms.
 \end{remark}
 
 \section{The deadly triad}
 
-\begin{theorem}[Sutton \& Barto 11.3, ``deadly triad'']
-Combining the three properties \textbf{(1)} function approximation, \textbf{(2)}
-bootstrapping, \textbf{(3)} off-policy data, generally yields divergence or unbounded
-parameter growth. Any two of the three are safe; all three together are not.
-\end{theorem}
+\begin{keyidea}
+The \textbf{deadly triad} combines function approximation, bootstrapping,
+and off-policy data. This combination admits divergent semi-gradient TD
+examples, even with linear approximation and zero rewards. It is a warning
+about the failure of a general convergence guarantee, not a theorem that
+all such methods diverge. Removing one ingredient does not make arbitrary
+nonlinear optimisation or arbitrary step sizes safe.
+\end{keyidea}
 
 \begin{example}[Baird 1995's counterexample]
 A 7-state MDP, linear function approximator, deterministic target policy that always
@@ -102,8 +115,9 @@ counterexample, three step sizes. All diverge; faster step size diverges faster.
 DQN works around the triad by (i) computing targets from a frozen copy of the network ---
 the \emph{target network} $\Qfn_{\theta^-}$ updated every $C$ steps (or with Polyak
 averaging $\theta^- \leftarrow (1-\tau)\theta^- + \tau\theta$); and (ii) sampling i.i.d.\
-batches from a \emph{replay buffer} $\mathcal{D}$, breaking the strong temporal
-correlation that drove the divergence.
+batches from a \emph{replay buffer} $\mathcal{D}$, reducing temporal
+correlation between consecutive updates. Off-policy divergence can also
+occur with independent samples, so decorrelation does not remove its cause.
 
 The DQN loss for a batch $\{(s_i, a_i, r_i, s'_i, d_i)\}_{i=1}^B$ is
 \begin{equation}
@@ -131,13 +145,14 @@ The gradient of the per-sample loss is, for the squared-error regime,
 By the chain rule, treating $y_i$ as a constant (semi-gradient).
 \end{proof}
 
-\paragraph{Polyak target update.} An equivalent and modernly preferred alternative to
+\paragraph{Polyak target update.} A commonly used alternative to
 hard target copies is a per-step Polyak average:
 \[
   \theta^- \leftarrow (1 - \tau) \theta^- + \tau \theta, \quad \tau \approx 5\times 10^{-3}.
 \]
 This is what SAC, TD3, BBF and our implementation use. Hard copies (every $C=10\,000$
-steps in the original DQN paper) are a special case in the limit.
+steps in the original DQN paper) are recovered by a time-varying $\tau$
+that is zero between copies and one on copy steps, not by a fixed-$\tau$ limit.
 
 \paragraph{Experience replay.} A circular buffer of size $|\mathcal{D}|$ (typically $10^5$
 to $10^6$) stores tuples $(s, a, r, s', d)$. Each gradient step samples a uniform random
@@ -149,8 +164,8 @@ size}.
 \section{Why these three tricks defang the triad}
 
 Function approximation we cannot give up (the whole point is to generalise). Bootstrapping
-we cannot give up (the whole point of TD is online learning). The triad attacks us through
-\emph{off-policy + correlated updates}. Replay turns the data into approximate i.i.d.\
+we cannot give up (the whole point of TD is online learning). Off-policy sampling can break the weighting assumptions behind linear
+TD stability even when consecutive samples are independent. Replay turns the data into approximate i.i.d.\
 samples from $\mathcal{D}$ (still off-policy, but uncorrelated), and the target network
 prevents the immediate self-reinforcement loop where a change in $\theta$ instantly
 changes the target the next step pulls toward. Neither trick \emph{eliminates} divergence;
@@ -218,10 +233,11 @@ $(r, s', d) = (-0.1, (\ldots), \text{False})$. Forward-pass: $\Qfn_\theta(s) = [
 
 \begin{pitfall}
 The single most common DQN bug is using \texttt{terminated} interchangeably with
-\texttt{truncated}. With $\Disc=0.99$ on a 1000-step truncation, omitting the
-\texttt{(1-d)} mask on truncations loses a few percent perf; mis-applying it on real
-terminals loses ten times more. Best practice: keep two booleans and only apply the
-``no bootstrap'' mask when the environment really ended.
+\texttt{truncated}. For an artificial time-limit truncation in a continuing task, retain the
+bootstrap from the final observation. For a true terminal transition, remove
+it. Keep both booleans: use either to end collection, but only true
+termination to zero the continuation value. A reset observation must not
+replace the final observation in the bootstrap.
 \end{pitfall}
 
 \chapter{Implementation walkthrough}

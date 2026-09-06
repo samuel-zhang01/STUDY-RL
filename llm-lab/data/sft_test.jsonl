@@ -1,0 +1,32 @@
+{"id": "add-07-17", "prompt": "Compute 7 + 17. Reply with just the integer.", "completion": "24", "operands": [7, 17]}
+{"id": "add-19-20", "prompt": "What is 20 plus 19? Answer with only the integer.", "completion": "39", "operands": [20, 19]}
+{"id": "add-05-17", "prompt": "Add 17 and 5. Return only the integer result.", "completion": "22", "operands": [17, 5]}
+{"id": "add-07-20", "prompt": "Compute 7 + 20. Reply with just the integer.", "completion": "27", "operands": [7, 20]}
+{"id": "add-11-24", "prompt": "What is 11 plus 24? Answer with only the integer.", "completion": "35", "operands": [11, 24]}
+{"id": "add-12-15", "prompt": "Add 15 and 12. Return only the integer result.", "completion": "27", "operands": [15, 12]}
+{"id": "add-19-21", "prompt": "Compute 21 + 19. Reply with just the integer.", "completion": "40", "operands": [21, 19]}
+{"id": "add-11-15", "prompt": "What is 11 plus 15? Answer with only the integer.", "completion": "26", "operands": [11, 15]}
+{"id": "add-06-16", "prompt": "Add 16 and 6. Return only the integer result.", "completion": "22", "operands": [16, 6]}
+{"id": "add-02-07", "prompt": "Compute 7 + 2. Reply with just the integer.", "completion": "9", "operands": [7, 2]}
+{"id": "add-20-23", "prompt": "What is 23 plus 20? Answer with only the integer.", "completion": "43", "operands": [23, 20]}
+{"id": "add-02-21", "prompt": "Add 2 and 21. Return only the integer result.", "completion": "23", "operands": [2, 21]}
+{"id": "add-04-12", "prompt": "Compute 4 + 12. Reply with just the integer.", "completion": "16", "operands": [4, 12]}
+{"id": "add-03-11", "prompt": "What is 3 plus 11? Answer with only the integer.", "completion": "14", "operands": [3, 11]}
+{"id": "add-10-11", "prompt": "Add 10 and 11. Return only the integer result.", "completion": "21", "operands": [10, 11]}
+{"id": "add-00-08", "prompt": "Compute 0 + 8. Reply with just the integer.", "completion": "8", "operands": [0, 8]}
+{"id": "add-10-15", "prompt": "What is 15 plus 10? Answer with only the integer.", "completion": "25", "operands": [15, 10]}
+{"id": "add-02-11", "prompt": "Add 11 and 2. Return only the integer result.", "completion": "13", "operands": [11, 2]}
+{"id": "add-00-14", "prompt": "Compute 14 + 0. Reply with just the integer.", "completion": "14", "operands": [14, 0]}
+{"id": "add-09-18", "prompt": "What is 9 plus 18? Answer with only the integer.", "completion": "27", "operands": [9, 18]}
+{"id": "add-09-16", "prompt": "Add 9 and 16. Return only the integer result.", "completion": "25", "operands": [9, 16]}
+{"id": "add-10-20", "prompt": "Compute 10 + 20. Reply with just the integer.", "completion": "30", "operands": [10, 20]}
+{"id": "add-13-22", "prompt": "What is 22 plus 13? Answer with only the integer.", "completion": "35", "operands": [22, 13]}
+{"id": "add-08-11", "prompt": "Add 8 and 11. Return only the integer result.", "completion": "19", "operands": [8, 11]}
+{"id": "add-02-09", "prompt": "Compute 2 + 9. Reply with just the integer.", "completion": "11", "operands": [2, 9]}
+{"id": "add-14-22", "prompt": "What is 14 plus 22? Answer with only the integer.", "completion": "36", "operands": [14, 22]}
+{"id": "add-16-22", "prompt": "Add 22 and 16. Return only the integer result.", "completion": "38", "operands": [22, 16]}
+{"id": "add-07-16", "prompt": "Compute 16 + 7. Reply with just the integer.", "completion": "23", "operands": [16, 7]}
+{"id": "add-13-21", "prompt": "What is 21 plus 13? Answer with only the integer.", "completion": "34", "operands": [21, 13]}
+{"id": "add-02-22", "prompt": "Add 22 and 2. Return only the integer result.", "completion": "24", "operands": [22, 2]}
+{"id": "add-04-07", "prompt": "Compute 7 + 4. Reply with just the integer.", "completion": "11", "operands": [7, 4]}
+{"id": "add-12-14", "prompt": "What is 12 plus 14? Answer with only the integer.", "completion": "26", "operands": [12, 14]}

@@ -55,9 +55,9 @@ class TicTacToe:
 
     @staticmethod
     def terminal_value(state: np.ndarray) -> Optional[float]:
-        """Returns +1 if the player who just moved (encoded as -1 in the
-        flipped state) won; -1 if the current player won (impossible by
-        construction); 0 if draw; None if the game is ongoing.
+        """Return -1 if the player who just moved (encoded as -1) won,
+        +1 if the current player has a winning line (unreachable in normal
+        play), 0 for a draw, or None while the game is ongoing.
 
         Convention: after apply_action() flips the board, the player who
         just moved sits at -1 in the new state. So:

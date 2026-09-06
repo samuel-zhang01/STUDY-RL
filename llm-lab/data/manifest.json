@@ -1,0 +1,29 @@
+{
+  "generator": "llm_lab.data.build_splits",
+  "seed": 42,
+  "provenance": "Synthetic integer addition, generated locally; no personal data.",
+  "split_unit": "unordered operand pair",
+  "files": {
+    "sft_train.jsonl": {
+      "rows": 192,
+      "sha256": "741d92102a33cfce39a8fe94e513de849e9da5bdafea21dc60d8f5f13083287f"
+    },
+    "preferences_train.jsonl": {
+      "rows": 192,
+      "sha256": "ace06870edc13cc4d682b54cf4da4951ef834849d924d2cced4b2815b0b0ceab"
+    },
+    "sft_validation.jsonl": {
+      "rows": 32,
+      "sha256": "fb0ec086b00195be675bde1b022320644aafcfd43208d595958070ce56ab2ff3"
+    },
+    "preferences_validation.jsonl": {
+      "rows": 32,
+      "sha256": "2f1718b230cdafea4dfbdf110d22d3a4b28ee0e689b6ee24854eac7099f93856"
+    },
+    "sft_test.jsonl": {
+      "rows": 32,
+      "sha256": "a5eb0e528601fef1236be118f717dc74520e84ea5b3695f76cc55e8203774164"
+    }
+  },
+  "limitation": "Held out from this lab's training only; pretrained-model exposure is unknown."
+}

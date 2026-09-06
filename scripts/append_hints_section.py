@@ -1,116 +1,126 @@
 #!/usr/bin/env python3
-"""Append a 'Hints toward answers' section to every week-*/workbook.ipynb.
+"""Consolidate exercise-specific inline hints without revealing reference code.
 
-For each exercise we detect by markdown heading, emit a stronger nudge:
-key equation to apply, expected output shape, sanity check, common pitfall,
-and a pointer to project/solutions.py for the worked answer.
-
-Idempotent — re-running won't duplicate the section. Run before papermill
-in the Phase-4 sweep so notebooks re-execute with the augmented hints.
+Existing generated sections are preserved unless --refresh is supplied. Refresh
+only replaces cells marked AUTO-HINTS-SECTION; learner cells are left in place.
+The generated section is excluded from extraction so it cannot copy itself.
 """
 from __future__ import annotations
+
+import argparse
+import html
 import json
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-
 HINTS_MARKER = "<!-- AUTO-HINTS-SECTION -->"
-
-# Generic per-exercise nudge — week-specific hints already live above each
-# scaffold cell; the consolidated bottom section gives a denser cheat-sheet.
-GENERIC_NUDGE = """
-- **Key relation:** look up the equation in the corresponding `notes.pdf` chapter \"Mathematical formulation\". The notebook prompt names the function — find that function in `project/solutions.py` and skim its docstring.
-- **Expected output shape:** scalar for losses / regret, `(n_steps,)` for training curves, `(nS,)` for value functions, `(nS, nA)` for Q-tables, dicts for hyperparameter sweeps.
-- **Sanity checks (in order, cheapest first):**
-  1. Run on the smallest fixture first (`n_steps=10`, `n_episodes=5`).
-  2. Compare against the random-policy baseline you already have.
-  3. Check finite values (no `nan` / `inf` after the first step).
-  4. Plot the learning curve — if it's flat, recheck the step direction (gradient sign).
-- **Common pitfalls for this exercise type:**
-  - Off-by-one in advantage estimation (GAE / TD): always test on a deterministic toy first.
-  - Forgetting `torch.no_grad()` around target-net targets — silent inflation of the loss.
-  - Updating the target / behavior policy with the same gradient — double counting.
-  - Using `.detach()` on the wrong tensor in DPO / PPO — kills the gradient.
-  - In off-policy / OPE: importance weights must use the behavior policy at the time the action was logged (not the current policy).
-- **Worked answer:** see the matching function in `project/solutions.py` — its body shows the canonical implementation; read it only after a serious attempt.
-"""
+EXERCISE_HEADING = re.compile(
+    r"^\s*#{1,4}\s*((?:Exercise|Ex|E|Question|Q|Task|Problem)\s*\d+[^\n]*"
+    r"|\d+\.\s+[A-Z][^\n]*)", re.IGNORECASE | re.MULTILINE,
+)
+HINT_START = re.compile(r"^\s*(?:>\s*)?(?:\*{1,2})?Hint\b|\(Hint\s*:", re.IGNORECASE)
 
 
-def already_has_hints(nb: dict) -> bool:
-    for cell in nb["cells"]:
-        src = "".join(cell.get("source", []))
-        if HINTS_MARKER in src:
-            return True
-    return False
+def source(cell: dict) -> str:
+    value = cell.get("source", "")
+    return value if isinstance(value, str) else "".join(value)
 
 
-def find_exercises(nb: dict) -> list[str]:
-    titles: list[str] = []
-    pat = re.compile(
-        r"^\s*#{1,4}\s*("
-        r"(?:Exercise|Ex|E|Question|Q|Task|Problem)\s*\d+[^\n]*"
-        r"|\d+\.\s+[A-Z][^\n]*"
-        r")",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    for cell in nb["cells"]:
-        if cell.get("cell_type") != "markdown":
-            continue
-        src = "".join(cell.get("source", []))
-        for m in pat.finditer(src):
-            title = m.group(1).strip().rstrip("—-:").strip()
-            if title not in titles:
-                titles.append(title)
-    return titles
+def find_exercises(nb: dict) -> list[tuple[str, str]]:
+    exercises = []
+    seen = set()
+    # A prompt and its hint often occupy different Markdown cells. Join their
+    # narrative text before locating exercise boundaries; never include the
+    # generated section or any executable cell in this extraction.
+    narrative = "\n\n".join(source(cell) for cell in nb["cells"]
+                             if cell.get("cell_type") == "markdown"
+                             and HINTS_MARKER not in source(cell))
+    for text in [narrative]:
+        headings = list(EXERCISE_HEADING.finditer(text))
+        for i, match in enumerate(headings):
+            title = match.group(1).strip().rstrip("—-:").strip()
+            if title in seen:
+                continue
+            seen.add(title)
+            stop = headings[i + 1].start() if i + 1 < len(headings) else len(text)
+            lines = text[match.end():stop].splitlines()
+            hints = []
+            collecting = False
+            for line in lines:
+                hint_start = HINT_START.search(line)
+                if hint_start:
+                    collecting = True
+                    line = line[hint_start.start():]
+                elif not line.strip() or line.lstrip().startswith(("#", "</details>")):
+                    collecting = False
+                if collecting:
+                    hints.append(line)
+            exercises.append((title, "\n".join(hints)))
+    return exercises
 
 
-def make_hints_cell(week_name: str, exercises: list[str]) -> dict:
+def make_hints_cell(exercises: list[tuple[str, str]]) -> dict:
     body = [
-        f"{HINTS_MARKER}\n",
-        "## Hints toward answers\n",
-        "\n",
-        "_A consolidated cheat-sheet — read only after you've attempted each exercise. "
-        "Stronger than the inline hints above the scaffolds, weaker than the full solution. "
-        f"Worked answers are in `project/solutions.py` in the same folder (`{week_name}`).\n_\n\n",
+        HINTS_MARKER + "\n",
+        "## Hints toward answers\n\n",
+        "Attempt the exercise first. Before opening a hint, write the quantity you are\n",
+        "estimating, the data source, and the expected update direction. The\n",
+        "[teaching guide](teaching_guide.md) supplies worked examples, assumptions,\n",
+        "and transfer questions. The hints below collect the exercise's own inline\n",
+        "hints; they do not reveal or execute reference solutions.\n\n",
     ]
+    for title, hint in exercises:
+        body.extend([
+            "<details>\n",
+            f"<summary>{html.escape(title)}</summary>\n\n",
+            (hint if hint else "No inline hint is supplied for this exercise. Use the corresponding derivation and code bridge in the teaching guide.") + "\n\n",
+            "</details>\n\n",
+        ])
     if not exercises:
-        body.append("> No exercise headings detected — open the notebook and add the relevant nudges manually.\n")
-    else:
-        for ex in exercises:
-            body.append(f"### {ex}\n")
-            body.append(GENERIC_NUDGE)
-            body.append("\n")
-    body.append("\n---\n_End of week. Mark this notebook in your tracker only after every exercise's hidden test cell passes._\n")
-    return {
-        "cell_type": "markdown",
-        "metadata": {"tags": ["hints-section"]},
-        "source": body,
-    }
+        body.append("No exercise headings were detected; use the teaching guide's self-checks.\n\n")
+    body.append(
+        "After solving, change one input or assumption and predict the result before\n"
+        "running it. If a cell calls `project.solutions`, passing it verifies the\n"
+        "reference demonstration; test your own implementation separately.\n"
+    )
+    return {"cell_type": "markdown", "id": "consolidated-hints", "metadata": {"tags": ["hints-section"]}, "source": body}
 
 
-def process(nb_path: Path) -> str:
+def process(nb_path: Path, refresh: bool = False) -> str:
     try:
         nb = json.loads(nb_path.read_text())
-    except Exception as e:
-        return f"SKIP (parse error: {e})"
-    if already_has_hints(nb):
-        return "skip (already present)"
+    except (ValueError, OSError) as error:
+        return f"SKIP (parse error: {error})"
+    indices = [i for i, cell in enumerate(nb["cells"]) if HINTS_MARKER in source(cell)]
+    if indices and not refresh:
+        return "skip (already present; use --refresh to regenerate)"
     exercises = find_exercises(nb)
-    cell = make_hints_cell(nb_path.parent.name, exercises)
-    nb["cells"].append(cell)
-    nb_path.write_text(json.dumps(nb, indent=1))
-    return f"appended ({len(exercises)} exercises detected)"
+    cell = make_hints_cell(exercises)
+    if indices:
+        old = nb["cells"][indices[0]]
+        cell["metadata"] = old.get("metadata", cell["metadata"])
+        cell["id"] = old.get("id", cell["id"])
+        nb["cells"][indices[0]] = cell
+        for i in reversed(indices[1:]):
+            del nb["cells"][i]
+    else:
+        nb["cells"].append(cell)
+    nb_path.write_text(json.dumps(nb, indent=1) + "\n")
+    return f"{'refreshed' if indices else 'appended'} ({len(exercises)} exercises)"
 
 
 def main() -> int:
-    weeks = sorted(ROOT.glob("week-*/workbook.ipynb"))
-    if not weeks:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--refresh", action="store_true", help="replace existing generated sections")
+    args = parser.parse_args()
+    notebooks = sorted(ROOT.glob("week-*/workbook.ipynb"))
+    if not notebooks:
         print("no workbooks found", file=sys.stderr)
         return 1
-    for nb in weeks:
-        print(f"{nb.parent.name}: {process(nb)}")
+    for notebook in notebooks:
+        print(f"{notebook.parent.name}: {process(notebook, refresh=args.refresh)}")
     return 0
 
 

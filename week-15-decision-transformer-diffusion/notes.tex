@@ -14,6 +14,13 @@
 
 \chapter*{Learning objectives}
 \addcontentsline{toc}{chapter}{Learning objectives}
+
+% Teaching companion: a small example before the full lecture.
+\noindent\textbf{Study companion.} Read \texttt{teaching\_guide.md} in this
+folder for step-by-step examples, an analogy with its limits, and self-checks.
+Then use \texttt{workbook.ipynb} to implement and vary the calculations.
+\par\medskip
+
 \begin{keyidea}
 After this week you will:
 \begin{enumerate}
@@ -67,16 +74,20 @@ Treat the trajectory as a sample from a joint distribution $p(R_0, s_0, a_0, \ld
 \]
 DT only fits the third term --- the action conditional. The reward dynamics and the transition $p(s_t \mid \ldots)$ are left to the environment at deployment time. This is the crucial design choice: \emph{we never model the world; we only model the data-generating distribution of actions}.
 
-\begin{theorem}[Conditional sufficiency of $R_t$]
-If the behaviour policy is a function only of the state $s_t$ and an exogenous ``intent'' variable $z \sim p(z)$ that determines the realised return $R_0$, then conditioning on $R_t$ recovers the optimal-given-intent action:
+\begin{remark}[What return conditioning does and does not establish]
+The law of total probability gives
 \[
-  p(a_t \mid s_t, R_t) = \E_{z \mid R_t, s_t}[\pi_\beta(a_t \mid s_t, z)].
+ p(a_t\mid s_t,R_t)=\sum_z p(a_t\mid s_t,R_t,z)p(z\mid s_t,R_t).
 \]
-\end{theorem}
-
-\begin{proof}[Sketch]
-$R_t$ is a sufficient statistic of $z$ under the assumed factorisation; marginalising over the posterior $p(z \mid R_t, s_t)$ gives the displayed equation. This is the formal version of ``conditioning on the desired outcome selects the right intent''.
-\end{proof}
+Replacing the first conditional by $\pi_\beta(a_t\mid s_t,z)$ additionally
+requires $a_t\perp R_t\mid(s_t,z)$, which does not generally hold because
+$R_t$ includes consequences of $a_t$ and environmental randomness.
+Even when this mixture identity holds, it describes historical behaviour;
+it does not prove that its actions achieve the requested return or are
+optimal. In stochastic environments, a high-return subset can select lucky
+outcomes. See Brandfonbrener et al.\ (2022), \emph{When does return-conditioned
+supervised learning work for offline reinforcement learning?}
+\end{remark}
 
 \section{Generation at deployment}
 
@@ -99,7 +110,7 @@ The DDPM forward process noises a sample $x_0 \sim q(x_0)$ along $T$ steps with
 with marginal $q(x_t \mid x_0) = \mathcal{N}(x_t; \sqrt{\bar\alpha_t}\, x_0, (1 - \bar\alpha_t) I)$ where $\bar\alpha_t = \prod_{k \le t}(1-\beta_k)$.
 
 \begin{theorem}[DDPM denoising loss]
-The reverse process $p_\theta(x_{t-1} \mid x_t)$ parametrised as Gaussian with mean predicted via a noise predictor $\varepsilon_\theta(x_t, t)$ has variational lower bound that simplifies, up to a constant, to
+The reverse process $p_\theta(x_{t-1} \mid x_t)$ parametrised as Gaussian with mean predicted via a noise predictor $\varepsilon_\theta(x_t, t)$ has a variational objective whose Gaussian KL terms are timestep-weighted noise-prediction errors. Dropping those weights gives the commonly used simplified training loss
 \[
   \mathcal{L}_{\mathrm{simple}}(\theta) = \E_{x_0, \varepsilon, t}\!\left[\bigl\|\varepsilon - \varepsilon_\theta(\sqrt{\bar\alpha_t}\, x_0 + \sqrt{1 - \bar\alpha_t}\, \varepsilon,\, t)\bigr\|_2^2\right].
 \]
@@ -124,7 +135,7 @@ Chebotar et al.\ 2023 quantise each action dimension into $K$ bins and treat the
   Sample a trajectory $\tau \sim \mathcal{D}$ and a window $[t, t+K-1]$\;
   Compute returns-to-go $R_{t}, \ldots, R_{t+K-1}$\;
   Build the interleaved sequence $X$\;
-  Forward $f_\theta(X)$, compute cross-entropy loss only at action positions\;
+  Forward $f_\theta(X)$, predict each action from its preceding state-token position and compute cross-entropy on valid timesteps\;
   Backprop, AdamW step\;
 }
 \end{algorithm}
@@ -133,7 +144,7 @@ Chebotar et al.\ 2023 quantise each action dimension into $K$ bins and treat the
 
 \section{Worked numerical example}
 
-A length-3 trajectory with rewards $(-1, -1, +10)$ has returns-to-go $(8, 9, 10)$. The DT sees $(8, s_0, a_0, 9, s_1, a_1, 10, s_2, a_2)$ and learns to predict $a_0$ given $(8, s_0)$, $a_1$ given $(8, s_0, a_0, 9, s_1)$, and $a_2$ given the full prefix. At test time the agent specifies target $R_0 = 10$, observes $r_0 = -1$, decrements the next target to $9$, and so on. A target of $20$ would be \emph{out of distribution}: the model can extrapolate the conditioning but the resulting actions are not guaranteed to be useful.
+A length-3 trajectory with rewards $(-1, -1, +10)$ has returns-to-go $(8, 9, 10)$. The DT sees $(8, s_0, a_0, 9, s_1, a_1, 10, s_2, a_2)$ and learns to predict $a_0$ given $(8, s_0)$, $a_1$ given $(8, s_0, a_0, 9, s_1)$, and $a_2$ given the full prefix. At test time the agent specifies target $R_0 = 10$, observes $r_0=-1$, updates the next target to $10-(-1)=11$, and so on. A target of $20$ would be \emph{out of distribution}: the model can extrapolate the conditioning but the resulting actions are not guaranteed to be useful.
 
 \chapter{Implementation walkthrough}
 

@@ -6,7 +6,7 @@ exhibit return-conditioned generation.
 
 Sequence layout per timestep: (R_t, s_t, a_t) ordered (R, s, a), so token
 stream is (R_0, s_0, a_0, R_1, s_1, a_1, ...). Causal mask is standard.
-The model predicts actions only at the *action* positions.
+The model predicts each action from the preceding *state* token position.
 """
 from __future__ import annotations
 import math
@@ -59,7 +59,7 @@ class DecisionTransformer(nn.Module):
         mask = torch.triu(torch.ones(L, L, device=tokens.device, dtype=torch.bool),
                           diagonal=1)
         h = self.transformer(tokens, mask=mask, is_causal=True)
-        # Pick action positions: indices 1, 4, 7, ... (every 3rd, offset 1 -> s positions
+        # Pick state positions: indices 1, 4, 7, ... (every 3rd, offset 1 -> s positions
         # are the predictor of next action). In DT, we predict action_t from the
         # token AT the state position (index 3t+1).
         h_s = h[:, 1::3, :]

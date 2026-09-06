@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Generate a `week-NN-slug/` folder with boilerplate notes.tex, workbook.ipynb,
+"""Generate a `week-NN-slug/` folder with boilerplate teaching_guide.md, notes.tex, workbook.ipynb,
 extended_reading.tex, project/, and tests/.
 
     python scripts/new_week.py 01 mdps "Markov Decision Processes"
 """
 from __future__ import annotations
+import copy
 import json
 import sys
 from pathlib import Path
@@ -33,7 +34,7 @@ By the end of this lecture you will be able to: \emph{(to be authored)}.
 
 %% ====================== SECTIONS BELOW (authored per week) ======================
 
-\chapter{Introduction}
+\chapter{Motivation \& intuition}
 TODO.
 
 \chapter{Mathematical formulation}
@@ -84,7 +85,8 @@ WORKBOOK_TEMPLATE = {
   {"cell_type": "markdown", "metadata": {}, "source": [
     "# Week %(n)s — %(title)s · Workbook\n",
     "\n",
-    "Each section ends with a graded **Exercise** with hints. Solutions live in the project module.\n"
+    "Start with the [teaching guide](teaching_guide.md) for intuition, derivations, and worked examples.\n",
+    "Each section ends with an **Exercise** with hints. Attempt it before opening the reference solutions in the project module.\n"
   ]},
   {"cell_type": "code", "metadata": {}, "source": [
     "import sys, os\n",
@@ -106,6 +108,52 @@ WORKBOOK_TEMPLATE = {
 }
 
 PROJECT_INIT = '"""Mini-project for week %(n)s — %(title)s."""\n'
+GUIDE_TEMPLATE = """# Week %(n)s — %(title)s: teaching guide
+
+Read [the course study guide](../STUDY_GUIDE.md) and [notation](../GLOSSARY.md).
+This is an authoring scaffold; complete and verify it before teaching from it.
+
+## Prerequisites and the question
+
+TODO: name earlier concepts and the new problem they cannot yet solve.
+
+## Analogy and its limits
+
+TODO: map each object to a mathematical concept and state where it stops fitting.
+
+## Derivation
+
+TODO: define symbols, timing, data distribution, objective, and assumptions;
+justify each important step; label approximations and proof sketches.
+
+## Worked example 1
+
+TODO: setup, prediction, intermediate calculations, final result, interpretation.
+
+## Worked example 2: change an assumption
+
+TODO: use an edge case or counterexample; calculate and verify the result.
+
+## From equations to code
+
+TODO: link real functions in project/ and state the implementation's limits.
+
+## Self-checks
+
+TODO: ask one retrieval, one calculation, and one transfer question.
+
+<details>
+<summary>Reveal answers after attempting the questions</summary>
+
+TODO: explain the answers, including why tempting alternatives fail.
+
+</details>
+
+## Sources and arithmetic validation
+
+TODO: cite primary sources and record the numerical checks actually run.
+"""
+
 TEST_TEMPLATE = """import importlib
 
 
@@ -123,9 +171,14 @@ def main(n: str, slug: str, title: str) -> int:
     (folder / "tests").mkdir()
     ctx = {"n": n, "slug": slug, "title": title}
     (folder / "notes.tex").write_text(NOTES_TEMPLATE % ctx)
+    (folder / "teaching_guide.md").write_text(GUIDE_TEMPLATE % ctx)
     (folder / "extended_reading.tex").write_text(EXTENDED_TEMPLATE % ctx)
-    nb = json.dumps(WORKBOOK_TEMPLATE, indent=1)
-    (folder / "workbook.ipynb").write_text(nb.replace("%(n)s", n).replace("%(title)s", title))
+    nb = copy.deepcopy(WORKBOOK_TEMPLATE)
+    for i, cell in enumerate(nb["cells"]):
+        cell["id"] = f"week-{n}-cell-{i}"
+        cell["source"] = [line.replace("%(n)s", n).replace("%(title)s", title)
+                          for line in cell["source"]]
+    (folder / "workbook.ipynb").write_text(json.dumps(nb, indent=1) + "\n")
     (folder / "project" / "__init__.py").write_text(PROJECT_INIT % ctx)
     (folder / "tests" / "__init__.py").write_text("")
     (folder / "tests" / f"test_smoke.py").write_text(TEST_TEMPLATE % ctx)

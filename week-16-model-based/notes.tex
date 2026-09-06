@@ -14,6 +14,13 @@
 
 \chapter*{Learning objectives}
 \addcontentsline{toc}{chapter}{Learning objectives}
+
+% Teaching companion: a small example before the full lecture.
+\noindent\textbf{Study companion.} Read \texttt{teaching\_guide.md} in this
+folder for step-by-step examples, an analogy with its limits, and self-checks.
+Then use \texttt{workbook.ipynb} to implement and vary the calculations.
+\par\medskip
+
 \begin{keyidea}
 After this week you will:
 \begin{enumerate}
@@ -56,22 +63,26 @@ where $c_t \in \{0, 1\}$ is the continue flag.
 \section{Dreamer world-model ELBO}
 
 \begin{theorem}[Dreamer world-model objective]
-Let $\tau = (o_{1:T}, a_{1:T-1}, r_{1:T-1}, c_{1:T-1})$. The negative ELBO is
+Index reward and continuation by arrival: action $a_{t-1}$ leads to $(o_t,r_t,c_t)$. For $\tau=(o_{1:T},a_{0:T-1},r_{1:T},c_{1:T})$, conditioning on the actions, the negative ELBO at $\beta=1$ is
 \[
-  -\mathcal{L}(\theta, \phi) = \sum_{t=1}^{T} \E_{q_\phi}\bigl[
+\begin{aligned}
+  -\mathcal{L}(\theta, \phi)
+  ={}& \sum_{t=1}^{T} \E_{q_\phi}\bigl[
     \underbrace{-\log p_\theta(o_t \mid h_t, s_t)}_{\text{reconstruction}}
-    -\log p_\theta(r_t) -\log p_\theta(c_t)\bigr]
-  + \beta \sum_{t=1}^{T} \E_{q_\phi}\bigl[\KL(q_\phi(s_t \mid h_t, o_t) \,\|\, p_\theta(s_t \mid h_t))\bigr].
+    -\log p_\theta(r_t\mid h_t,s_t)\\
+    &\hspace{4.5cm} -\log p_\theta(c_t\mid h_t,s_t)\bigr]\\
+  &+ \beta \sum_{t=1}^{T} \E_{q_\phi}\bigl[
+    \KL(q_\phi(s_t \mid h_t, o_t) \,\|\, p_\theta(s_t \mid h_t))\bigr].
+\end{aligned}
 \]
 \end{theorem}
 
 \begin{proof}[Derivation]
-Start from $\log p_\theta(o_{1:T}, r_{1:T}, c_{1:T}) \geq \E_{q_\phi}[\log p_\theta(o, r, c, s) - \log q_\phi(s)]$, factor the joint by the temporal Markov structure of the RSSM, and gather the $-\KL$ terms per timestep. The $\beta$ coefficient is the standard $\beta$-VAE weight; Dreamer V2 introduces ``KL balancing'' --- stop-gradients on either side --- to control whose distribution moves.
+Start from $\log p_\theta(o_{1:T}, r_{1:T}, c_{1:T}\mid a_{0:T-1}) \geq \E_{q_\phi}[\log p_\theta(o, r, c, s) - \log q_\phi(s)]$, factor the joint by the temporal Markov structure of the RSSM, and gather the $-\KL$ terms per timestep. Choosing $\beta\ne1$ reweights this objective and is no longer the standard ELBO identity; Dreamer V2 introduces ``KL balancing'' --- stop-gradients on either side --- to control whose distribution moves.
 \end{proof}
 
 \begin{pitfall}
-Without KL balancing, the prior chases the posterior and the latent collapses
-(the encoder ignores the observation). Always apply Dreamer-V2's stop-gradient trick.
+KL balancing controls how strongly the prior and posterior are updated; it is not a universal cure or a mathematical requirement for every RSSM. Posterior collapse can arise from the interaction of KL pressure and the decoder. The project uses free-nats clipping; exercise 5 demonstrates balancing separately.
 \end{pitfall}
 
 \section{Actor-critic in imagination}
@@ -97,7 +108,7 @@ Actor and critic losses:
   \mathcal{L}_\xi = \E\!\left[\sum_t (V_\xi(h_t, s_t) - G_t^\lambda)^2\right].
 \]
 
-The advantage uses the lambda-return as both target and baseline. Dreamer V2/V3 replace the REINFORCE actor by a path-derivative one when actions are continuous; for discrete actions we use straight-through with Gumbel-softmax or REINFORCE as above.
+The advantage is the lambda-return target minus the current-state value baseline. In the REINFORCE loss, stop gradients through that advantage; the critic targets are detached too. Dreamer V2/V3 replace the REINFORCE actor by a path-derivative one when actions are continuous; for discrete actions we use straight-through with Gumbel-softmax or REINFORCE as above.
 
 \section{PETS and MBPO --- the alternative}
 
@@ -105,8 +116,7 @@ The advantage uses the lambda-return as both target and baseline. Dreamer V2/V3 
 trajectories under the model (CEM in action space). \textbf{MBPO} interleaves
 short-horizon model rollouts with real data in an SAC-style buffer:
 $D_{\mathrm{train}} = D_{\mathrm{real}} \cup D_{\mathrm{model}}$. The MBPO theorem bounds the
-policy-evaluation gap between true and model rollouts by the one-step model error times the
-rollout length --- so we keep the rollout horizon short.
+policy-performance gap using assumptions on rewards, model error, policy shift, and rollout horizon. State-distribution errors can accumulate and affect all later rewards, so total return error is not generally just one-step error times horizon. Short rollouts branched from real data reduce this accumulation.
 
 \section{MuZero, EfficientZero V2, TD-MPC2}
 
@@ -157,7 +167,7 @@ $\gamma = 0.99, \lambda = 0.95$,
 G_1^\lambda &= 1 + 0.99 \cdot 0.98 \cdot [0.05 \cdot 3 + 0.95 \cdot 3] = 1 + 0.9702 \cdot 3 = 3.91, \\
 G_0^\lambda &= 1 + 0.99 \cdot 0.99 \cdot [0.05 \cdot 4 + 0.95 \cdot 3.91] = 1 + 0.9801 \cdot (0.2 + 3.715) = 4.84.
 \end{align*}
-The actor gradient at $t=0$ is $-\log \pi(a_0=0) \cdot (G_0^\lambda - V_0) = -\log 0.7 \cdot (4.84 - 5) = -(-0.357) \cdot (-0.16) = -0.057$ --- a tiny push \emph{away} from $a_0$ because the realised return was slightly worse than the baseline.
+The sampled actor loss term at $t=0$ is $-\log \pi(a_0=0) \cdot (G_0^\lambda - V_0) = -\log 0.7 \cdot (4.84 - 5) = -(-0.357) \cdot (-0.16) = -0.057$ --- a negative loss contribution, not the gradient itself. Differentiating with the advantage detached gives a push \emph{away} from $a_0$ because the realised return was slightly worse than the baseline.
 
 \chapter{Implementation walkthrough}
 

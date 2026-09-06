@@ -42,8 +42,8 @@ def ips_ltr_value(
 ) -> float:
     """IPS-LTR estimate of the target ranking's expected click sum.
 
-    For each clicked item in the logged ranking, weight by 1/p_k where k is
-    that item's position in the *target* ranking (if present).
+    For each clicked item, weight by target examination probability divided
+    by its logged examination probability, if the item is in the target.
     """
     val = 0.0
     K = len(ranking)

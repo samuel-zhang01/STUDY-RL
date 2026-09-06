@@ -1,0 +1,267 @@
+{
+  "method": "dpo",
+  "initial_eval": {
+    "loss": 0.6931471824645996,
+    "denominator": 32,
+    "averaging": "preference_pairs",
+    "preference_margin": 0.0,
+    "relative_preference_accuracy": 0.5
+  },
+  "final_eval": {
+    "loss": 0.5564608871936798,
+    "denominator": 32,
+    "averaging": "preference_pairs",
+    "preference_margin": 3.098204530775547,
+    "relative_preference_accuracy": 0.9375
+  },
+  "train_history": [
+    {
+      "step": 1,
+      "loss": 0.693147599697113,
+      "denominator": 4,
+      "grad_norm": 0.7398033142089844,
+      "elapsed_seconds": 1.2094842919996154
+    },
+    {
+      "step": 2,
+      "loss": 0.6929428577423096,
+      "denominator": 4,
+      "grad_norm": 0.42605674266815186,
+      "elapsed_seconds": 1.8017904169992107
+    },
+    {
+      "step": 3,
+      "loss": 0.6783685684204102,
+      "denominator": 4,
+      "grad_norm": 0.8326663970947266,
+      "elapsed_seconds": 1.9645417089996045
+    },
+    {
+      "step": 4,
+      "loss": 0.6689534485340118,
+      "denominator": 4,
+      "grad_norm": 0.833858847618103,
+      "elapsed_seconds": 2.118616750000001
+    },
+    {
+      "step": 5,
+      "loss": 0.6740444004535675,
+      "denominator": 4,
+      "grad_norm": 0.8107806444168091,
+      "elapsed_seconds": 2.273769833998813
+    },
+    {
+      "step": 6,
+      "loss": 0.6495159864425659,
+      "denominator": 4,
+      "grad_norm": 1.106659173965454,
+      "elapsed_seconds": 2.429503499999555
+    },
+    {
+      "step": 7,
+      "loss": 0.653947114944458,
+      "denominator": 4,
+      "grad_norm": 0.7686219215393066,
+      "elapsed_seconds": 2.584427959000095
+    },
+    {
+      "step": 8,
+      "loss": 0.6146615147590637,
+      "denominator": 4,
+      "grad_norm": 1.2590243816375732,
+      "elapsed_seconds": 2.7360901669999294
+    },
+    {
+      "step": 9,
+      "loss": 0.6514354348182678,
+      "denominator": 4,
+      "grad_norm": 2.061842918395996,
+      "elapsed_seconds": 2.9423028339988377
+    },
+    {
+      "step": 10,
+      "loss": 0.6185885667800903,
+      "denominator": 4,
+      "grad_norm": 1.16367506980896,
+      "elapsed_seconds": 3.105733541999143
+    },
+    {
+      "step": 11,
+      "loss": 0.6155702173709869,
+      "denominator": 4,
+      "grad_norm": 1.2014811038970947,
+      "elapsed_seconds": 3.263938291998784
+    },
+    {
+      "step": 12,
+      "loss": 0.6054241061210632,
+      "denominator": 4,
+      "grad_norm": 1.1279627084732056,
+      "elapsed_seconds": 3.4218039169991243
+    },
+    {
+      "step": 13,
+      "loss": 0.5797778367996216,
+      "denominator": 4,
+      "grad_norm": 0.8957855701446533,
+      "elapsed_seconds": 3.572560041999168
+    },
+    {
+      "step": 14,
+      "loss": 0.5232476592063904,
+      "denominator": 4,
+      "grad_norm": 1.2140697240829468,
+      "elapsed_seconds": 3.724523541999588
+    },
+    {
+      "step": 15,
+      "loss": 0.5486649572849274,
+      "denominator": 4,
+      "grad_norm": 0.7425352931022644,
+      "elapsed_seconds": 3.882910958998764
+    },
+    {
+      "step": 16,
+      "loss": 0.6025291681289673,
+      "denominator": 4,
+      "grad_norm": 0.8433337211608887,
+      "elapsed_seconds": 4.04039395899963
+    },
+    {
+      "step": 17,
+      "loss": 0.6187887787818909,
+      "denominator": 4,
+      "grad_norm": 0.7723231315612793,
+      "elapsed_seconds": 4.191772459000276
+    },
+    {
+      "step": 18,
+      "loss": 0.59466552734375,
+      "denominator": 4,
+      "grad_norm": 0.7192295789718628,
+      "elapsed_seconds": 4.3425955419988895
+    },
+    {
+      "step": 19,
+      "loss": 0.5379092395305634,
+      "denominator": 4,
+      "grad_norm": 0.9072151184082031,
+      "elapsed_seconds": 4.496676667000429
+    },
+    {
+      "step": 20,
+      "loss": 0.5603488087654114,
+      "denominator": 4,
+      "grad_norm": 0.7622750401496887,
+      "elapsed_seconds": 4.647892666998814
+    }
+  ],
+  "training_seconds": 5.648056166999595,
+  "optimizer_steps": 20,
+  "inference_command": "python -m llm_lab.inference --model HuggingFaceTB/SmolLM2-135M-Instruct --revision 12fd25f77366fa6b3b4b768ec3050bf629380bac --adapter runs/dpo --device mps --quantization none --prompt 'What is 17 + 8? Reply with only the integer answer.'",
+  "config": {
+    "method": "dpo",
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "revision": null,
+    "adapter": "runs/sft",
+    "data": "data/preferences_train.jsonl",
+    "eval_data": "data/preferences_validation.jsonl",
+    "output": "runs/dpo",
+    "steps": 20,
+    "batch_size": 2,
+    "gradient_accumulation": 2,
+    "max_length": 192,
+    "device": "mps",
+    "quantization": "none",
+    "lr": 5e-05,
+    "beta": 0.1,
+    "lora_r": 8,
+    "lora_alpha": 16,
+    "lora_dropout": 0.0,
+    "target_modules": "all-linear",
+    "gradient_checkpointing": false,
+    "max_grad_norm": 1.0,
+    "seed": 7,
+    "cpu_threads": 4,
+    "log_every": 1,
+    "base_model_name": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "base_revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+    "revision_kind": "hub_commit",
+    "compute_dtype": "torch.float32",
+    "adapter_path": "runs/sft",
+    "trainable_parameters": 2442240,
+    "total_parameters": 136957248,
+    "trainable_fraction": 0.017832134010169365,
+    "lora_configuration": {
+      "task_type": "CAUSAL_LM",
+      "peft_type": "LORA",
+      "auto_mapping": null,
+      "peft_version": "0.20.0",
+      "base_model_name_or_path": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+      "inference_mode": false,
+      "r": 8,
+      "target_modules": "{'gate_proj', 'down_proj', 'up_proj', 'k_proj', 'q_proj', 'o_proj', 'v_proj'}",
+      "exclude_modules": null,
+      "lora_alpha": 16,
+      "lora_dropout": 0.0,
+      "fan_in_fan_out": false,
+      "bias": "none",
+      "use_rslora": false,
+      "modules_to_save": null,
+      "init_lora_weights": true,
+      "layers_to_transform": null,
+      "layers_pattern": null,
+      "rank_pattern": {},
+      "alpha_pattern": {},
+      "megatron_config": null,
+      "megatron_core": "megatron.core",
+      "trainable_token_indices": null,
+      "loftq_config": {},
+      "eva_config": null,
+      "corda_config": null,
+      "lora_ga_config": null,
+      "use_dora": false,
+      "velora_config": null,
+      "alora_invocation_tokens": null,
+      "use_qalora": false,
+      "qalora_group_size": 16,
+      "monteclora_config": null,
+      "layer_replication": null,
+      "lora_bias": false,
+      "target_parameters": null,
+      "use_bdlora": null,
+      "arrow_config": null,
+      "ensure_weight_tying": false
+    },
+    "environment": {
+      "torch": "2.14.0",
+      "python": "3.12.14",
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "cuda_runtime": null,
+      "cudnn": null,
+      "mps_available": true,
+      "transformers": "5.16.1",
+      "peft": "0.20.0",
+      "accelerate": "1.14.0",
+      "bitsandbytes": null
+    },
+    "train_data_sha256": "ace06870edc13cc4d682b54cf4da4951ef834849d924d2cced4b2815b0b0ceab",
+    "eval_data_sha256": "2f1718b230cdafea4dfbdf110d22d3a4b28ee0e689b6ee24854eac7099f93856",
+    "train_examples": 192,
+    "eval_examples": 32,
+    "evaluation_split": "held_out",
+    "masking": "exact_chat_prompt_prefix; completion_plus_EOS_only; padding_by_length",
+    "truncation": "reject_overlong_rows",
+    "effective_batch_size_max": 4,
+    "loss_averaging": "preference_pairs",
+    "initial_adapter_hashes": {
+      "adapter_model.safetensors": "5e65984420c74d1c612a5f74b64e47ffeeaf3ca08bc499e5102bc4fa96be7aaa",
+      "adapter_config.json": "57f32d21528457286a80cef0e105fd071f847266a98555d2cf5e345c8fc3dee7"
+    },
+    "inference_command": "python -m llm_lab.inference --model HuggingFaceTB/SmolLM2-135M-Instruct --revision 12fd25f77366fa6b3b4b768ec3050bf629380bac --adapter runs/dpo --device mps --quantization none --prompt 'What is 17 + 8? Reply with only the integer answer.'",
+    "reference": "initial_loaded_adapter",
+    "reference_cache_sha256": "9c50df4a5119abda53a6d08e5357a152db717ce409da1ffd2b803d13b1c8358a"
+  },
+  "validation_note": "Recorded before final metadata and validation-check refinements; no model runs repeated after the request to focus on the guide."
+}

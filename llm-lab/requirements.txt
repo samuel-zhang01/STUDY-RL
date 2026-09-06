@@ -1,0 +1,13 @@
+# Tested API versions. Install the PyTorch build for your hardware first.
+torch>=2.6,<3
+transformers==5.16.1
+peft==0.20.0
+accelerate==1.14.0
+safetensors==0.8.0
+numpy>=1.26,<3
+pytest>=8,<10
+
+# Only needed to open/execute the optional numerical workbook:
+nbformat>=5.10,<6
+nbclient>=0.10,<1
+ipykernel>=6,<8

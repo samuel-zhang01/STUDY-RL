@@ -1,0 +1,32 @@
+{"id": "add-13-20", "prompt": "Compute 20 + 13. Reply with just the integer.", "chosen": "33", "rejected": "32"}
+{"id": "add-15-21", "prompt": "What is 15 plus 21? Answer with only the integer.", "chosen": "36", "rejected": "37"}
+{"id": "add-12-12", "prompt": "Add 12 and 12. Return only the integer result.", "chosen": "24", "rejected": "23"}
+{"id": "add-06-23", "prompt": "Compute 23 + 6. Reply with just the integer.", "chosen": "29", "rejected": "30"}
+{"id": "add-04-18", "prompt": "What is 18 plus 4? Answer with only the integer.", "chosen": "22", "rejected": "21"}
+{"id": "add-17-24", "prompt": "Add 17 and 24. Return only the integer result.", "chosen": "41", "rejected": "42"}
+{"id": "add-15-16", "prompt": "Compute 16 + 15. Reply with just the integer.", "chosen": "31", "rejected": "30"}
+{"id": "add-07-13", "prompt": "What is 7 plus 13? Answer with only the integer.", "chosen": "20", "rejected": "21"}
+{"id": "add-01-15", "prompt": "Add 1 and 15. Return only the integer result.", "chosen": "16", "rejected": "15"}
+{"id": "add-01-04", "prompt": "Compute 1 + 4. Reply with just the integer.", "chosen": "5", "rejected": "6"}
+{"id": "add-23-24", "prompt": "What is 23 plus 24? Answer with only the integer.", "chosen": "47", "rejected": "46"}
+{"id": "add-16-16", "prompt": "Add 16 and 16. Return only the integer result.", "chosen": "32", "rejected": "33"}
+{"id": "add-16-18", "prompt": "Compute 16 + 18. Reply with just the integer.", "chosen": "34", "rejected": "33"}
+{"id": "add-05-16", "prompt": "What is 5 plus 16? Answer with only the integer.", "chosen": "21", "rejected": "22"}
+{"id": "add-05-20", "prompt": "Add 5 and 20. Return only the integer result.", "chosen": "25", "rejected": "24"}
+{"id": "add-11-11", "prompt": "Compute 11 + 11. Reply with just the integer.", "chosen": "22", "rejected": "23"}
+{"id": "add-13-14", "prompt": "What is 13 plus 14? Answer with only the integer.", "chosen": "27", "rejected": "26"}
+{"id": "add-03-23", "prompt": "Add 3 and 23. Return only the integer result.", "chosen": "26", "rejected": "27"}
+{"id": "add-13-18", "prompt": "Compute 13 + 18. Reply with just the integer.", "chosen": "31", "rejected": "30"}
+{"id": "add-10-18", "prompt": "What is 10 plus 18? Answer with only the integer.", "chosen": "28", "rejected": "29"}
+{"id": "add-04-19", "prompt": "Add 19 and 4. Return only the integer result.", "chosen": "23", "rejected": "22"}
+{"id": "add-06-20", "prompt": "Compute 20 + 6. Reply with just the integer.", "chosen": "26", "rejected": "27"}
+{"id": "add-09-11", "prompt": "What is 11 plus 9? Answer with only the integer.", "chosen": "20", "rejected": "19"}
+{"id": "add-11-12", "prompt": "Add 11 and 12. Return only the integer result.", "chosen": "23", "rejected": "24"}
+{"id": "add-06-08", "prompt": "Compute 6 + 8. Reply with just the integer.", "chosen": "14", "rejected": "13"}
+{"id": "add-06-14", "prompt": "What is 6 plus 14? Answer with only the integer.", "chosen": "20", "rejected": "21"}
+{"id": "add-09-10", "prompt": "Add 9 and 10. Return only the integer result.", "chosen": "19", "rejected": "18"}
+{"id": "add-16-17", "prompt": "Compute 17 + 16. Reply with just the integer.", "chosen": "33", "rejected": "34"}
+{"id": "add-15-20", "prompt": "What is 20 plus 15? Answer with only the integer.", "chosen": "35", "rejected": "34"}
+{"id": "add-02-20", "prompt": "Add 20 and 2. Return only the integer result.", "chosen": "22", "rejected": "23"}
+{"id": "add-14-14", "prompt": "Compute 14 + 14. Reply with just the integer.", "chosen": "28", "rejected": "27"}
+{"id": "add-05-07", "prompt": "What is 7 plus 5? Answer with only the integer.", "chosen": "12", "rejected": "13"}

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Walk all week-* folders, report build status (LaTeX PDF present, notebook executed, tests passing)."""
+"""Report artifact presence across week-* folders, without executing any checks.
+
+An executed-notebook filename or tests directory is not evidence that execution
+passed. Use the build and test targets for fresh validation.
+"""
 from __future__ import annotations
 import json
 import subprocess

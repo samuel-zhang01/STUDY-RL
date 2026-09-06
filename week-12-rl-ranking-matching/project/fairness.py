@@ -1,7 +1,8 @@
 """Fairness audit utilities for a ranking system.
 
 We implement:
-- demographic parity gap: |P(top-k | A=F) - P(top-k | A=M)|
+- top-k representation gap (legacy name demographic_parity_gap):
+  |P(A=F | top-k) - P(A=M | top-k)|, not the selection-rate DP gap
 - equalised opportunity gap: |TPR_F - TPR_M| (TPR = P(top-k | qualified))
 - exposure (Singh & Joachims 2018): expected position-bias-weighted exposure
   by group; the gap is the producer/consumer-fairness primitive

@@ -17,6 +17,8 @@
 
 This document is the master syllabus for \textsc{STUDY-RL}, a 24-week self-paced curriculum
 designed for a learner who is fluent in modern deep learning but new to reinforcement learning.
+An additional applied audit in week 25 connects the core material to a synthetic
+ATS experiment and an application review.
 It threads three goals through every week:
 \begin{enumerate}
   \item \textbf{Strong applied mathematics} — every algorithm derived from first principles with intuition and code.
@@ -24,7 +26,7 @@ It threads three goals through every week:
   \item \textbf{Two applied threads} — \emph{safety-critical RL} (one callout per lecture plus a dedicated 3-week track) and \emph{matching/ranking} (insurance lead matching and recruitment candidate matching, woven through bandits, OPE, fairness).
 \end{enumerate}
 
-Each week ships four artifacts: a Tufte-flavored PDF (\texttt{notes.pdf}), a Jupyter
+Each week includes a teaching guide (\texttt{teaching\_guide.md}), a Tufte-flavored PDF (\texttt{notes.pdf}), a Jupyter
 workbook with graded exercises (\texttt{workbook.ipynb}), curated extended reading
 (\texttt{extended\_reading.pdf}), and a mini-project with tests (\texttt{project/}, \texttt{tests/}).
 
@@ -33,8 +35,15 @@ workbook with graded exercises (\texttt{workbook.ipynb}), curated extended readi
 
 \begin{itemize}
   \item About \textbf{10 hours per week}: 2--3 h reading the PDF, 3--4 h on the workbook, 3--4 h on the project.
-  \item Run the workbooks end-to-end before reading the solutions; hints unlock the exercises without spoilers.
-  \item Re-run \texttt{make tests} every weekend — green tests across all completed weeks is the only honest measure of progress.
+  \item Start with \texttt{STUDY\_GUIDE.md} in the repository root, then the
+        weekly teaching guide. Predict an update, calculate it by hand, and
+        explain the result before running it.
+  \item Attempt workbook exercises before opening hints or reference solutions.
+        Some supplied cells call the reference directly: these demonstrate a
+        solution but do not test an independent implementation.
+  \item Check both execution and understanding: reproduce a numerical example,
+        explain the assumptions, test a changed input, and compare a project
+        result with a baseline. Passing tests alone does not establish mastery.
 \end{itemize}
 
 \chapter{Curriculum overview}
@@ -54,6 +63,11 @@ workbook with graded exercises (\texttt{workbook.ipynb}), curated extended readi
 \end{description}
 
 \section{Week-by-week schedule}
+The schedule below describes topic coverage and suggested larger experiments.
+Several bundled mini-projects use smaller synthetic environments or reduced
+models; each weekly teaching guide identifies the implementation actually
+present and its limitations. A successful toy run is not a reproduction of a
+paper's benchmark result.
 \begin{longtable}{@{}p{1.4cm}p{6.4cm}p{6.0cm}@{}}
 \toprule
 \textbf{Week} & \textbf{Topic} & \textbf{Mini-project} \\

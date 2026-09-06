@@ -1,0 +1,329 @@
+{
+  "method": "sft",
+  "initial_eval": {
+    "loss": 2.8149531515021073,
+    "denominator": 95,
+    "averaging": "completion_tokens",
+    "completion_perplexity": 16.6923937484396
+  },
+  "final_eval": {
+    "loss": 0.47154661354265714,
+    "denominator": 95,
+    "averaging": "completion_tokens",
+    "completion_perplexity": 1.6024706804954951
+  },
+  "train_history": [
+    {
+      "step": 1,
+      "loss": 2.5746411085128784,
+      "denominator": 12,
+      "grad_norm": 2.1984384059906006,
+      "elapsed_seconds": 1.874383125001259
+    },
+    {
+      "step": 2,
+      "loss": 3.133625626564026,
+      "denominator": 9,
+      "grad_norm": 7.561936855316162,
+      "elapsed_seconds": 2.1566133329997683
+    },
+    {
+      "step": 3,
+      "loss": 2.216263771057129,
+      "denominator": 12,
+      "grad_norm": 2.6489858627319336,
+      "elapsed_seconds": 2.354278124999837
+    },
+    {
+      "step": 4,
+      "loss": 2.380004405975342,
+      "denominator": 10,
+      "grad_norm": 5.241966247558594,
+      "elapsed_seconds": 2.4920377079997706
+    },
+    {
+      "step": 5,
+      "loss": 1.7002148032188416,
+      "denominator": 12,
+      "grad_norm": 3.909346580505371,
+      "elapsed_seconds": 2.6295625420007127
+    },
+    {
+      "step": 6,
+      "loss": 1.3019052743911743,
+      "denominator": 12,
+      "grad_norm": 2.4546401500701904,
+      "elapsed_seconds": 2.7627147500006686
+    },
+    {
+      "step": 7,
+      "loss": 1.1923615634441376,
+      "denominator": 12,
+      "grad_norm": 1.9050586223602295,
+      "elapsed_seconds": 2.9002744580011495
+    },
+    {
+      "step": 8,
+      "loss": 0.8914135694503784,
+      "denominator": 12,
+      "grad_norm": 1.7002276182174683,
+      "elapsed_seconds": 3.034006792000582
+    },
+    {
+      "step": 9,
+      "loss": 1.0953963100910187,
+      "denominator": 11,
+      "grad_norm": 4.348101615905762,
+      "elapsed_seconds": 3.223230125000555
+    },
+    {
+      "step": 10,
+      "loss": 0.41291919350624084,
+      "denominator": 12,
+      "grad_norm": 2.0636589527130127,
+      "elapsed_seconds": 3.3708714580006927
+    },
+    {
+      "step": 11,
+      "loss": 1.8403048515319824,
+      "denominator": 12,
+      "grad_norm": 7.262638092041016,
+      "elapsed_seconds": 3.5058691250014817
+    },
+    {
+      "step": 12,
+      "loss": 0.5158142745494843,
+      "denominator": 12,
+      "grad_norm": 2.9034130573272705,
+      "elapsed_seconds": 3.6422175000006973
+    },
+    {
+      "step": 13,
+      "loss": 0.9090530872344971,
+      "denominator": 12,
+      "grad_norm": 6.423083305358887,
+      "elapsed_seconds": 3.773104208001314
+    },
+    {
+      "step": 14,
+      "loss": 0.39355066418647766,
+      "denominator": 12,
+      "grad_norm": 1.4853973388671875,
+      "elapsed_seconds": 3.9047856670003966
+    },
+    {
+      "step": 15,
+      "loss": 0.8113337755203247,
+      "denominator": 12,
+      "grad_norm": 3.4128434658050537,
+      "elapsed_seconds": 4.043698333000066
+    },
+    {
+      "step": 16,
+      "loss": 1.0509420931339264,
+      "denominator": 12,
+      "grad_norm": 5.7551984786987305,
+      "elapsed_seconds": 4.177046374999918
+    },
+    {
+      "step": 17,
+      "loss": 0.6386290490627289,
+      "denominator": 11,
+      "grad_norm": 2.432107448577881,
+      "elapsed_seconds": 4.319469250000111
+    },
+    {
+      "step": 18,
+      "loss": 1.2633269429206848,
+      "denominator": 10,
+      "grad_norm": 3.1425766944885254,
+      "elapsed_seconds": 4.461766250000437
+    },
+    {
+      "step": 19,
+      "loss": 0.8812410235404968,
+      "denominator": 11,
+      "grad_norm": 2.274651050567627,
+      "elapsed_seconds": 4.606297875001474
+    },
+    {
+      "step": 20,
+      "loss": 0.5722350180149078,
+      "denominator": 12,
+      "grad_norm": 2.8818793296813965,
+      "elapsed_seconds": 4.746759125000608
+    },
+    {
+      "step": 21,
+      "loss": 0.4106716066598892,
+      "denominator": 12,
+      "grad_norm": 3.170370101928711,
+      "elapsed_seconds": 4.883181875000446
+    },
+    {
+      "step": 22,
+      "loss": 0.9717161357402802,
+      "denominator": 11,
+      "grad_norm": 3.820852518081665,
+      "elapsed_seconds": 5.0170795419999195
+    },
+    {
+      "step": 23,
+      "loss": 0.3315330594778061,
+      "denominator": 12,
+      "grad_norm": 1.888201117515564,
+      "elapsed_seconds": 5.15131004199975
+    },
+    {
+      "step": 24,
+      "loss": 0.6262656450271606,
+      "denominator": 12,
+      "grad_norm": 3.360459089279175,
+      "elapsed_seconds": 5.280657291999887
+    },
+    {
+      "step": 25,
+      "loss": 0.5339642614126205,
+      "denominator": 11,
+      "grad_norm": 2.374022960662842,
+      "elapsed_seconds": 5.4196206249998795
+    },
+    {
+      "step": 26,
+      "loss": 0.45625121891498566,
+      "denominator": 11,
+      "grad_norm": 1.4443217515945435,
+      "elapsed_seconds": 5.551019208000071
+    },
+    {
+      "step": 27,
+      "loss": 0.906106173992157,
+      "denominator": 12,
+      "grad_norm": 4.814560413360596,
+      "elapsed_seconds": 5.68240762500136
+    },
+    {
+      "step": 28,
+      "loss": 0.28880777955055237,
+      "denominator": 11,
+      "grad_norm": 1.8812841176986694,
+      "elapsed_seconds": 5.810671167000692
+    },
+    {
+      "step": 29,
+      "loss": 0.23507025092840195,
+      "denominator": 12,
+      "grad_norm": 1.6568289995193481,
+      "elapsed_seconds": 5.939585583000735
+    },
+    {
+      "step": 30,
+      "loss": 0.9689503908157349,
+      "denominator": 10,
+      "grad_norm": 3.887829303741455,
+      "elapsed_seconds": 6.067766083000606
+    }
+  ],
+  "training_seconds": 6.981904749998648,
+  "optimizer_steps": 30,
+  "inference_command": "python -m llm_lab.inference --model HuggingFaceTB/SmolLM2-135M-Instruct --revision 12fd25f77366fa6b3b4b768ec3050bf629380bac --adapter runs/sft --device mps --quantization none --prompt 'What is 17 + 8? Reply with only the integer answer.'",
+  "config": {
+    "method": "sft",
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "revision": null,
+    "adapter": null,
+    "data": "data/sft_train.jsonl",
+    "eval_data": "data/sft_validation.jsonl",
+    "output": "runs/sft",
+    "steps": 30,
+    "batch_size": 2,
+    "gradient_accumulation": 2,
+    "max_length": 192,
+    "device": "mps",
+    "quantization": "none",
+    "lr": 0.0005,
+    "beta": 0.1,
+    "lora_r": 8,
+    "lora_alpha": 16,
+    "lora_dropout": 0.0,
+    "target_modules": "all-linear",
+    "gradient_checkpointing": false,
+    "max_grad_norm": 1.0,
+    "seed": 7,
+    "cpu_threads": 4,
+    "log_every": 1,
+    "base_model_name": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "base_revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+    "revision_kind": "hub_commit",
+    "compute_dtype": "torch.float32",
+    "adapter_path": null,
+    "trainable_parameters": 2442240,
+    "total_parameters": 136957248,
+    "trainable_fraction": 0.017832134010169365,
+    "lora_configuration": {
+      "task_type": "CAUSAL_LM",
+      "peft_type": "LORA",
+      "auto_mapping": null,
+      "peft_version": "0.20.0",
+      "base_model_name_or_path": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "revision": null,
+      "inference_mode": false,
+      "r": 8,
+      "target_modules": "{'up_proj', 'gate_proj', 'q_proj', 'down_proj', 'o_proj', 'v_proj', 'k_proj'}",
+      "exclude_modules": null,
+      "lora_alpha": 16,
+      "lora_dropout": 0.0,
+      "fan_in_fan_out": false,
+      "bias": "none",
+      "use_rslora": false,
+      "modules_to_save": null,
+      "init_lora_weights": true,
+      "layers_to_transform": null,
+      "layers_pattern": null,
+      "rank_pattern": {},
+      "alpha_pattern": {},
+      "megatron_config": null,
+      "megatron_core": "megatron.core",
+      "trainable_token_indices": null,
+      "loftq_config": {},
+      "eva_config": null,
+      "corda_config": null,
+      "lora_ga_config": null,
+      "use_dora": false,
+      "velora_config": null,
+      "alora_invocation_tokens": null,
+      "use_qalora": false,
+      "qalora_group_size": 16,
+      "monteclora_config": null,
+      "layer_replication": null,
+      "lora_bias": false,
+      "target_parameters": null,
+      "use_bdlora": null,
+      "arrow_config": null,
+      "ensure_weight_tying": false
+    },
+    "environment": {
+      "torch": "2.14.0",
+      "python": "3.12.14",
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "cuda_runtime": null,
+      "cudnn": null,
+      "mps_available": true,
+      "transformers": "5.16.1",
+      "peft": "0.20.0",
+      "accelerate": "1.14.0",
+      "bitsandbytes": null
+    },
+    "train_data_sha256": "741d92102a33cfce39a8fe94e513de849e9da5bdafea21dc60d8f5f13083287f",
+    "eval_data_sha256": "fb0ec086b00195be675bde1b022320644aafcfd43208d595958070ce56ab2ff3",
+    "train_examples": 192,
+    "eval_examples": 32,
+    "evaluation_split": "held_out",
+    "masking": "exact_chat_prompt_prefix; completion_plus_EOS_only; padding_by_length",
+    "truncation": "reject_overlong_rows",
+    "effective_batch_size_max": 4,
+    "loss_averaging": "completion_tokens",
+    "inference_command": "python -m llm_lab.inference --model HuggingFaceTB/SmolLM2-135M-Instruct --revision 12fd25f77366fa6b3b4b768ec3050bf629380bac --adapter runs/sft --device mps --quantization none --prompt 'What is 17 + 8? Reply with only the integer answer.'"
+  },
+  "validation_note": "Recorded before final metadata and validation-check refinements; no model runs repeated after the request to focus on the guide."
+}

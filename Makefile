@@ -4,7 +4,7 @@ LATEXMK := latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error
 WEEKS := $(sort $(wildcard week-*))
 PY := python3
 
-.PHONY: all syllabus weeks notebooks tests qa clean cleanall
+.PHONY: all syllabus weeks notebooks tests llm-tests llm-notebook qa clean cleanall
 
 all: syllabus weeks notebooks tests
 
@@ -21,15 +21,24 @@ notebooks:
 	@for w in $(WEEKS); do \
 	  if [ -f $$w/workbook.ipynb ]; then \
 	    echo "=== executing $$w/workbook.ipynb ==="; \
-	    papermill --kernel python3 $$w/workbook.ipynb $$w/workbook.executed.ipynb || exit 1; \
+	    papermill --kernel python3 --cwd "$$w" $$w/workbook.ipynb $$w/workbook.executed.ipynb || exit 1; \
 	  fi; \
 	done
 
 tests:
-	pytest -q --maxfail=3
+	@for w in common $(WEEKS); do \
+	  PYTHONPATH=. $(PY) -m pytest "$$w/tests" -q --maxfail=3 || exit 1; \
+	done
 
 qa: all
 	$(PY) scripts/qa_report.py
+
+# Optional lab: install llm-lab/requirements.txt first. No model downloads in tests.
+llm-tests:
+	PYTHONPATH=llm-lab $(PY) -m pytest llm-lab/tests -q
+
+llm-notebook:
+	PYTHONPATH=llm-lab $(PY) -m llm_lab.execute_workbook
 
 clean:
 	@for w in $(WEEKS); do (cd $$w && latexmk -C) ; done

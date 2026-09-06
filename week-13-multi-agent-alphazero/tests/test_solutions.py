@@ -77,3 +77,32 @@ def test_az_rating_climb():
     wrs = exercise_10_az_rating_climb(n_iters=4, seed=0)
     assert wrs.shape == (4,)
     assert (wrs >= 0).all() and (wrs <= 1).all()
+
+
+class _UniformSearchPrior:
+    """No trained knowledge: tactical results must come from tree search."""
+
+    def predict(self, encoded_state):
+        return np.full(9, 1 / 9), 0.0
+
+
+def _immediate_win_board():
+    return np.array([[1, 1, 0], [-1, -1, 0], [0, 0, 0]], dtype=np.int8)
+
+
+def test_mcts_prefers_a_forced_immediate_win():
+    from project.alphazero import MCTS
+    from project.tictactoe import TicTacToe
+    board = _immediate_win_board()
+    search = MCTS(_UniformSearchPrior(), n_simulations=64, seed=0)
+    visits = search.run(board, add_noise=False)
+    assert visits.argmax() == 2, visits
+    assert TicTacToe.terminal_value(TicTacToe.apply_action(board, 2)) == -1
+
+
+def test_evaluation_counts_an_agent_win_as_a_win(monkeypatch):
+    from project.alphazero import evaluate_vs_random
+    from project.tictactoe import TicTacToe
+    monkeypatch.setattr(TicTacToe, "initial_state", staticmethod(_immediate_win_board))
+    result = evaluate_vs_random(_UniformSearchPrior(), n_games=1, n_sim=64, seed=0)
+    assert result == {"wins": 1, "draws": 0, "losses": 0, "winrate": 1.0}

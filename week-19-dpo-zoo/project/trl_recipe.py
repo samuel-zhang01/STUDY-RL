@@ -1,62 +1,23 @@
-"""TRL/PEFT recipes for the DPO zoo on a real LM (Qwen2.5-0.5B + LoRA).
+"""Compatibility pointer to the actual LoRA DPO training lab.
 
-This module imports nothing heavy at module load.  Each recipe lives
-as a string; running ``python -m project.trl_recipe --variant dpo``
-prints the script.
+The former printed bake-off conflated algorithm-specific TRL APIs. The week's
+local losses still compare its toy variants. llm-lab implements executable DPO
+on a pretrained model with a fixed initial-policy reference.
 """
-from __future__ import annotations
-import argparse
+from pathlib import Path
 
 
-BAKEOFF_RECIPE = r'''
-from datasets import load_dataset
-from peft import LoraConfig
-from trl import DPOTrainer, DPOConfig
-
-variant = "{variant}"  # one of: sigmoid (DPO), ipo, kto_pair, simpo, cpo, orpo
-ds = load_dataset("trl-lib/ultrafeedback_binarized", split="train[:5%]")
-
-cfg = DPOConfig(
-    loss_type=variant,
-    beta=0.1 if variant != "simpo" else 2.0,
-    simpo_gamma=1.0,
-    max_length=512,
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=8,
-    learning_rate=1e-4,
-    bf16=True,
-    output_dir=f"runs/{{variant}}",
-    logging_steps=10,
-    save_steps=200,
-    max_steps=500,
-)
-
-peft_cfg = LoraConfig(
-    r=16, lora_alpha=32, lora_dropout=0.05,
-    target_modules=["q_proj","k_proj","v_proj","o_proj"],
-    task_type="CAUSAL_LM",
-)
-
-trainer = DPOTrainer(
-    model="Qwen/Qwen2.5-0.5B-Instruct",
-    ref_model=None if variant in {{"simpo", "cpo", "orpo"}} else "Qwen/Qwen2.5-0.5B-Instruct",
-    args=cfg,
-    train_dataset=ds,
-    peft_config=peft_cfg,
-)
-trainer.train()
-'''
-
-
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--variant",
-        choices=["sigmoid", "ipo", "kto_pair", "simpo", "cpo", "orpo"],
-        required=True,
-    )
-    args = ap.parse_args()
-    print(BAKEOFF_RECIPE.format(variant=args.variant))
+def main():
+    lab = Path(__file__).resolve().parents[2] / "llm-lab"
+    print(f"Follow the SFT stage first: {lab / 'README.md'}")
+    print("Then, from llm-lab with its environment active:")
+    print("python -m llm_lab.train --method dpo --adapter runs/sft "
+          "--data data/preferences_train.jsonl --eval-data data/preferences_validation.jsonl "
+          "--output runs/dpo --steps 20 --lr 0.00005 --beta 0.1")
+    print("For NVIDIA QLoRA, add --device cuda --quantization nf4; "
+          "see NVIDIA.md for installation and a matching SFT run.")
+    print("This command implements DPO. IPO/KTO/ORPO/SimPO remain separate "
+          "algorithms illustrated by the week's toy project.")
 
 
 if __name__ == "__main__":

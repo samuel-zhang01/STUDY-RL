@@ -1,7 +1,24 @@
 # Glossary — STUDY-RL
 
-Symbols and terms used across the curriculum. Defined once here so weekly notes
-can be terse.
+Symbols and terms used across the curriculum. Weekly derivations should still
+define their local notation. For a connected example, see [STUDY_GUIDE.md](STUDY_GUIDE.md).
+
+## Reward indexing: translate before calculating
+
+The repository uses two common conventions. In early notes, $r_{t+1}$ is
+received after action $a_t$; some later notes and arrays call that same reward
+$r_t$. This table uses the **after-action** convention. If a local formula uses
+$r_t$, shift the reward index throughout, without shifting states or actions.
+
+| Transition | After-action notation | Array notation |
+|---|---|---|
+| $s_t \xrightarrow{a_t} s_{t+1}$ | reward $r_{t+1}$ | `rewards[t]` |
+| Return from $s_t$ | $r_{t+1}+\gamma r_{t+2}+\cdots$ | `rewards[t] + gamma * rewards[t+1] + ...` |
+
+An actual terminal state has zero future return; the reward for entering it is
+already counted. A data-collection truncation can still require a bootstrap
+from the last real observation. These differ from a finite-horizon task ending
+at its specified horizon; see the [time-limit explanation](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
 
 ## Set / function notation
 
@@ -10,7 +27,7 @@ can be terse.
 | $\mathcal{S}$ | State space |
 | $\mathcal{A}$ | Action space |
 | $\mathcal{R}$ | Reward set |
-| $\pi(a \mid s)$ | Policy: probability of action $a$ in state $s$ |
+| $\pi(a \mid s)$ | Policy: probability mass for discrete actions, or density for continuous actions, conditional on state $s$ |
 | $\pi^\star$ | Optimal policy |
 | $\gamma \in [0,1)$ | Discount factor |
 | $T$ or $H$ | Horizon |
@@ -23,11 +40,11 @@ can be terse.
 
 | Symbol | Definition |
 |---|---|
-| $G_t = \sum_{k=0}^\infty \gamma^k r_{t+k}$ | Return from time $t$ |
+| $G_t = \sum_{k=0}^\infty \gamma^k r_{t+k+1}$ | Sample return from time $t$; stop the sum at termination for an episode |
 | $V^\pi(s) = \mathbb{E}^\pi[G_t \mid s_t=s]$ | State value |
 | $Q^\pi(s,a) = \mathbb{E}^\pi[G_t \mid s_t=s, a_t=a]$ | Action value |
 | $A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)$ | Advantage |
-| $\delta_t = r_t + \gamma V^\pi(s_{t+1}) - V^\pi(s_t)$ | TD error |
+| $\delta_t = r_{t+1} + \gamma\hat V(s_{t+1}) - \hat V(s_t)$ | Sample TD error using a value estimate; mask the bootstrap on true termination |
 | $\hat{A}^\mathrm{GAE}_t = \sum_{l=0}^\infty (\gamma\lambda)^l \delta_{t+l}$ | GAE-$\lambda$ advantage |
 
 ## Operators
@@ -37,7 +54,32 @@ can be terse.
 | $T_\pi V(s) = \mathbb{E}_{a\sim\pi, s'\sim P}[r + \gamma V(s')]$ | Bellman expectation operator |
 | $T_\star V(s) = \max_a \mathbb{E}_{s'}[r + \gamma V(s')]$ | Bellman optimality operator |
 
-Both are $\gamma$-contractions in $\ell_\infty$.
+Both are $\gamma$-contractions in $\ell_\infty$ on bounded value functions for
+a discounted MDP with $0\le\gamma<1$ and bounded rewards. This does not make an
+arbitrary neural-network training update a contraction. Undiscounted episodic
+tasks need their own assumptions and analysis.
+
+## Distinctions that prevent common mistakes
+
+| Terms | Distinction |
+|---|---|
+| Reward / return / value | One feedback number / a trajectory's accumulated rewards / expected return under a specified policy |
+| State / observation | A Markov state suffices to predict the next outcome given the action; a sensor observation need not |
+| Prediction / control | Evaluate a fixed policy / improve or optimise a policy |
+| Behaviour policy $b$ / target policy $\pi$ | Generates the data / is evaluated or improved |
+| On-policy / off-policy | Uses data from the relevant target policy / uses data from a different policy, with algorithm-specific corrections or assumptions |
+| Online / offline | Can gather more environment data / learns from a fixed dataset; off-policy learning can still be online |
+| Bootstrapping | Uses a learned estimate inside a learning target; unrelated to resampling a dataset for a statistical bootstrap |
+| Bias / variance | Systematic estimation error in expectation / variability across samples; a single run does not reveal either by itself |
+| Advantage / TD error | Expected relative action value / a sampled residual that may estimate advantage under suitable assumptions |
+| Exact / estimated KL | A distribution-level nonnegative expectation / a finite-sample estimator, which can be negative for some estimators |
+| Clipped surrogate / hard constraint | Alters an optimisation objective / explicitly restricts feasible solutions; PPO clipping does not enforce a hard KL limit |
+| Expected cost / per-step safety | Averages cost over trajectories / restricts individual actions or outcomes under stated assumptions |
+
+Symbols are reused between papers. $\alpha$ may be a learning rate, SAC
+temperature, or PER exponent; $\lambda$ may be GAE's trace parameter or a cost
+multiplier; $\rho$ may be a policy ratio or a state distribution. Always attach
+the meaning, range, and conditioning to the local derivation.
 
 ## Algorithms (one-line)
 
@@ -84,19 +126,24 @@ Both are $\gamma$-contractions in $\ell_\infty$.
 | MAML | meta-RL | Model-Agnostic Meta-Learning (Finn 2017) |
 | PEARL | meta-RL | Probabilistic embeddings for actor-critic RL |
 | AD / DPT | meta-RL | Algorithm Distillation / Decision-Pretrained Transformer |
-| RLHF | LLM RL | Reinforcement learning from human feedback (PPO on a reward-model) |
+| RLHF | LLM RL | Reinforcement learning from human feedback; this course studies the reward-model + PPO pipeline |
 | DPO | LLM RL | Direct preference optimisation (Rafailov 2023) |
-| IPO, KTO, ORPO, SimPO | LLM RL | DPO-zoo variants |
+| IPO, KTO, ORPO, SimPO | LLM RL | Distinct preference/post-training objectives; not interchangeable DPO flags |
+| SFT | LLM training | Supervised fine-tuning on demonstrated responses; the lab masks prompt and padding targets |
+| LoRA | LLM training | Freeze a base weight and learn a low-rank correction `W = W0 + (alpha/r) BA`; [worked derivation](llm-lab/lessons/02-real-lora-training.md) |
+| QLoRA | LLM training | Train floating-point LoRA adapters through a frozen quantised base; [quantisation lesson](llm-lab/lessons/03-quantisation-and-qlora.md) |
+| NF4 | Quantisation | A nonuniform 4-bit codebook motivated by normally distributed weights; differs from uniform signed int4 |
+| BF16 | Numerical precision | A 16-bit floating-point format with fewer significand bits than FP32 but the same exponent width; the lab uses it on supported CUDA hardware |
 | GRPO | LLM RL | Group-relative PO (critic-free, DeepSeekMath 2024) |
 | RLOO | LLM RL | REINFORCE leave-one-out (Ahmadian 2024) |
 | RLVR | LLM RL | RL with verifiable rewards (R1/Kimi-K1.5 lineage) |
 | PRM / ORM | LLM RL | Process / outcome reward model |
 | CAI | LLM RL | Constitutional AI |
 | CMDP | safety | Constrained Markov decision process |
-| CPO | safety | Constrained PG (Achiam 2017) |
-| PPO-Lagrangian | safety | PPO with dual ascent on the cost multiplier |
+| CPO | safety | Constrained Policy Optimization (Achiam 2017) |
+| PPO-Lagrangian | safety | PPO with an adaptive cost multiplier; for $L=J_r-\lambda(J_c-d)$, maximise in policy and minimise in $\lambda\ge0$ |
 | FOCOPS | safety | First-order constrained policy optimisation |
-| Shielding | safety | LTL-synthesised filter on policy actions |
+| Shielding | safety | Action filtering relative to a safety model/specification; LTL synthesis is one construction |
 | CBF | safety | Control-barrier function (safe-set forward invariance) |
 | W2S | safety | Weak-to-strong generalisation (OpenAI 2023) |
 

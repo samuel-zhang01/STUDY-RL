@@ -17,6 +17,7 @@
 *.lof
 *.lot
 _minted-*/
+_minted/
 *.pyg
 
 # Python
@@ -31,6 +32,7 @@ __pycache__/
 build/
 dist/
 .venv/
+.venv-llm/
 venv/
 
 # Training artifacts
@@ -58,3 +60,8 @@ Thumbs.db
 !**/extended_reading.pdf
 !syllabus.pdf
 workbook.executed.ipynb
+
+# Small, reproducible teaching fixtures (large training data remains ignored).
+!llm-lab/data/
+!llm-lab/data/*.jsonl
+!llm-lab/data/manifest.json

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Phase-4 QA sweep: per-week, check PDFs compile, workbook executes, pytest passes.
+# Inventory existing artifacts and run each week's tests in a fresh process.
+# This script does not compile PDFs or execute notebooks; use make all for those.
 # Writes a TSV report to qa_report.tsv. Exits 0 if all green.
 set -u
 cd "$(dirname "$0")/.."
@@ -25,11 +26,14 @@ for w in week-*/; do
 
     if [ -d tests ]; then
         cd "$ROOT"
-        if PYTHONPATH=. timeout 300 python3 -m pytest "$w/tests" -q --no-header 2>&1 | tail -1 | grep -qE "passed"; then
+        test_log="$(mktemp)"
+        if PYTHONPATH=. python3 -m pytest "$w/tests" -q --no-header --timeout=300 > "$test_log" 2>&1; then
             tests="OK"; pass=$((pass+1))
         else
             tests="FAIL"; fail=$((fail+1))
         fi
+        tail -1 "$test_log"
+        rm -f "$test_log"
         cd "$ROOT/$w"
     fi
     echo -e "$w\t$notes_pdf\t$ext_pdf\t$wb_present\t$wb_exec\t$tests\t$pages" >> "$ROOT/$REPORT"

@@ -1,0 +1,349 @@
+{
+  "examples": 32,
+  "exact_matches": 19,
+  "exact_match_rate": 0.59375,
+  "valid_formats": 32,
+  "format_rate": 1.0,
+  "length_cutoffs": 0,
+  "max_new_tokens": 12,
+  "decoding": "greedy",
+  "generation_seconds": 2.4387789169995813,
+  "predictions": [
+    {
+      "id": "add-07-17",
+      "prompt": "Compute 7 + 17. Reply with just the integer.",
+      "expected": "24",
+      "text": "24",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-19-20",
+      "prompt": "What is 20 plus 19? Answer with only the integer.",
+      "expected": "39",
+      "text": "39",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-05-17",
+      "prompt": "Add 17 and 5. Return only the integer result.",
+      "expected": "22",
+      "text": "22",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-07-20",
+      "prompt": "Compute 7 + 20. Reply with just the integer.",
+      "expected": "27",
+      "text": "37",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-11-24",
+      "prompt": "What is 11 plus 24? Answer with only the integer.",
+      "expected": "35",
+      "text": "35",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-12-15",
+      "prompt": "Add 15 and 12. Return only the integer result.",
+      "expected": "27",
+      "text": "27",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-19-21",
+      "prompt": "Compute 21 + 19. Reply with just the integer.",
+      "expected": "40",
+      "text": "30",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-11-15",
+      "prompt": "What is 11 plus 15? Answer with only the integer.",
+      "expected": "26",
+      "text": "26",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-06-16",
+      "prompt": "Add 16 and 6. Return only the integer result.",
+      "expected": "22",
+      "text": "23",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-02-07",
+      "prompt": "Compute 7 + 2. Reply with just the integer.",
+      "expected": "9",
+      "text": "11",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-20-23",
+      "prompt": "What is 23 plus 20? Answer with only the integer.",
+      "expected": "43",
+      "text": "43",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-02-21",
+      "prompt": "Add 2 and 21. Return only the integer result.",
+      "expected": "23",
+      "text": "43",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-04-12",
+      "prompt": "Compute 4 + 12. Reply with just the integer.",
+      "expected": "16",
+      "text": "16",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-03-11",
+      "prompt": "What is 3 plus 11? Answer with only the integer.",
+      "expected": "14",
+      "text": "34",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-10-11",
+      "prompt": "Add 10 and 11. Return only the integer result.",
+      "expected": "21",
+      "text": "1110",
+      "generated_tokens": 5,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-00-08",
+      "prompt": "Compute 0 + 8. Reply with just the integer.",
+      "expected": "8",
+      "text": "16",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-10-15",
+      "prompt": "What is 15 plus 10? Answer with only the integer.",
+      "expected": "25",
+      "text": "25",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-02-11",
+      "prompt": "Add 11 and 2. Return only the integer result.",
+      "expected": "13",
+      "text": "32",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-00-14",
+      "prompt": "Compute 14 + 0. Reply with just the integer.",
+      "expected": "14",
+      "text": "28",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-09-18",
+      "prompt": "What is 9 plus 18? Answer with only the integer.",
+      "expected": "27",
+      "text": "27",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-09-16",
+      "prompt": "Add 9 and 16. Return only the integer result.",
+      "expected": "25",
+      "text": "25",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-10-20",
+      "prompt": "Compute 10 + 20. Reply with just the integer.",
+      "expected": "30",
+      "text": "30",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-13-22",
+      "prompt": "What is 22 plus 13? Answer with only the integer.",
+      "expected": "35",
+      "text": "35",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-08-11",
+      "prompt": "Add 8 and 11. Return only the integer result.",
+      "expected": "19",
+      "text": "19",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-02-09",
+      "prompt": "Compute 2 + 9. Reply with just the integer.",
+      "expected": "11",
+      "text": "31",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-14-22",
+      "prompt": "What is 14 plus 22? Answer with only the integer.",
+      "expected": "36",
+      "text": "36",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-16-22",
+      "prompt": "Add 22 and 16. Return only the integer result.",
+      "expected": "38",
+      "text": "38",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-07-16",
+      "prompt": "Compute 16 + 7. Reply with just the integer.",
+      "expected": "23",
+      "text": "33",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-13-21",
+      "prompt": "What is 21 plus 13? Answer with only the integer.",
+      "expected": "34",
+      "text": "34",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-02-22",
+      "prompt": "Add 22 and 2. Return only the integer result.",
+      "expected": "24",
+      "text": "34",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": false
+    },
+    {
+      "id": "add-04-07",
+      "prompt": "Compute 7 + 4. Reply with just the integer.",
+      "expected": "11",
+      "text": "11",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    },
+    {
+      "id": "add-12-14",
+      "prompt": "What is 12 plus 14? Answer with only the integer.",
+      "expected": "26",
+      "text": "26",
+      "generated_tokens": 3,
+      "terminated": true,
+      "valid_format": true,
+      "exact_match": true
+    }
+  ],
+  "interpretation": "Small lab-held-out addition set; not a general reasoning benchmark. Cutoff answers score zero.",
+  "model": {
+    "base_model_name": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "base_revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+    "revision_kind": "hub_commit",
+    "device": "mps",
+    "compute_dtype": "torch.float32",
+    "quantization": "none",
+    "adapter_path": "runs/sft",
+    "cpu_threads": 4
+  },
+  "data": {
+    "path": "data/sft_test.jsonl",
+    "sha256": "a5eb0e528601fef1236be118f717dc74520e84ea5b3695f76cc55e8203774164"
+  },
+  "validation_note": "Recorded before final metadata and validation-check refinements; no model runs repeated after the request to focus on the guide."
+}
