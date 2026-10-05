@@ -32,15 +32,13 @@ def parse_log_for_overfull(log_path: Path) -> list[tuple[float, int, str]]:
         return []
     text = log_path.read_text(errors="replace")
     out: list[tuple[float, int, str]] = []
-    pat = re.compile(
-        r"Overfull \\(?:hbox|vbox) \(([\d.]+)pt too (?:wide|tall)\)[^\n]*"
-        r"(?: in paragraph at lines? (\d+))?",
-    )
+    pat = re.compile(r"Overfull \\(?:hbox|vbox) \(([\d.]+)pt too (?:wide|tall)\)[^\n]*")
     for m in pat.finditer(text):
         pt = float(m.group(1))
         if pt < TOL_PT:
             continue
-        line = int(m.group(2)) if m.group(2) else -1
+        line_match = re.search(r"at lines? (\d+)", m.group(0))
+        line = int(line_match.group(1)) if line_match else -1
         ctx = m.group(0)[:140]
         out.append((pt, line, ctx))
     return out
@@ -53,21 +51,21 @@ def check_edges_via_raster(pdf_path: Path) -> tuple[int, list[int]]:
     """
     try:
         from PIL import Image
-    except ImportError:
-        return 0, []
+    except ImportError as exc:
+        raise RuntimeError("--render requires Pillow; no edge check was performed") from exc
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         # Render every page (cheap at 100 dpi for our few-page PDFs)
         subprocess.run(
             ["pdftoppm", "-r", "100", "-gray", str(pdf_path), str(td / "p")],
-            check=False, capture_output=True,
+            check=True, capture_output=True,
         )
+        images = sorted(td.glob("p-*.pgm"))
+        if not images:
+            raise RuntimeError(f"No rendered pages produced for {pdf_path}")
         bad: list[int] = []
-        for img_path in sorted(td.glob("p-*.pgm")):
-            try:
-                im = Image.open(img_path)
-            except Exception:
-                continue
+        for img_path in images:
+            im = Image.open(img_path)
             w, h = im.size
             px = im.load()
             # Sample each edge band.
@@ -109,9 +107,12 @@ def main(argv: list[str]) -> int:
             worst = max((o[0] for o in overfulls), default=0.0)
             cutoff_pages = 0
             cutoff_list: list[int] = []
+            status = "OK" if log.exists() else "UNVERIFIED (missing compile log)"
             if args.render:
-                cutoff_pages, cutoff_list = check_edges_via_raster(pdf)
-            status = "OK"
+                try:
+                    cutoff_pages, cutoff_list = check_edges_via_raster(pdf)
+                except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
+                    status = f"ERROR (edge check failed: {exc})"
             if n_over > 0:
                 status = f"OVERFULL ({n_over}, max {worst:.1f}pt)"
             if cutoff_pages > 0:
@@ -123,7 +124,18 @@ def main(argv: list[str]) -> int:
     if syllabus.exists():
         ofs = parse_log_for_overfull(ROOT / "syllabus" / "syllabus.log")
         worst = max((o[0] for o in ofs), default=0.0)
-        st = "OK" if not ofs else f"OVERFULL ({len(ofs)}, max {worst:.1f}pt)"
+        st = "OK" if (ROOT / "syllabus" / "syllabus.log").exists() else "UNVERIFIED (missing compile log)"
+        if ofs:
+            st = f"OVERFULL ({len(ofs)}, max {worst:.1f}pt)"
+        if args.render:
+            try:
+                _, cutoff_list = check_edges_via_raster(syllabus)
+                if cutoff_list:
+                    st += f" CUTOFF pages={cutoff_list[:5]}"
+            except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
+                st = f"ERROR (edge check failed: {exc})"
+        if st != "OK":
+            fail += 1
         rows.append(("syllabus", "syllabus", st))
 
     out_path = ROOT / "pdf_margin_report.tsv"

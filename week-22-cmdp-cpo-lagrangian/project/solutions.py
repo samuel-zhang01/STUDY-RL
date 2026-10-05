@@ -74,11 +74,19 @@ def exercise_4(pi_old: np.ndarray, A_r: np.ndarray, A_c: np.ndarray,
 def exercise_5(samples: np.ndarray, alpha: float) -> float:
     """Empirical CVaR at level alpha: mean of the worst alpha fraction.
 
-    CVaR_alpha(G) = E[G | G <= VaR_alpha(G)] for alpha in (0, 1].
+    Uses exactly alpha probability mass, with fractional weight at the cutoff.
+    The conditional-tail shorthand needs care at atoms/tied quantiles.
     """
     samples = np.sort(np.asarray(samples, dtype=float))
-    k = max(1, int(np.ceil(alpha * len(samples))))
-    return float(samples[:k].mean())
+    if samples.ndim != 1 or not len(samples) or not np.isfinite(samples).all() or not 0 < alpha <= 1:
+        raise ValueError("Need finite nonempty 1D samples and alpha in (0,1]")
+    mass = alpha * len(samples)
+    whole = int(np.floor(mass))
+    remainder = mass - whole
+    tail_sum = samples[:whole].sum()
+    if remainder > 0:
+        tail_sum += remainder * samples[whole]
+    return float(tail_sum / mass)
 
 
 # -----------------------------------------------------------------------------

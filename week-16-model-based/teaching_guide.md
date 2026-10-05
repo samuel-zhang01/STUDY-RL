@@ -131,11 +131,16 @@ Short rollouts branched from real states are motivated by this tradeoff; see [MB
   The training loss uses detached returns/advantages for the REINFORCE update.
 - [solutions.py](project/solutions.py): exercise 5 demonstrates KL balancing separately from the training loop.
   Exercise 6 reports first/last evaluation return, not matched imagined/real trajectories.
-  Exercise 7 currently returns final evaluation return, not the four world-model loss components.
-- The collection policy reinitializes latent state for each observation; evaluation passes a zero
-  previous-action vector. These simplify recurrent state handling and limit claims about a full Dreamer agent.
+  Exercise 7 returns the final iteration's mean world-model loss components and evaluation return.
+- `_posterior_policy` keeps a latent state and the previously executed action for
+  each episode. Training encodes the chunk's initial observation, and padded transitions
+  receive zero weight in the world-model loss. Time limits end collection but do not
+  teach the continuation head that the physical system entered an absorbing terminal.
+- Imagination keeps the world model frozen; actor gradients use sampled action log
+  probabilities and detached advantages. This omits Dreamer's differentiable dynamics
+  actor update and its full replay/burn-in implementation.
 
-Do not use the labels of exercises 6–7 as evidence that their advertised diagnostics were measured.
+Exercise 6's first/last evaluation return is not a matched imagined/real diagnostic.
 A proper imagined/real comparison needs the same initial history, matched actions, and a common observable representation.
 
 ## Retrieval and transfer

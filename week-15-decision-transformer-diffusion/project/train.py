@@ -41,7 +41,7 @@ def train(seed: int = 0, n_steps: int = 1500, batch_size: int = 32,
         T_t = torch.from_numpy(T_clipped).to(device)
         M_t = torch.from_numpy(M).to(device)
 
-        logits = model(R_t, S_t, A_t, T_t)  # (B, K, nA)
+        logits = model(R_t, S_t, A_t, T_t, attention_mask=M_t)  # (B, K, nA)
         loss_unmasked = F.cross_entropy(logits.reshape(-1, nA), A_t.reshape(-1),
                                         reduction="none").reshape_as(M_t)
         loss = (loss_unmasked * M_t).sum() / M_t.sum().clamp_min(1.0)
@@ -95,7 +95,9 @@ def _rollout(model: DecisionTransformer, env, target_return: float,
                 A_t = torch.from_numpy(A_hist).to(device)
                 R_t = torch.from_numpy(R_hist[..., None]).to(device)
                 T_t = torch.from_numpy(T_hist).to(device)
-                logits = model(R_t, S_t, A_t, T_t)
+                mask = torch.zeros(1, K, device=device, dtype=torch.bool)
+                mask[:, -min(t + 1, K):] = True
+                logits = model(R_t, S_t, A_t, T_t, attention_mask=mask)
                 a = int(torch.argmax(logits[0, -1]).item())
                 A_hist[0, -1] = a
 

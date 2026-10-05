@@ -35,7 +35,7 @@ def exercise_2(texts):
     *Spearman* rank correlation between them. A failing reward proxy will
     have correlation near zero or negative.
     """
-    import scipy.stats as ss  # noqa: F401  -- imported lazily
+    from scipy.stats import rankdata
 
     from .hack_lab import fit_bigram
     from .agent import build_tokenizer
@@ -43,9 +43,9 @@ def exercise_2(texts):
     log_bigram = fit_bigram(stoi)
     px = np.array([proxy_reward(t) for t in texts])
     tx = np.array([true_quality(t, log_bigram, stoi) for t in texts])
-    # Hand-rolled Spearman to avoid the scipy dependency in tests.
-    rx = np.argsort(np.argsort(px))
-    rt = np.argsort(np.argsort(tx))
+    # Average tied ranks; arbitrary argsort positions create spurious correlation.
+    rx = rankdata(px, method="average")
+    rt = rankdata(tx, method="average")
     rx, rt = rx - rx.mean(), rt - rt.mean()
     corr = float((rx * rt).sum() / (np.sqrt((rx**2).sum() * (rt**2).sum()) + 1e-12))
     return px, tx, corr
@@ -95,7 +95,7 @@ def exercise_6(
     """Pure-NumPy DPO loss for verification against the torch version."""
     pi_logits = beta * ((pol_c - pol_r) - (ref_c - ref_r))
     # log sigmoid via softplus(-x).
-    return float(np.log1p(np.exp(-pi_logits)).mean())
+    return float(np.logaddexp(0.0, -pi_logits).mean())
 
 
 # ---------------------------------------------------------------------------
@@ -107,10 +107,9 @@ def exercise_7(p_judge_correct: float, n_rounds: int) -> float:
     judge has per-round accuracy ``p`` and the truthful side argues the
     correct claim in every round.
 
-    Under the Irving-Christiano-Amodei 2018 model, with an oracle judge
-    (p=1) the truthful side wins almost surely. As p degrades, the
-    probability degrades; we model it as ``1 - (1-p)**n``: each round is
-    an independent chance for the judge to detect the lie.
+    This invented independent-detection model uses ``1 - (1-p)**n``: each
+    round independently gives the judge a chance to detect a lie. It is not
+    an equilibrium result or a guarantee from Irving et al. (2018).
     """
     return 1.0 - (1.0 - p_judge_correct) ** n_rounds
 

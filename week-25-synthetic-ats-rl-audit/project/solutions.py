@@ -65,9 +65,10 @@ def exercise_4_snips_ci(seed: int = 0) -> Tuple[float, float, float]:
     res = train(n_candidates=200, n_jobs=30, n_rounds=500, seed=seed)
     d = res.log[0][0].shape[0]
     lints = LinTSReranker(d=d, seed=seed + 4)
-    for x, a, r, pb, slate in res.log:
+    for x, a, r, pb, slate in res.training_log:
         lints.update(slate[a], r)
-    pi = target_pi_argmax_factory(lints.score)
+    theta = lints.theta_hat.copy()
+    pi = target_pi_argmax_factory(lambda X: X @ theta)
     return snips_ci(res.log, pi)
 
 

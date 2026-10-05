@@ -78,3 +78,15 @@ def test_recommendation_memo_keys():
     for k in ("tt_ndcg@10", "rerank_ndcg@10", "dp_gap_pre", "dp_gap_post",
               "eo_gap_pre", "eo_gap_post", "ece_raw", "ece_beta"):
         assert k in d
+
+
+def test_logger_records_full_mixture_probability_with_small_candidate_pool():
+    from project.train import simulate_hire_logs
+    class Dataset:
+        def true_match(self, c, j): return .5
+    scores = np.array([[3., 2., 1.]])
+    logs = simulate_hire_logs(Dataset(), scores, np.random.default_rng(0),
+        n_per_job=100, eps=.6, top_n=20)
+    assert any(c == 0 for _,c,*_ in logs) and any(c != 0 for _,c,*_ in logs)
+    for j,c,r,propensity,mu in logs:
+        assert abs(propensity - (.6 / 3 + .4 * (c == 0))) < 1e-12

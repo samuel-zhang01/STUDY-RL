@@ -70,6 +70,11 @@ def train_variant(
     KTO uses ``ref`` plus a running KL estimate.
     """
     torch.manual_seed(cfg.seed)
+    variant = cfg.variant.lower()
+    if not pairs:
+        raise ValueError("Preference training needs nonempty pairs")
+    if variant in {"dpo", "ipo", "kto"} and ref is None:
+        raise ValueError(f"{variant.upper()} requires a frozen reference model")
     model.to(device).train()
     if ref is not None:
         ref.to(device).eval()
@@ -81,6 +86,10 @@ def train_variant(
     enc_w = [encode(p + c) for (p, c, _) in pairs]
     enc_l = [encode(p + l) for (p, _, l) in pairs]
     plens = torch.tensor([len(encode(p)) for (p, _, _) in pairs], dtype=torch.long)
+    if any(len(w) > block or len(l) > block for w, l in zip(enc_w, enc_l)):
+        raise ValueError("Preference row exceeds block_size; shorten it rather than truncate the response")
+    if any(len(w) <= p or len(l) <= p or p < 1 for w, l, p in zip(enc_w, enc_l, plens.tolist())):
+        raise ValueError("Every pair needs an encodable prompt and two nonempty responses")
 
     history: Dict[str, List[float]] = {"loss": [], "margin": [], "acc": []}
     g = torch.Generator().manual_seed(cfg.seed)
@@ -119,10 +128,12 @@ def train_variant(
                 torch.ones(w_ids.size(0), device=device),
                 torch.zeros(l_ids.size(0), device=device),
             ])
+            # This toy uses an in-batch off-policy reference-point proxy. It
+            # does not implement KTO's separate unpaired KL-estimation batch.
             kl_ref = (logp - logp_ref).detach().mean().clamp(min=0.0)
             loss = kto_loss(logp, logp_ref, desirable, kl_ref, beta=cfg.beta)
         elif v == "orpo":
-            loss = orpo_loss(logp_w, logp_l, nll_w, beta=cfg.beta)
+            loss = orpo_loss(-nll_w, -nll_l, nll_w, beta=cfg.beta)
         elif v == "simpo":
             loss = simpo_loss(logp_w, logp_l, len_w, len_l, beta=cfg.beta, gamma=cfg.gamma)
         elif v == "cpo":

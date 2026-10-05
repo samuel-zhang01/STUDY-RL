@@ -30,21 +30,15 @@ def make_figures(seeds=(0, 1, 2), n_updates: int = 150) -> None:
     FIG_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- A2C learning curve ---
-    L = 800  # pad / trim to a common length
     curves = []
     for s in seeds:
         out = train(seed=s, n_updates=n_updates)
         r = np.array(out.episode_returns, dtype=float)
         if len(r) == 0:
-            r = np.array([0.0])
-        sm = _smooth(r, k=10)
-        # pad/trim to same length so we can stack
-        if len(sm) < L:
-            sm = np.concatenate([sm, np.full(L - len(sm), sm[-1])])
-        else:
-            sm = sm[:L]
-        curves.append(sm)
-    curves = np.stack(curves, axis=0)
+            raise ValueError("No completed episodes available for the learning curve")
+        curves.append(_smooth(r, k=10))
+    L = min(len(curve) for curve in curves)
+    curves = np.stack([curve[:L] for curve in curves], axis=0)
     x = np.arange(L)
     fig, ax = plt.subplots(figsize=(6.5, 4.0))
     shaded(ax, x, curves, label="A2C+GAE", color=RL_PALETTE["teal"], agg="median")

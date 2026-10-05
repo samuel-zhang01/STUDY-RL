@@ -6,7 +6,9 @@ Action: number of cars moved overnight from location 1 to location 2, in
 
 Each day, requests at location i are Poisson(lambda_req_i) and returns are
 Poisson(lambda_ret_i). A successful rental earns $10. We model the dynamics
-exactly via Poisson PMFs truncated at ``poisson_cap``.
+exactly for the capped inventory via Poisson PMFs whose last bin absorbs
+the tail. The bin horizon is at least the inventory capacity, so larger
+request/return counts cannot change any capped outcome.
 
 For tractability the default is ``cap=10`` (Sutton uses 20), which keeps the
 state space to 121 states and a transition tensor under ~50 MB.
@@ -38,6 +40,7 @@ class CarRentalMDP:
     gamma: float = 0.9
 
     def __post_init__(self) -> None:
+        self.poisson_cap = max(self.poisson_cap, self.cap)
         self.req_pmf = [_poisson_pmf(self.lambda_req[i], self.poisson_cap) for i in (0, 1)]
         self.ret_pmf = [_poisson_pmf(self.lambda_ret[i], self.poisson_cap) for i in (0, 1)]
         self._build_transition()
@@ -89,8 +92,11 @@ class CarRentalMDP:
                                  ) -> Tuple[float, np.ndarray]:
         """Return (expected immediate reward, transition pmf over next states)."""
         n1, n2 = s
-        # Clip move to feasibility
-        a_eff = max(-n2, min(n1, a))
+        # Feasibility requires both available cars and destination space.
+        # A transfer must not silently discard cars at a full destination.
+        lower = -min(n2, self.cap - n1)
+        upper = min(n1, self.cap - n2)
+        a_eff = max(lower, min(upper, a))
         n1m, n2m = n1 - a_eff, n2 + a_eff
         # Clip at capacity
         n1m = min(self.cap, max(0, n1m))

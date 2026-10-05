@@ -5,10 +5,12 @@ Pipeline:
   2. Compute heuristic shortlist (top-k = 10) for each job.
   3. Run an epsilon-soft behaviour policy over the shortlist (logs propensities).
   4. Train LinTS on the logged stream.
-  5. Compute SNIPS + DR estimates for LinTS vs heuristic vs uniform.
-  6. Run constrained variant + audit.
+  5. Evaluate a fixed posterior-mean policy, heuristic, and uniform on a fresh
+     logged stream that supplied neither policy nor reward-model updates.
+  6. Return audit inputs. The constrained variant is a separate experiment.
 
-Target: SNIPS(LinTS) > SNIPS(heuristic) in < 30s on CPU.
+Target: finite held-out OPE estimates in <30s on CPU. Reward ordering is an
+empirical question, not a guarantee of a linear model on binary outcomes.
 """
 from __future__ import annotations
 
@@ -27,7 +29,7 @@ from .env import (
     true_match_prob,
 )
 from .ope import LogEntry, RidgeRewardModel, doubly_robust, ips, snips
-from .scorer import heuristic_score, top_k_shortlist
+from .scorer import heuristic_score, heuristic_feature_score, top_k_shortlist
 
 
 @dataclass
@@ -39,6 +41,9 @@ class TrainResult:
     chosen_cands: np.ndarray
     chosen_jobs: np.ndarray
     rewards: List[float] = field(default_factory=list)
+    training_log: List[LogEntry] = field(default_factory=list)
+    ground_truth_values: Dict[str, float] = field(default_factory=dict)
+    evaluation: str = "fresh_stream_same_population_and_shortlist"
 
 
 def behaviour_policy_probs(scores: np.ndarray, beta: float = 3.0, eps: float = 0.05) -> np.ndarray:
@@ -85,9 +90,10 @@ def target_pi_argmax_factory(scorer_fn):
         scores = scorer_fn(slate)
         p = np.zeros(len(scores))
         a = int(np.argmax(scores))
-        # smooth a tiny bit to keep overlap finite for OPE
-        p[:] = 1e-3
-        p[a] = 1.0 - 1e-3 * (len(scores) - 1)
+        # A fixed total exploration mass, valid for any shortlist size. The
+        # logger supplies positivity; this smoothing is a policy choice.
+        p[:] = 1e-3 / len(scores)
+        p[a] += 1.0 - 1e-3
         return p
     return pi
 
@@ -102,21 +108,28 @@ def train(
     data = generate_population(
         n_candidates=n_candidates, n_jobs=n_jobs, seed=seed
     )
-    log, chosen_cands, chosen_jobs, rewards = collect_logs(
+    training_log, _, _, _ = collect_logs(
         data, n_rounds=n_rounds, k_slate=k_slate, seed=seed + 1
     )
     d = feature_dim(data.candidates.shape[1])
 
     # Train LinTS on the logged stream (single epoch, online).
     lints = LinTSReranker(d=d, seed=seed + 2)
-    for x, a, r, pb, slate in log:
+    for x, a, r, pb, slate in training_log:
         lints.update(slate[a], r)
 
-    qhat = RidgeRewardModel(d=d).fit(log)
+    qhat = RidgeRewardModel(d=d).fit(training_log)
 
-    pi_lints = target_pi_argmax_factory(lints.score)
-    pi_heur = target_pi_argmax_factory(lambda X: X @ np.ones(d) / d)
+    # OPE and bootstrap require one fixed target distribution. Resampling
+    # lints.score inside every pi() call evaluates a different random policy
+    # on each pass. Here we explicitly evaluate posterior-mean exploitation.
+    theta = lints.theta_hat.copy()
+    pi_lints = target_pi_argmax_factory(lambda X: X @ theta)
+    pi_heur = target_pi_argmax_factory(heuristic_feature_score)
     pi_uniform = lambda slate: np.full(len(slate), 1.0 / len(slate))
+    log, chosen_cands, chosen_jobs, rewards = collect_logs(
+        data, n_rounds=n_rounds, k_slate=k_slate, seed=seed + 10001
+    )
 
     snips_est = {
         "LinTS": float(snips(log, pi_lints)),
@@ -128,6 +141,17 @@ def train(
         "Heuristic": float(doubly_robust(log, pi_heur, qhat)),
         "Uniform": float(doubly_robust(log, pi_uniform, qhat)),
     }
+    # Synthetic expected values under the evaluation job distribution let
+    # learners distinguish estimator error from actual policy performance.
+    s_mat = heuristic_score(data)
+    p_match = true_match_prob(data)
+    truth = {name: [] for name in snips_est}
+    for entry, job in zip(log, chosen_jobs):
+        slate = entry[-1]
+        candidates = top_k_shortlist(s_mat, int(job), k_slate)
+        outcomes = p_match[candidates, job]
+        for name, pi in (("LinTS", pi_lints), ("Heuristic", pi_heur), ("Uniform", pi_uniform)):
+            truth[name].append(float(pi(slate) @ outcomes))
     return TrainResult(
         log=log,
         snips_estimates=snips_est,
@@ -136,6 +160,8 @@ def train(
         chosen_cands=chosen_cands,
         chosen_jobs=chosen_jobs,
         rewards=list(rewards),
+        training_log=training_log,
+        ground_truth_values={name: float(np.mean(values)) for name, values in truth.items()},
     )
 
 

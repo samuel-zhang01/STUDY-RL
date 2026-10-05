@@ -19,8 +19,13 @@ def exercise_1_expectile(u: np.ndarray, tau: float) -> np.ndarray:
 
 def exercise_2_awr_weights(adv: np.ndarray, beta: float, clip: float = 100.0) -> np.ndarray:
     """Return normalised AWR sample weights: w_i ~ exp(beta * adv_i), capped."""
-    w = np.exp(np.clip(beta * adv, -clip, clip))
-    return w / (w.mean() + 1e-9)
+    # ``clip`` caps weights (not logits). Shift before exponentiating so large
+    # positive advantages do not overflow; preserve the cap's relative scale.
+    if clip <= 0 or not np.isfinite(clip):
+        raise ValueError("weight cap must be finite and positive")
+    logits = np.minimum(beta * np.asarray(adv, dtype=float), np.log(clip))
+    w = np.exp(logits - logits.max())
+    return w / w.mean()
 
 
 def exercise_3_cql_penalty(Q_s: np.ndarray, a_beta: int) -> float:
@@ -47,32 +52,39 @@ def exercise_7_off_policy_evaluation_is(data: dict, target_actions: np.ndarray,
     """Self-normalised importance-sampling (SNIPS) OPE.
 
     target_actions : np.ndarray of shape (nS,) giving greedy target-policy action per state.
-    Returns the SNIPS estimate of V^pi (sample-mean discounted return per episode,
-    weighted by per-step importance ratio).
+    Returns trajectory SNIPS of the finite-horizon discounted return. Each
+    episode's weight is the PRODUCT of per-step ratios. The target uses 1e-3
+    smoothing; episode_end includes collection time limits. Long trajectories
+    can still give low effective sample size despite stable log arithmetic.
     """
-    # Identify episode boundaries via the done flag.
-    done = data["done"].astype(bool)
+    done = np.asarray(data.get("episode_end", data["done"]), dtype=bool).copy()
     s_idx = data["s_idx"]; a = data["a"]; r = data["r"]; log_b = data["a_log_prob"]
     eps_target = 1e-3  # near-deterministic target
     nA = data["nA"]
-    weights, returns = [], []
-    w, G, gpow = 1.0, 0.0, 1.0
+    if not len(a):
+        return float("nan")
+    done[-1] = True  # include a final partial trajectory in legacy fixtures
+    log_weights, returns = [], []
+    log_w, G, gpow = 0.0, 0.0, 1.0
     for t in range(len(a)):
         # target prob: 1 - eps_target if matches, eps_target/(nA-1) otherwise (deterministic + smoothing).
         tgt_a = int(target_actions[s_idx[t]])
-        if a[t] == tgt_a:
+        if nA == 1:
+            log_t = 0.0
+        elif a[t] == tgt_a:
             log_t = np.log(1.0 - eps_target)
         else:
             log_t = np.log(eps_target / (nA - 1))
-        w *= np.exp(log_t - log_b[t])
+        log_w += log_t - log_b[t]
         G += gpow * r[t]
         gpow *= gamma
         if done[t]:
-            weights.append(w); returns.append(G)
-            w, G, gpow = 1.0, 0.0, 1.0
-    weights = np.asarray(weights); returns = np.asarray(returns)
-    if weights.sum() < 1e-9:
+            log_weights.append(log_w); returns.append(G)
+            log_w, G, gpow = 0.0, 0.0, 1.0
+    log_weights = np.asarray(log_weights); returns = np.asarray(returns)
+    if not np.isfinite(log_weights).any():
         return float("nan")
+    weights = np.exp(log_weights - log_weights.max())
     return float((weights * returns).sum() / weights.sum())
 
 

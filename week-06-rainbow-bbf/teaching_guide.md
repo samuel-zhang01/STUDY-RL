@@ -134,6 +134,15 @@ See [Wang et al., Dueling Network Architectures](https://proceedings.mlr.press/v
 For the complete BBF experimental recipe, consult
 [Schwarzer et al., Bigger, Better, Faster](https://proceedings.mlr.press/v202/schwarzer23a.html).
 
+## Episode boundaries in the project
+
+A true terminal ends the Bellman bootstrap. An external time limit ends
+collection but retains the final state's continuation value. For example,
+with reward 1, gamma 0.9, and final value 10, the truncated target is
+$1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
+flag for this mask and either flag to reset the environment.
+See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
+
 ## Retrieve and transfer
 
 <details><summary>1. What does PER alpha = 0 do?</summary>

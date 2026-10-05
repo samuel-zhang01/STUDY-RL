@@ -124,15 +124,21 @@ See [Conservative Q-Learning](https://arxiv.org/abs/2006.04779).
 - [agent.py](project/agent.py): `expectile_loss_grad` returns $w(Q-V)$,
   which is negative one-half of the actual derivative with respect to V; the caller adds it.
 - `IQLAgent.update_value` and `update_q` illustrate the two backups.
-  The current `policy_probs` is a softmax over all Q-values, with no behavior-frequency factor.
-  It is a uniform-prior extraction simplification, not canonical dataset-weighted AWR.
-  `policy` is greedy over all actions, so it also does not enforce empirical support.
+  `fit_behavior` counts logged state/action pairs; `policy_probs` multiplies those
+  frequencies by exponentiated advantage. `policy` takes that fitted policy's argmax.
+  Unsupported actions receive zero mass at observed states. Unobserved states use
+  a documented uniform fallback and carry no support guarantee.
+  Repeated minibatch samples are averaged per tabular parameter, so duplicates
+  do not multiply its learning rate.
 - `CQLAgent.update` combines sampled Bellman and penalty steps; it is a teaching implementation,
   not a certificate satisfying every condition of a CQL lower-bound theorem.
 - [solutions.py](project/solutions.py): `exercise_2_awr_weights` normalizes sample weights;
-  its argument named `clip` caps the exponent, not the final weight directly.
+  its argument named `clip` caps raw weights before mean normalisation.
 - `exercise_7_off_policy_evaluation_is` multiplies ratios across each episode.
   Its $10^{-3}$ target smoothing changes the evaluated policy; it cannot create missing logger support.
+  `episode_end` splits terminal and time-limited episodes; `done` alone masks
+  absorbing terminals in Bellman backups. Log-domain trajectory weights prevent
+  arithmetic underflow but do not cure weight concentration.
 
 ## Retrieval and transfer
 

@@ -8,59 +8,53 @@
 \maketitle
 
 \section*{1.\ Schulman, Wolski, Dhariwal, Radford, Klimov (2017) --- Proximal Policy Optimization Algorithms}
-arXiv:1707.06347 (July 2017). 50,000+ citations as of 2026; the most-cited RL paper in history.
+Preprint, \href{https://arxiv.org/abs/1707.06347}{arXiv:1707.06347}.
 
-\paragraph{Summary.} Introduces the PPO-clip and PPO-KL variants. Argues that a first-order approximation to TRPO's trust region, combined with multiple epochs of mini-batch SGD, achieves comparable performance with $5\times$--$10\times$ less wall-clock. The paper has 6 pages of derivation and 4 of empirical results --- it is the shortest landmark paper in modern RL.
+\paragraph{Summary.} PPO alternates interaction with surrogate optimization and enables repeated minibatch updates on a collected batch. The clipped and adaptive KL-penalty variants have favorable empirical comparisons on continuous-control and Atari tasks; these experiments are not convergence proofs.
+\paragraph{Why it matters for this week.} Derive the four cases formed by advantage sign and ratio location relative to the clipping interval. Separate improvement incentives from penalties for harmful changes.
+\paragraph{Annotated key passage (abstract).}
+\begin{quote}\emph{``a novel objective function that enables multiple epochs of minibatch updates''}\end{quote}
+Batch reuse explains why old log probabilities stay fixed. The clipped surrogate is pointwise no larger than the unclipped surrogate, because it takes their minimum. This is not a lower bound on actual policy return.
 
-\paragraph{Why it matters for this week.} This is the algorithm we implement. Read Section 3 carefully; pay particular attention to the asymmetry of the clip with respect to the sign of $\hat\Adv$.
-
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``Note that, despite being a lower bound on $L^{\mathrm{CPI}}$ (and hence on the unclipped surrogate $\hat g$), $L^{\mathrm{CLIP}}$ is not a lower bound when $r_t < 1, \hat A_t > 0$, or $r_t > 1, \hat A_t < 0$ --- in these cases the clip is inactive.''}\end{quote}
-This subtle remark is what makes the clip a soft trust region rather than a hard one. When the importance ratio moves toward $1$ from outside the box, the surrogate gradient is non-zero; only when it moves \emph{further away} does it saturate. The result is that PPO can ``re-enter'' the trust region even from a violation.
 
 \section*{2.\ Huang, Dossa, Raffin, Kanervisto, Wang (2022) --- The 37 Implementation Details of Proximal Policy Optimization}
-ICLR Blog Track 2022. \texttt{iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/}
+ICLR Blog Track, 25 March 2022. \href{https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/}{Article and reference implementation}.
 
-\paragraph{Summary.} A line-by-line forensic comparison of the original Schulman PPO code, the OpenAI Baselines reimplementation, the Stable Baselines3 reimplementation, and CleanRL. Identifies 37 distinct code-level details that affect performance --- the orthogonal init, the Adam $\varepsilon$, the value clipping, etc.
+\paragraph{Summary.} The authors trace implementation revisions and reproduce results across classic control, Atari, robotics, recurrent policies, and multidiscrete actions. Their 37-item checklist contains task-specific choices; every item is not required for every environment.
+\paragraph{Why it matters for this week.} Audit stored Gaussian samples, action clipping, normalization, and rollout boundaries. The course's detail numbers are local labels, not an exact copy of the article's ordering.
+\paragraph{Annotated key passage (introduction).}
+\begin{quote}\emph{``conclusions are in MuJoCo tasks and do not necessarily transfer to other games such as Atari''}\end{quote}
+Evaluate choices in their intended task. An ablation label is meaningful only if disabling the option changes the implementation.
 
-\paragraph{Why it matters for this week.} The checklist this week's mini-project follows is taken directly from this blog post. Without these details, the canonical PPO loss in Schulman 2017 does not converge.
-
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``In 2022, the difference between a paper PPO and a working PPO is 37 lines of code spread across 6 files. Each one is essential.''}\end{quote}
-A useful corrective to ``it's just the loss''. The lesson generalises to every RL algorithm: there is no such thing as ``the algorithm'' in isolation; the code-level details are part of the algorithm.
 
 \section*{3.\ Engstrom, Ilyas, Santurkar, Tsipras, Janoos, Rudolph, Madry (2020) --- Implementation Matters in Deep Policy Gradients}
-ICLR 2020. arXiv:2005.12729.
+ICLR 2020, \href{https://arxiv.org/abs/2005.12729}{arXiv:2005.12729}.
 
-\paragraph{Summary.} See week-8 extended reading. The headline result is reproduced here because it is the empirical justification for the 37-details exercise.
+\paragraph{Summary.} Controlled PPO/TRPO comparisons show that code-level optimizations affect both measured performance and the trust-region behavior attributed to the algorithm. Comparisons can change when implementation conditions change.
+\paragraph{Why it matters for this week.} Match architectures, optimizers, interaction budgets, and evaluation protocols when comparing losses.
+\paragraph{Annotated passage (paraphrase of the abstract).}
+\begin{quote}Implementation details affect the performance and behavior attributed to a policy-gradient algorithm.\end{quote}
+This is a paraphrase, not a direct quotation. The result motivates controlled comparisons; it does not establish that PPO and TRPO are interchangeable on every task or that one checklist eliminates their differences.
 
-\paragraph{Why it matters for this week.} The strongest evidence in the literature that ``algorithm'' and ``implementation'' are fundamentally entangled in deep RL.
-
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``With the code-level optimisations from PPO added to TRPO, the two algorithms perform indistinguishably on all five MuJoCo benchmarks.''}\end{quote}
-A controlled experiment: when you hold the optimisations fixed and vary only the algorithm, there is no measurable advantage to either. The corollary for practitioners: do not waste time tuning between PPO and TRPO; tune the 37 details first.
 
 \section*{4.\ Andrychowicz, Raichuk, Stanczyk, Orsini, Girgin, Marinier, Hussenot, Geist, Pietquin, Michalski, Gelly, Bachem (2021) --- What Matters In On-Policy Reinforcement Learning? A Large-Scale Empirical Study}
-ICLR 2021. arXiv:2006.05990.
+ICLR 2021, \href{https://arxiv.org/abs/2006.05990}{arXiv:2006.05990}.
 
-\paragraph{Summary.} A sweep of 250,000 PPO/A2C/IMPALA runs on a battery of continuous-control tasks, ablating individual implementation choices. Findings: orthogonal init matters most for stability; advantage normalisation matters most for final performance; entropy bonus matters most for exploration; the choice of optimiser ($\varepsilon = 10^{-5}$ Adam vs.\ $10^{-8}$) genuinely affects convergence speed.
+\paragraph{Summary.} This broad empirical study investigates design decisions in on-policy deep RL, covering objectives, architectures, optimization, and data collection. The effects are conditional on the tested environments and protocols.
+\paragraph{Why it matters for this week.} Select an ablation from the study, then state its task, budget, and seeds before interpreting the effect.
+\paragraph{Annotated passage (paraphrase of the abstract).}
+\begin{quote}Empirical investigation of many design choices can inform on-policy RL implementations.\end{quote}
+This is a paraphrase, not a direct quotation. Recommendations motivate measurements; they are not convergence theorems. There is no universal ordering of which implementation choice matters most.
 
-\paragraph{Why it matters for this week.} Quantifies the per-detail contribution. Useful when triaging a broken implementation: read this paper's Figure 4 and decide which detail to fix first.
-
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``The default $\varepsilon = 10^{-8}$ in Adam causes systematically worse performance than $\varepsilon = 10^{-5}$ across all five benchmarks we tested.''}\end{quote}
-A single hyper-parameter buried in the optimiser, six orders of magnitude smaller than the learning rate, makes a measurable empirical difference. Such is deep RL.
 
 \section*{5.\ Ouyang, Wu, Jiang, et al.\ (2022) --- Training language models to follow instructions with human feedback (InstructGPT)}
-arXiv:2203.02155 (March 2022).
+NeurIPS 2022, \href{https://arxiv.org/abs/2203.02155}{arXiv:2203.02155}.
 
-\paragraph{Summary.} The InstructGPT paper. PPO is used to fine-tune GPT-3 against a learned reward model trained on human preferences. The recipe (PPO + KL-to-reference penalty + per-token reward) is what underpins ChatGPT and every public LLM RLHF stack since.
-
-\paragraph{Why it matters for this week.} This is the production application of PPO that dominates the modern landscape. Read sections 3.1--3.3; the PPO loss they write is exactly our \texttt{ppo\_loss}, with one extra reward-shaping term: $r_t \leftarrow r_t - \beta \log \Policy_\theta(a_t\given s_t) / \Policy_\text{ref}(a_t\given s_t)$.
-
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``We adapt the standard PPO algorithm to use a KL penalty between the policy and the SFT model as an additional reward shaping term, ensuring that the model does not drift too far from a well-behaved initialization.''}\end{quote}
-The KL term is what saves RLHF from the reward-hacking pathology. It is the exact mechanism we analysed in our safety angle, applied to a frontier-scale model. Week 18 implements this end-to-end.
+\paragraph{Summary.} InstructGPT combines supervised demonstrations, a preference reward model, and PPO fine-tuning to improve instruction following under human evaluation. It is an application of PPO, not evidence that all preference-training systems use the same optimizer.
+\paragraph{Why it matters for this week.} Distinguish the old rollout policy from the SFT reference used in KL reward regularization.
+\paragraph{Annotated passage (paraphrase of the method).}
+\begin{quote}Divergence from the supervised reference is penalized during reward optimization.\end{quote}
+This is a paraphrase, not a direct quotation. A finite penalty discourages drift but does not eliminate reward hacking or guarantee safety. Week 18 supplies a small synthetic analogue, rather than a frontier-model reproduction.
 
 \section*{Sourced from}
 \texttt{research/deeprl\_core\_sota.md} \S 2.6 and \texttt{research/llm\_rl\_sota.md} (RLHF section).

@@ -39,3 +39,13 @@ def test_idx_roundtrip():
     env = GridWorld(rows=5, cols=7)
     for i in range(env.nS):
         assert env.s2idx(env.idx2s(i)) == i
+
+
+def test_terminal_steps_match_absorbing_transition_model():
+    for terminal_kind in ('goals', 'pits'):
+        env = GridWorld(rows=2, cols=2, start=(0, 0), **{terminal_kind: ((0, 1),)})
+        env.step(1)
+        for a in range(4):
+            obs, reward, done, _ = env.step(a)
+            assert (obs, reward, done) == ((0, 1), 0.0, True)
+            assert env.transition_table()[(env.s2idx(obs), a)] == [(1.0, env.s2idx(obs), 0.0, True)]

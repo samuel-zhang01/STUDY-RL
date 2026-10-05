@@ -148,6 +148,8 @@ class CharLM(nn.Module):
         positions masked to 0 once EOS has been emitted — those positions are
         also masked out in the loss via :func:`completion_mask`.
         """
+        if not math.isfinite(temperature) or temperature <= 0:
+            raise ValueError("temperature must be finite and positive")
         ids = prefix.clone()
         B = ids.shape[0]
         logps = torch.zeros(B, max_new_tokens, device=ids.device)
@@ -157,7 +159,7 @@ class CharLM(nn.Module):
             logits = self.forward(inp)[:, -1, :] / max(temperature, 1e-6)
             probs = F.softmax(logits, dim=-1)
             sampled = torch.multinomial(probs, num_samples=1).squeeze(-1)
-            lp = torch.log(probs.gather(-1, sampled.unsqueeze(-1)).squeeze(-1) + 1e-12)
+            lp = F.log_softmax(logits, dim=-1).gather(-1, sampled.unsqueeze(-1)).squeeze(-1)
             lp = torch.where(done, torch.zeros_like(lp), lp)
             logps[:, t] = lp
             ids = torch.cat([ids, sampled.unsqueeze(-1)], dim=-1)
@@ -184,7 +186,8 @@ def completion_mask(comp_ids: torch.Tensor, eos_id: int) -> torch.Tensor:
     return (after_eos == 0).float()
 
 
-def token_logprobs(model: CharLM, ids: torch.Tensor, comp_start: int) -> torch.Tensor:
+def token_logprobs(model: CharLM, ids: torch.Tensor, comp_start: int,
+                   temperature: float = 1.0) -> torch.Tensor:
     """Return per-token log-probs for the *completion* slice of ``ids``.
 
     For ``ids`` of shape ``(B, T)`` with the first ``comp_start`` tokens being
@@ -192,7 +195,7 @@ def token_logprobs(model: CharLM, ids: torch.Tensor, comp_start: int) -> torch.T
     to positions ``[comp_start, T)`` (i.e., predicting the i-th completion
     token given everything before it).
     """
-    logits = model(ids[:, :-1])  # predict position t+1 from prefix [0..t]
+    logits = model(ids[:, :-1]) / temperature  # same distribution as sampling
     log_probs_all = F.log_softmax(logits, dim=-1)
     targets = ids[:, 1:]  # (B, T-1)
     chosen = log_probs_all.gather(-1, targets.unsqueeze(-1)).squeeze(-1)

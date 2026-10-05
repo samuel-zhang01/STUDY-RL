@@ -8,7 +8,9 @@ the recommendation decision is independent for each (job, candidate) pair).
 In this contextual-bandit version IQL reduces to:
     V(s) = expectile_tau of Q(s, a) over a sampled from dataset
     Q(s, a) -> r (no bootstrap, because the next state is terminal)
-    pi(a|s) propto exp(beta * (Q(s, a) - V(s))) advantage-weighted regression
+    maximise E_D[exp(beta * (Q(s,a)-V(s))) log pi(a|s)]
+    The tabular optimum includes the behavior frequency mu_D(a|s); a neural
+    policy can still extrapolate on unseen contexts, so support is not guaranteed.
 
 We train Q-networks for actions 0 and 1, a V-network, and the policy network
 (a small MLP outputting a Bernoulli logit). The whole pipeline runs in ~10
@@ -82,6 +84,7 @@ class IQLPolicy(nn.Module):
 
     def __init__(self, ctx_dim: int, hidden: int = 64):
         super().__init__()
+        self.include_group = ctx_dim == context_dim(include_group=True)
         self.q = MLP(ctx_dim, 2, hidden=hidden)
         self.v = MLP(ctx_dim, 1, hidden=hidden)
         self.pi = MLP(ctx_dim, 2, hidden=hidden)

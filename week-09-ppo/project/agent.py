@@ -91,7 +91,7 @@ class PPOAgent:
     # --- act ----------------------------------------------------------------
 
     @torch.no_grad()
-    def act(self, obs: np.ndarray) -> tuple[np.ndarray, float, float]:
+    def act(self, obs: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         obs_t = torch.as_tensor(obs, dtype=torch.float32)
         if obs_t.ndim == 1:
             obs_t = obs_t.unsqueeze(0)
@@ -99,8 +99,9 @@ class PPOAgent:
         a = dist.sample()
         logp = dist.log_prob(a).sum(-1)
         v = self.critic(obs_t)
-        # Detail #18: action clipping.
-        a_np = a.clamp(-1.0, 1.0).cpu().numpy()
+        # The rollout clips only the action sent to the environment. Store
+        # this sampled latent action so old and new log-probs agree at ratio 1.
+        a_np = a.cpu().numpy()
         return a_np, logp.cpu().numpy(), v.cpu().numpy()
 
     # --- update -------------------------------------------------------------
@@ -113,17 +114,21 @@ class PPOAgent:
         advantages: torch.Tensor,
         returns: torch.Tensor,
         values_old: torch.Tensor,
+        *, use_value_clip: bool = True, use_advantage_norm: bool = True,
     ) -> dict[str, float]:
         dist = self.actor.dist(obs)
         logp = dist.log_prob(acts).sum(-1)
         entropy = dist.entropy().sum(-1).mean()
 
         # Standardise advantages within the mini-batch (detail #6).
-        adv = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        adv = advantages
+        if use_advantage_norm:
+            adv = (adv - adv.mean()) / (adv.std(correction=0) + 1e-8)
 
         pi_loss = ppo_clip_loss(logp, logp_old, adv, clip_eps=self.clip_eps)
         v = self.critic(obs)
-        v_loss = ppo_value_clip_loss(v, values_old, returns, clip_eps=self.clip_eps)
+        v_loss = (ppo_value_clip_loss(v, values_old, returns, clip_eps=self.clip_eps)
+                  if use_value_clip else 0.5 * F.mse_loss(v, returns))
         loss = pi_loss + self.value_coef * v_loss - self.entropy_coef * entropy
 
         self.opt.zero_grad()

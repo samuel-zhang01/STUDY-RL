@@ -78,3 +78,17 @@ def test_snips_recovers_mean_for_target_equals_behaviour():
     r = rng.normal(loc=2.0, size=100)
     v = snips_estimator(logp, logp, r)
     assert abs(v - r.mean()) < 1e-9
+
+
+def test_snips_preserves_extreme_ratios_without_clipping():
+    v = snips_estimator(np.array([-100., -99.]), np.array([0., 0.]), np.array([0., 1.]))
+    assert abs(v - 1. / (np.e + 1.)) < 1e-12
+
+
+def test_singleton_advantage_has_finite_losses_and_critic_gradient():
+    logp = torch.tensor([-1.], requires_grad=True)
+    values = torch.tensor([0.], requires_grad=True)
+    actor_loss, value_loss = reinforce_with_baseline_loss(logp, torch.tensor([1.]), values)
+    assert torch.isfinite(actor_loss) and torch.isfinite(value_loss)
+    value_loss.backward()
+    assert values.grad.item() == -1.

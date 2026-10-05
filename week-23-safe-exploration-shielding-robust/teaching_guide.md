@@ -119,14 +119,16 @@ Domain randomisation optimises performance under a distribution; it need not sol
 - [project/shield.py](project/shield.py): `DFAShield.filter` returns the first preferred
   safe action, then tries fallbacks. This preference filter is not identical to
   renormalising a stochastic policy over its safe action set.
-- If every action is unsafe, it returns the first preference. Its guarantee therefore
-  relies on the nonempty-safe-set assumption; it does not enforce safe stopping.
+- If every action is unsafe, it raises `NoSafeActionError` before execution. The
+  caller must handle the infeasible situation; the filter cannot invent a safe action.
 - [project/env_grid.py](project/env_grid.py): `adjacent_dangerous` supplies the one-step
   predicate. Inspect that model and its transition assumptions before claiming soundness.
 - [project/solutions.py](project/solutions.py): exercise 7 projects a simplified 1D
-  constraint; the `dh_da==0` branch returns the proposal even if the constraint is infeasible.
+  constraint; the `dh_da==0` branch raises when the half-space is infeasible.
 - [project/pendulum_train.py](project/pendulum_train.py): compare `train_pendulum_dr`
   under its training-length distribution and separately at held-out lengths.
+  Its angle zero is upright: gravity increases a small displacement from zero.
+  Average performance under randomised lengths does not imply a worst-case bound.
 
 Zero violations in a finite rollout is an empirical observation.
 An induction proof is conditional on the model, invariant set, initial state, and action execution.

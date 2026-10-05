@@ -25,6 +25,7 @@ class DecisionTransformer(nn.Module):
         self.n_actions = n_actions
         self.context_len = context_len
         self.hidden = hidden
+        self.n_heads = n_heads
 
         self.state_embed = nn.Linear(state_dim, hidden)
         self.action_embed = nn.Embedding(n_actions, hidden)
@@ -41,7 +42,8 @@ class DecisionTransformer(nn.Module):
         self.action_head = nn.Linear(hidden, n_actions)
 
     def forward(self, returns: torch.Tensor, states: torch.Tensor,
-                actions: torch.Tensor, timesteps: torch.Tensor) -> torch.Tensor:
+                actions: torch.Tensor, timesteps: torch.Tensor,
+                attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         """returns: (B, K, 1) float; states: (B, K, state_dim); actions: (B, K) long;
         timesteps: (B, K) long. Returns logits over actions, shape (B, K, n_actions)."""
         B, K = states.shape[:2]
@@ -58,7 +60,16 @@ class DecisionTransformer(nn.Module):
         L = 3 * K
         mask = torch.triu(torch.ones(L, L, device=tokens.device, dtype=torch.bool),
                           diagonal=1)
-        h = self.transformer(tokens, mask=mask, is_causal=True)
+        if attention_mask is not None:
+            # Mask padded keys for valid predictions. Padded queries may attend
+            # themselves, avoiding an all-masked softmax without leaking padding
+            # into the valid queries.
+            valid = attention_mask.bool().repeat_interleave(3, dim=1)
+            mask = mask[None].expand(B, L, L).clone() | ~valid[:, None, :]
+            diagonal = torch.arange(L, device=tokens.device)
+            mask[:, diagonal, diagonal] &= valid
+            mask = mask.repeat_interleave(self.n_heads, dim=0)
+        h = self.transformer(tokens, mask=mask)
         # Pick state positions: indices 1, 4, 7, ... (every 3rd, offset 1 -> s positions
         # are the predictor of next action). In DT, we predict action_t from the
         # token AT the state position (index 3t+1).

@@ -58,7 +58,8 @@ class AZNetwork(nn.Module):
 
     @torch.no_grad()
     def predict(self, encoded_state: np.ndarray) -> Tuple[np.ndarray, float]:
-        x = torch.tensor(encoded_state, dtype=torch.float32).unsqueeze(0)
+        x = torch.tensor(encoded_state, dtype=torch.float32,
+                         device=next(self.parameters()).device).unsqueeze(0)
         logits, value = self.forward(x)
         prior = F.softmax(logits, dim=-1).cpu().numpy()[0]
         return prior, float(value.item())
@@ -123,9 +124,10 @@ class MCTS:
         s = prior.sum()
         prior = prior / s if s > 0 else legal / legal.sum()
         if add_noise:
-            noise = self._rng.dirichlet([self.dirichlet_alpha] * len(prior))
             mask = legal.astype(bool)
-            prior[mask] = (1 - self.dirichlet_eps) * prior[mask] + self.dirichlet_eps * noise[mask]
+            # Draw only over legal actions so the mixture has the stated weight.
+            noise = self._rng.dirichlet([self.dirichlet_alpha] * int(mask.sum()))
+            prior[mask] = (1 - self.dirichlet_eps) * prior[mask] + self.dirichlet_eps * noise
             prior = prior * legal
             prior = prior / max(prior.sum(), 1e-9)
         for a, p in enumerate(prior):

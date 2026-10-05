@@ -9,8 +9,7 @@ This is a single-step Lagrangian relaxation — full CMDP treatment is in
 week 22. For this week we want a runnable demonstration on the synthetic
 ATS data, not yet-another-PPO clone.
 
-  L(theta, lambda) = E[reward] - lambda * (parity_floor * P(B selected) - P(A selected))
-                                                       wait sign:
+  This is a heuristic score penalty, not a PPO policy-gradient implementation.
   cost c = max(0, parity_floor * sel_A - sel_B)  (B under-selected)
   Lagrangian update:
       theta_{t+1} = theta_t + eta * (grad reward - lambda_t * grad cost)
@@ -59,13 +58,12 @@ def train_lagrangian(
     # Running ema of group selection rates
     sel_A = sel_B = 0.5
     decay = 0.05
+    from .scorer import heuristic_score, top_k_shortlist
+    s_mat = heuristic_score(data)
 
     for t in range(n_rounds):
         j = int(rng.integers(0, n_job))
         # heuristic shortlist
-        from .scorer import heuristic_score, top_k_shortlist
-        # cache once outside in real code; cheap here
-        s_mat = heuristic_score(data)
         shortlist = top_k_shortlist(s_mat, j, k=k_slate)
         feats = np.stack([context_features(data, c, j) for c in shortlist])
         logits = feats @ theta

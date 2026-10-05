@@ -44,6 +44,7 @@ def train(
     seed_everything(seed)
     env = gym.make(env_id)
     obs, _ = env.reset(seed=seed)
+    env.action_space.seed(seed)
     obs_dim = int(np.prod(env.observation_space.shape))
     act_dim = int(np.prod(env.action_space.shape))
     action_scale = float(env.action_space.high[0])

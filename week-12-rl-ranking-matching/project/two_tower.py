@@ -54,8 +54,11 @@ def train_two_tower(
     seed: int = 0,
     device: str = "cpu",
 ) -> Tuple[TwoTower, np.ndarray]:
-    """Train with in-batch-negatives contrastive loss using the ground-truth
-    Jaccard relevance as a softmax target.
+    """Train symmetric InfoNCE using each candidate's best synthetic job.
+
+    Targets are diagonal class indices, not soft relevance distributions.
+    Duplicate jobs within a batch are treated as negatives in this simplified
+    recipe; a production retriever needs explicit multiple-positive handling.
 
     Returns (model, loss_history).
     """

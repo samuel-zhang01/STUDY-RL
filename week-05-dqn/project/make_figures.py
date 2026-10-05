@@ -96,7 +96,7 @@ def main(out_dir: str | None = None, n_steps: int = 30_000,
     plt.close(fig)
 
     # Figure 4: action-value visualisation across an evaluation episode
-    # (uses the last trained agent, with eps=0)
+    # (uses a separately trained agent, with eps=0)
     import gymnasium as gym
     cfg = agent_mod.DQNConfig(obs_dim=8, n_actions=4,
                               eps_decay_steps=int(0.7 * n_steps),
@@ -108,7 +108,7 @@ def main(out_dir: str | None = None, n_steps: int = 30_000,
     for step in range(min(15_000, n_steps)):
         a = ag.act(np.asarray(s, dtype=np.float32))
         s2, r, term, trunc, _ = env.step(a)
-        ag.push(s, a, r, s2, term or trunc)
+        ag.push(s, a, r, s2, term)
         ag.learn()
         s = s2 if not (term or trunc) else env.reset(seed=step + 1)[0]
     env_eval = gym.make("LunarLander-v3")

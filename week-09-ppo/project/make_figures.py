@@ -35,18 +35,18 @@ def make_figures(seeds=(0, 1, 2), n_updates: int = 60) -> None:
     use_rl_style()
     FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    L = 600
     curves = []
     for s in seeds:
         out = train(seed=s, n_updates=n_updates)
         r = np.array(out.episode_returns, dtype=float)
         if len(r) == 0:
-            r = np.array([0.0])
-        curves.append(_pad(_smooth(r, k=10), L))
-    curves = np.stack(curves, axis=0)
+            raise ValueError("No completed episodes available for the learning curve")
+        curves.append(_smooth(r, k=10))
+    L = min(len(curve) for curve in curves)
+    curves = np.stack([curve[:L] for curve in curves], axis=0)
     x = np.arange(L)
     fig, ax = plt.subplots(figsize=(6.5, 4.0))
-    shaded(ax, x, curves, label="PPO (37 details)", color=RL_PALETTE["teal"], agg="median")
+    shaded(ax, x, curves, label="PPO (implemented details)", color=RL_PALETTE["teal"], agg="median")
     ax.set_xlabel("episode index")
     ax.set_ylabel("episode return (BipedalWalker-v3)")
     ax.set_title("PPO on BipedalWalker-v3")
@@ -75,7 +75,7 @@ def make_figures(seeds=(0, 1, 2), n_updates: int = 60) -> None:
     colors = [RL_PALETTE["teal"], RL_PALETTE["blue"], RL_PALETTE["orange"], RL_PALETTE["gold"]]
     ax.bar(names, means, yerr=stds, color=colors, capsize=4)
     ax.set_ylabel("final mean return (last 20 episodes)")
-    ax.set_title("Detail ablation: skipping any one detail hurts")
+    ax.set_title("PPO implementation-detail ablation")
     fig.tight_layout()
     fig.savefig(FIG_DIR / "details_ablation.pdf")
     plt.close(fig)

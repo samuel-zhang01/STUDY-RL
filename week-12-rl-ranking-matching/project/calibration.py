@@ -60,7 +60,8 @@ class BetaCalibrator:
 
     def fit(self, scores: np.ndarray, labels: np.ndarray) -> "BetaCalibrator":
         """Beta calibration is logistic regression on
-        (log(s), -log(1-s)) features; coefficients are constrained positive."""
+        (log(s), -log(1-s)) features. This teaching variant uses unconstrained
+        logistic regression; it does not guarantee a monotone mapping."""
         s = np.clip(scores, 1e-6, 1 - 1e-6)
         X = np.column_stack([np.log(s), -np.log(1 - s)])
         lr = LogisticRegression()

@@ -58,6 +58,8 @@ def policy_evaluation(env: GridWorld, policy: np.ndarray, gamma: float = 0.99,
 def policy_iteration(env: GridWorld, gamma: float = 0.99,
                      max_iter: int = 100) -> Tuple[np.ndarray, np.ndarray, int]:
     """Howard's policy iteration. Returns (V, pi, n_sweeps)."""
+    if max_iter < 1:
+        raise ValueError("max_iter must be positive")
     P = env.transition_table()
     pi = np.zeros(env.nS, dtype=int)
     for sweep in range(max_iter):
@@ -73,7 +75,8 @@ def policy_iteration(env: GridWorld, gamma: float = 0.99,
                 pi[s] = best
         if stable:
             return V, pi, sweep + 1
-    return V, pi, max_iter
+    # A budget exit can follow an improvement: evaluate the returned policy.
+    return policy_evaluation(env, pi, gamma=gamma), pi, max_iter
 
 
 # ===================== Model-free control =====================

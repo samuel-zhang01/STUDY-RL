@@ -107,10 +107,11 @@ The support requirement comes from the importance-sampling change of measure;
 
 ## The logger's bias: check the threshold before telling the story
 
-In [project/data.py](project/data.py), group 0 gets score `0.6×relevance` and group 1 gets `0.4×relevance`.
-With relevance `0.7`, scores are `0.42` and `0.28`: both are below threshold `0.5`.
+In [project/data.py](project/data.py), group 0 gets score `relevance+0.1`
+and group 1 gets `relevance−0.1` (the default bias parameter is `0.6`).
+With relevance `0.3`, scores are `0.4` and `0.2`: both are below threshold `0.5`.
 At epsilon `0.1`, each gets recommendation probability `epsilon/2=0.05`, not `0.1`.
-With relevance `0.9`, scores are `0.54` and `0.36`:
+With relevance `0.5`, scores are `0.6` and `0.4`:
 recommendation probabilities now differ, `0.95` versus `0.05`.
 This demonstrates uneven coverage without assuming every different score changes the action.
 
@@ -118,13 +119,17 @@ This demonstrates uneven coverage without assuming every different score changes
 
 - [project/offline_iql.py](project/offline_iql.py): `_expectile_loss` weights residual signs;
   `iql_pretrain` clips the AWR weight at `100` and uses terminal Q targets.
-- [project/online_ppo_lag.py](project/online_ppo_lag.py): `_sample_rollout` computes a rolling
-  group gap, while `ppo_lag_finetune` updates the multiplier using full-rollout parity.
-  Window history is not in the policy state, so this is a heuristic cost update.
+- [project/online_ppo_lag.py](project/online_ppo_lag.py): `_sample_rollout` records
+  moving-window and sampled selection gaps. The policy update differentiates a
+  full-batch gap in expected recommendation probabilities and updates the dual
+  using that same surrogate. This is an empirical constraint, with no population
+  feasibility guarantee. Fine-tuning copies the offline checkpoint.
 - [project/audit.py](project/audit.py): `snips_ope` expects target probability for the
   **logged action**, not always the recommend action.
-- `full_audit` uses a prefix of the supplied interaction list. The shipped pipeline
-  reuses the dataset used for fitting; independent evaluation requires an explicit split.
+- `full_audit` uses a prefix of the supplied list and reports the actual number of rows.
+  The shipped pipeline creates an independent synthetic evaluation population and
+  log stream; neither is used for fitting. `--no-finetune` skips the online stage
+  and ranks/audits the preserved offline policy.
 - `calibration_curve` receives policy recommendation probabilities versus relevance labels.
   Decision probabilities are not predicted outcome probabilities; a diagonal is not required by RL.
 

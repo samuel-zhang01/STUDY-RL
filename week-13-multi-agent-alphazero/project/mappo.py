@@ -1,7 +1,7 @@
 """Minimal MAPPO (Multi-Agent PPO) implementation for the SimpleSpread env.
 
-Centralised-critic, decentralised-execution paradigm: each agent has its own
-actor (local observation only), but all share a critic that consumes the
+Centralised-critic, decentralised-execution paradigm: agents use a
+shared actor (local observation only) and a critic that consumes the
 global state. This is the dominant cooperative-MARL recipe of 2022-2026
 (Yu et al. NeurIPS 2022 demonstrated MAPPO matches or beats QMIX, MADDPG,
 COMA on most benchmarks).

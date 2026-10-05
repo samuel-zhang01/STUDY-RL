@@ -2,8 +2,8 @@
 
 Generates a fake population of candidates and jobs with a *skills overlap*
 ground-truth reward (probability of "good match", i.e. hire) plus a binary
-*sensitive attribute* (group A / group B) that is correlated with one of
-the skill dimensions to inject realistic bias risk into the data.
+*sensitive attribute* (group A / group B) that affects recorded experience.
+Skills are sampled independently of the group.
 
 Schema mimics what a real ATS pipeline produces:
   candidate: id, skills (dense vector), years_experience, group
@@ -64,7 +64,9 @@ def generate_population(
     sim = cand_n @ jobs_n.T                                # (N, J) in [-1, 1]
     sen_gap = np.abs(years[:, None] / 10.0 - job_sen[None, :])  # (N, J)
     logits = 2.5 * sim - 1.2 * sen_gap - 1.5
-    # The TRUE reward does NOT depend on group — only on skill + years/seniority.
+    # No explicit group term appears in the reward, but group affects recorded
+    # years and therefore indirectly affects reward. This is not a causally
+    # fair reward construction or a measure of unbiased latent competence.
     return ATSData(
         candidates=cand,
         cand_years=years,
@@ -98,7 +100,9 @@ def context_features(data: ATSData, cand_idx: int, job_idx: int) -> np.ndarray:
     """
     c = data.candidates[cand_idx]
     j = data.jobs[job_idx]
-    prod = c * j
+    # Normalised elementwise products sum to cosine similarity, so the
+    # heuristic baseline can be reconstructed exactly from a logged slate.
+    prod = _safe_norm(c) * _safe_norm(j)
     extras = np.array([
         data.cand_years[cand_idx] / 30.0,
         data.job_seniority[job_idx],

@@ -66,3 +66,23 @@ def test_ex7_baird_diverges():
 def test_ex8_smoke_returns_log():
     log = S.exercise_8_smoke_dqn(n_steps=1000, seed=0)
     assert len(log.episode_returns) >= 1
+
+
+def test_dqn_replay_time_limit_keeps_bootstrap(monkeypatch):
+    import importlib
+    import gymnasium as gym
+    trainer = importlib.import_module('w05_project.train')
+    class Env:
+        observation_space = gym.spaces.Box(-1., 1., (2,))
+        action_space = gym.spaces.Discrete(2)
+        def reset(self, seed=None): return np.zeros(2, dtype=np.float32), {}
+        def step(self, a): return np.ones(2, dtype=np.float32), 1., False, True, {}
+        def close(self): pass
+    monkeypatch.setattr(trainer, '_make_env', lambda *args: Env())
+    instances = []
+    original = trainer.DQNAgent
+    def agent(*args, **kwargs):
+        obj = original(*args, **kwargs); instances.append(obj); return obj
+    monkeypatch.setattr(trainer, 'DQNAgent', agent)
+    trainer.train(n_steps=1, hidden=(8,), warmup_steps=10)
+    assert instances[0].buf.done[0] == 0.

@@ -90,3 +90,35 @@ def test_ex8_shrink_perturb_endpoints():
 def test_ex9_smoke_returns_three_runs():
     res = S.exercise_9_smoke_ablate(n_steps=800)
     assert set(res.keys()) == {"full", "no_per", "no_noisy"}
+
+
+def test_noisy_agent_deterministic_action_uses_mean_parameters(monkeypatch):
+    from w06_project.agent import RainbowAgent, RainbowConfig
+    agent = RainbowAgent(RainbowConfig(obs_dim=2, n_actions=2, hidden=(8,), device='cpu'))
+    def unexpected_noise():
+        raise AssertionError('A deterministic action must not resample noise')
+    monkeypatch.setattr(agent.q, 'reset_noise', unexpected_noise)
+    obs = np.zeros(2, dtype=np.float32)
+    actions = [agent.act(obs, deterministic=True) for _ in range(3)]
+    assert len(set(actions)) == 1
+    assert agent.q.training
+
+
+def test_rainbow_replay_time_limit_keeps_bootstrap(monkeypatch):
+    import importlib
+    import gymnasium as gym
+    trainer = importlib.import_module('w06_project.train')
+    class Env:
+        observation_space = gym.spaces.Box(-1., 1., (2,))
+        action_space = gym.spaces.Discrete(2)
+        def reset(self, seed=None): return np.zeros(2, dtype=np.float32), {}
+        def step(self, a): return np.ones(2, dtype=np.float32), 1., False, True, {}
+        def close(self): pass
+    monkeypatch.setattr(trainer.gym, 'make', lambda *args: Env())
+    instances = []
+    original = trainer.RainbowAgent
+    def agent(*args, **kwargs):
+        obj = original(*args, **kwargs); instances.append(obj); return obj
+    monkeypatch.setattr(trainer, 'RainbowAgent', agent)
+    trainer.train(n_steps=1, hidden=(8,), warmup_steps=10)
+    assert instances[0].buf.done[0] == 0.

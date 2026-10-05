@@ -43,7 +43,8 @@ def train(seed: int = 0, env_id: str = "LunarLander-v3", n_steps: int = 5000,
     for step in range(1, n_steps + 1):
         a = agent.act(np.asarray(s, dtype=np.float32))
         s2, r, term, trunc, _ = env.step(a)
-        agent.push(s, a, r, s2, term or trunc)
+        # A time limit ends collection but retains the continuation value.
+        agent.push(s, a, r, s2, term)
         ep_ret += r
         loss = agent.learn()
         if loss is not None and step % log_every == 0:
@@ -59,6 +60,7 @@ def train(seed: int = 0, env_id: str = "LunarLander-v3", n_steps: int = 5000,
         "mean_last_10": (float(np.mean(log.episode_returns[-10:]))
                         if log.episode_returns else float("nan")),
     }
+    env.close()
     return log
 
 

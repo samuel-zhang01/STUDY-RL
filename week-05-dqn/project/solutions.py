@@ -56,7 +56,10 @@ def exercise_5_td_error(q_sa: torch.Tensor, target: torch.Tensor) -> torch.Tenso
 
 def exercise_6_huber(pred: torch.Tensor, target: torch.Tensor,
                      delta: float = 1.0) -> torch.Tensor:
-    """Huber/smooth-L1 loss, summed-mean reduction."""
+    """Mean smooth-L1 loss with transition threshold delta.
+
+    Smooth-L1 equals Huber/delta; the two coincide when delta is 1.
+    """
     return F.smooth_l1_loss(pred, target, reduction="mean", beta=delta)
 
 
@@ -64,11 +67,12 @@ def exercise_6_huber(pred: torch.Tensor, target: torch.Tensor,
 
 def exercise_7_baird_divergence(n_iters: int = 200, alpha: float = 0.1,
                                 gamma: float = 0.99) -> np.ndarray:
-    """A *very* simplified Baird-style counterexample: linear value function
-    with off-policy semi-gradient TD diverges.
+    """Seven-state Baird counterexample with importance-weighted TD(0).
 
-    Returns the trajectory of the parameter norm over iterations. Expected
-    behaviour: it grows.
+    Target chooses solid (next state 6). Behaviour chooses solid with
+    probability 1/7 and dashed (uniform upper state) with probability 6/7.
+    The importance ratio is 7 on solid actions and 0 on dashed actions.
+    Features have unit norm; all rewards are zero. Returns parameter norms.
     """
     # 7-state Baird's counterexample (small version)
     n_states = 7
@@ -80,21 +84,22 @@ def exercise_7_baird_divergence(n_iters: int = 200, alpha: float = 0.1,
         Phi[i, 7] = 1.0
     Phi[n_states - 1, 6] = 1.0
     Phi[n_states - 1, 7] = 2.0
+    Phi /= np.sqrt(5.0)
     w = np.ones(n_features)
     w[6] = 10.0
-    # all transitions go to state 6 under the target policy ("solid action");
-    # behaviour samples states uniformly. Reward = 0, so V_pi = 0.
     norms = []
     rng = np.random.default_rng(0)
+    s = 0
     for _ in range(n_iters):
-        s = int(rng.integers(0, n_states))
-        sp = n_states - 1  # target action goes to last state
+        solid = rng.random() < 1.0 / n_states
+        sp = n_states - 1 if solid else int(rng.integers(0, n_states - 1))
         v_s = Phi[s] @ w
         v_sp = Phi[sp] @ w
         delta = 0.0 + gamma * v_sp - v_s
         # importance-weighted semi-gradient (off-policy)
-        rho = 1.0 / (1.0 / n_states)  # behaviour uniform -> heavy weight
+        rho = float(n_states) if solid else 0.0
         w = w + alpha * rho * delta * Phi[s]
+        s = sp
         norms.append(float(np.linalg.norm(w)))
     return np.asarray(norms)
 

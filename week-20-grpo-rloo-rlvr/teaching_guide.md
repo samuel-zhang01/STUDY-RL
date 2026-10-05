@@ -125,6 +125,8 @@ samples are treated as fixed during differentiation.
   not as a blanket proof of an unbiased full training algorithm.
 - [project/agent.py](project/agent.py): `token_logprobs` aligns shifted targets;
   `completion_mask` includes the first EOS and excludes later positions.
+  Scoring and generation share the same temperature, so an unchanged policy has
+  importance ratio one even when the temperature differs from one.
 - [project/solutions.py](project/solutions.py): exercise 4 compares variances of
   reward **coefficients**, not complete score-weighted gradients; it cannot prove variance reduction.
 - [project/env.py](project/env.py): inspect `extract_final_number` and `exact_match_reward`
@@ -133,6 +135,8 @@ samples are treated as fixed during differentiation.
 The full Dr.GRPO recipe also changes length normalisation; dropping only the standard deviation
 is one component. Fixed normalisation and averaging over all valid batch tokens are distinct choices.
 See [the Dr.GRPO analysis](https://arxiv.org/abs/2503.20783) for the length and difficulty distinction.
+The toy's evaluation samples new draws from the same finite prompt set as SFT
+and RL. A new RNG seed does not make those prompts a disjoint held-out test set.
 
 ## Retrieve and transfer
 

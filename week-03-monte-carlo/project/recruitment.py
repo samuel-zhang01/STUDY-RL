@@ -3,9 +3,14 @@
 A candidate proceeds through a 4-stage funnel: screening -> interview ->
 offer -> outcome. At each stage the agent picks one of two actions: ADVANCE
 or REJECT. Only the terminal outcome (hire / no-hire) carries reward (+1 or
-0); intermediate rewards are zero. The state encodes a coarse signal of fit
+0); intermediate rewards are zero. The observation encodes a coarse signal of fit
 that becomes more informative as the funnel progresses, modelling the
 recruiter's growing knowledge.
+
+The fit remains latent, so stage plus its latest noisy bucket is not a
+complete Markov state; this is a partially observed simulator despite the
+legacy class name. Trajectory importance sampling remains valid for the
+randomized logger and history-independent target used here.
 
 This exercises off-policy MC because we want to evaluate a *new* shortlisting
 policy from logs collected under a different (e.g., uniform) behaviour.

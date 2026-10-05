@@ -114,7 +114,13 @@ Shared reward alone does not tell which agent's action caused an improvement.
   `self_play_episode` associates each saved position with the outcome for its player.
 - [coord_game.py](project/coord_game.py): read the per-agent reward construction before summing it.
 - [mappo.py](project/mappo.py): `CentralisedCritic` uses global training information;
-  `Actor` receives local observations. Verify that execution does not accidentally depend on the critic input.
+  all agents share actor parameters and each receives its own local observation.
+  Verify that execution does not accidentally depend on the critic input.
+- Root Dirichlet noise is sampled only over legal actions before mixing with
+  the masked prior. Network inference puts observations on the network's device.
+- Exercise 9 compares a self-play-trained network with an untrained network,
+  both using MCTS. It does not train a second agent against a fixed opponent,
+  and a win over random is not an Elo rating.
 
 A short self-play run beating a random opponent is one measurement, not evidence of a Nash strategy.
 Fixed weak opponents can reveal improvement while missing exploitable weaknesses against stronger policies.

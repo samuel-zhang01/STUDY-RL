@@ -7,7 +7,7 @@ Five-step pipeline:
 2. **Generate.**  Sample two candidates per prompt from the SFT model.
 3. **Critique + revise.**  Apply a rule-based critique against a five-point
    constitution; if the candidate violates a principle, we *revise* it by
-   sampling again (using a constitution-aware prompt). In a real CAI run
+   applying mechanical text rules. In a real CAI run
    the critique and revision would be done by a strong LLM; here we use a
    deterministic constitution function so the loop is testable.
 4. **Preference pair.**  Score the original vs revised candidate by total
@@ -19,6 +19,7 @@ Source: Bai et al., Constitutional AI, arXiv:2212.08073 (Anthropic, 2022).
 """
 from __future__ import annotations
 import copy
+import re
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -51,12 +52,13 @@ CONSTITUTION: tuple[str, ...] = (
 # strong LLM judging against the constitution; we use a rule so the test
 # suite is hermetic.
 _BAD_WORDS = ("damn", "hell")
+_BAD_WORD_PATTERN = re.compile(r"\b(?:damn|hell)\b", re.IGNORECASE)
 
 
 def critique(text: str) -> dict[str, bool]:
     """Return per-principle pass/fail booleans (True = pass)."""
     return {
-        "no_swearing":      all(b not in text for b in _BAD_WORDS),
+        "no_swearing":      _BAD_WORD_PATTERN.search(text) is None,
         "under_40_chars":   len(text) <= 40,
         "lowercase":        text == text.lower(),
         "ends_with_period": text.endswith("."),
@@ -76,16 +78,14 @@ def revise(text: str) -> str:
     satisfy <constitution>" prompt; here we apply each principle
     deterministically so the resulting preference pair is reliable.
     """
-    t = text
-    for b in _BAD_WORDS:
-        t = t.replace(b, "")
-    t = t.lower()
+    t = text.lower()
     t = t.replace("x", "")  # after lower(), this catches both x and X
+    t = _BAD_WORD_PATTERN.sub("", t)
 
-    if len(t) > 40:
-        t = t[:40]
-    if not t.endswith("."):
-        t = t.rstrip() + "."
+    t = t.rstrip()
+    if not t.endswith(".") or len(t) > 40:
+        # Reserve one of the 40 characters for terminal punctuation.
+        t = t[:39].rstrip() + "."
     return t
 
 

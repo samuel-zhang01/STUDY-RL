@@ -106,3 +106,16 @@ def test_evaluation_counts_an_agent_win_as_a_win(monkeypatch):
     monkeypatch.setattr(TicTacToe, "initial_state", staticmethod(_immediate_win_board))
     result = evaluate_vs_random(_UniformSearchPrior(), n_games=1, n_sim=64, seed=0)
     assert result == {"wins": 1, "draws": 0, "losses": 0, "winrate": 1.0}
+
+
+def test_root_noise_is_a_dirichlet_mixture_over_legal_moves():
+    from project.alphazero import MCTS, MCTSNode
+    from project.tictactoe import TicTacToe
+    state = np.array([[1,-1,1],[-1,1,-1],[0,0,0]], dtype=np.int8)
+    legal = TicTacToe.legal_actions(state).astype(bool)
+    search = MCTS(_UniformSearchPrior(), dirichlet_eps=.25, dirichlet_alpha=.3, seed=5)
+    node = MCTSNode(state=state)
+    search._expand(node, add_noise=True)
+    noise = np.random.default_rng(5).dirichlet([.3] * int(legal.sum()))
+    expected = .75 / legal.sum() + .25 * noise
+    np.testing.assert_allclose([child.prior for child in node.children.values()], expected)

@@ -93,3 +93,32 @@ def test_ex9_snips_recovers_known_mean():
     # half the logged data has arm==0 (reward 2), half has arm==1 (reward 0).
     # IS weights are all 0.5 so SNIPS is just mean rewards ~= 1.0
     assert 0.7 < est < 1.3
+
+
+class _OneStateBoundaryEnv:
+    def __init__(self, terminate):
+        from types import SimpleNamespace
+        self.observation_space = SimpleNamespace(n=1)
+        self.action_space = SimpleNamespace(n=1)
+        self.terminate = terminate
+    def reset(self, seed=None):
+        return 0, {}
+    def step(self, action):
+        return 0, 1., self.terminate, not self.terminate, {}
+
+
+def test_td_control_bootstraps_truncation_and_not_termination():
+    from w04_project import agents
+    for algorithm in (agents.sarsa, agents.q_learning, agents.expected_sarsa):
+        kwargs = dict(n_episodes=2, alpha=1., gamma=.5, eps_start=0., eps_end=0.)
+        truncated, _ = algorithm(_OneStateBoundaryEnv(False), **kwargs)
+        terminal, _ = algorithm(_OneStateBoundaryEnv(True), **kwargs)
+        np.testing.assert_allclose(truncated, [[1.5]])
+        np.testing.assert_allclose(terminal, [[1.]])
+
+
+def test_nstep_prediction_keeps_truncated_tail_bootstrap():
+    from w04_project.agents import n_step_td_prediction
+    values = n_step_td_prediction(_OneStateBoundaryEnv(False), lambda s,rng: 0,
+        n=3, n_episodes=2, alpha=1., gamma=.5)
+    np.testing.assert_allclose(values, [1.5])

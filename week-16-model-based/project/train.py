@@ -42,7 +42,8 @@ def _collect_episode(env, policy_fn, max_steps: int = 200) -> dict:
         obs, r, term, trunc, _ = env.step(int(a))
         obss.append(obs.astype(np.float32))
         acts.append(int(a)); rews.append(float(r))
-        conts.append(0.0 if (term or trunc) else 1.0)
+        # Time-limit truncation ends collection but not the continuing dynamics.
+        conts.append(0.0 if term else 1.0)
         done = term or trunc
         steps += 1
     return {"obs": np.asarray(obss, dtype=np.float32),
@@ -52,7 +53,7 @@ def _collect_episode(env, policy_fn, max_steps: int = 200) -> dict:
 
 
 def _sample_chunks(episodes: List[dict], n_chunks: int, chunk_len: int,
-                   rng: np.random.Generator):
+                   rng: np.random.Generator, return_mask: bool = False):
     """Sample fixed-length sequence chunks. Pads short episodes by repeating last obs."""
     obs_dim = episodes[0]["obs"].shape[-1]
     L = chunk_len
@@ -60,6 +61,7 @@ def _sample_chunks(episodes: List[dict], n_chunks: int, chunk_len: int,
     A = np.zeros((n_chunks, L), dtype=np.int64)
     R = np.zeros((n_chunks, L), dtype=np.float32)
     C = np.zeros((n_chunks, L), dtype=np.float32)
+    M = np.zeros((n_chunks, L), dtype=np.float32)
     for i in range(n_chunks):
         ep = episodes[int(rng.integers(0, len(episodes)))]
         T = len(ep["acts"])
@@ -69,6 +71,7 @@ def _sample_chunks(episodes: List[dict], n_chunks: int, chunk_len: int,
             A[i] = ep["acts"][j:j + L]
             R[i] = ep["rews"][j:j + L]
             C[i] = ep["conts"][j:j + L]
+            M[i] = 1.0
         else:
             # pad: repeat the last observation; rewards and conts = 0.
             O[i, :T + 1] = ep["obs"]
@@ -76,11 +79,12 @@ def _sample_chunks(episodes: List[dict], n_chunks: int, chunk_len: int,
             A[i, :T] = ep["acts"]
             R[i, :T] = ep["rews"]
             C[i, :T] = ep["conts"]
-    return O, A, R, C
+            M[i, :T] = 1.0
+    return (O, A, R, C, M) if return_mask else (O, A, R, C)
 
 
 def _world_model_update(rssm: RSSM, opt: torch.optim.Optimizer, O, A, R, C,
-                        nA: int, kl_beta: float, free_nats: float):
+                        nA: int, kl_beta: float, free_nats: float, mask=None):
     """One world-model gradient step. Returns dict of scalar losses."""
     device = next(rssm.parameters()).device
     B, Lp1, obs_dim = O.shape
@@ -89,22 +93,26 @@ def _world_model_update(rssm: RSSM, opt: torch.optim.Optimizer, O, A, R, C,
     A_oh = F.one_hot(torch.from_numpy(A), nA).float().to(device)
     R_t = torch.from_numpy(R).to(device)
     C_t = torch.from_numpy(C).to(device)
+    M_t = torch.ones_like(C_t) if mask is None else torch.as_tensor(mask, device=device)
+    denominator = M_t.sum().clamp_min(1)
 
     state = rssm.initial(B, device)
+    state, *_ = rssm.observe_step(state, torch.zeros(B, nA, device=device), O_t[:, 0])
     recon_loss = 0.0; rew_loss = 0.0; cont_loss = 0.0; kl_loss = 0.0
     for t in range(L):
         target_obs = O_t[:, t + 1]
         (state, prior_mu, prior_std, post_mu, post_std,
          recon, r_pred, c_pred) = rssm.observe_step(state, A_oh[:, t], target_obs)
-        recon_loss = recon_loss + ((recon - target_obs) ** 2).sum(dim=-1).mean()
-        rew_loss = rew_loss + ((r_pred - R_t[:, t]) ** 2).mean()
-        cont_loss = cont_loss + F.binary_cross_entropy(c_pred, C_t[:, t])
+        valid = M_t[:, t]
+        recon_loss = recon_loss + (((recon - target_obs) ** 2).sum(dim=-1) * valid).sum()
+        rew_loss = rew_loss + (((r_pred - R_t[:, t]) ** 2) * valid).sum()
+        cont_loss = cont_loss + (F.binary_cross_entropy(c_pred, C_t[:, t], reduction="none") * valid).sum()
         kl = kl_gaussian(post_mu, post_std, prior_mu, prior_std)
-        kl_clipped = torch.clamp(kl, min=free_nats).mean()
+        kl_clipped = (torch.clamp(kl, min=free_nats) * valid).sum()
         kl_loss = kl_loss + kl_clipped
 
-    recon_loss = recon_loss / L; rew_loss = rew_loss / L
-    cont_loss = cont_loss / L; kl_loss = kl_loss / L
+    recon_loss = recon_loss / denominator; rew_loss = rew_loss / denominator
+    cont_loss = cont_loss / denominator; kl_loss = kl_loss / denominator
     total = recon_loss + rew_loss + cont_loss + kl_beta * kl_loss
 
     opt.zero_grad(); total.backward()
@@ -127,7 +135,10 @@ def _imagine_from_states(rssm: RSSM, agent: DreamerLite, init_state: RSSMState,
         a = dist.sample()
         lp = dist.log_prob(a)
         a_oh = F.one_hot(a, n_actions).float()
-        state, r, c = rssm.imagine_step(state, a_oh)
+        # This toy uses score-function actor gradients, not derivatives through
+        # the learned dynamics. Keep world-model parameters frozen here.
+        with torch.no_grad():
+            state, r, c = rssm.imagine_step(state, a_oh)
         feats.append(feat); lps.append(lp); rs.append(r); cs.append(c)
     # Append final feat for bootstrap value.
     feats.append(torch.cat([state.h, state.s], dim=-1))
@@ -147,23 +158,36 @@ def _lambda_return(rewards, values, conts, gamma: float, lam: float):
     return torch.stack(returns, dim=0)  # (H, B)
 
 
+def _posterior_policy(rssm, agent, device, rng=None, epsilon=0.0, greedy=False):
+    """Create one episode's recurrent policy, remembering executed actions."""
+    state = rssm.initial(1, device)
+    previous_action = torch.zeros(1, agent.n_actions, device=device)
+
+    def policy(obs):
+        nonlocal state, previous_action
+        obs_t = torch.as_tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            state, *_ = rssm.observe_step(state, previous_action, obs_t)
+            dist = agent.actor(torch.cat([state.h, state.s], dim=-1))
+            if rng is not None and rng.random() < epsilon:
+                action = int(rng.integers(0, agent.n_actions))
+            else:
+                action = int(dist.logits.argmax(-1).item() if greedy else dist.sample().item())
+            previous_action = F.one_hot(torch.tensor([action], device=device), agent.n_actions).float()
+        return action
+    return policy
+
+
 def evaluate(env, agent: DreamerLite, rssm: RSSM, n_episodes: int = 5,
              max_steps: int = 200) -> float:
     device = next(rssm.parameters()).device
     returns = []
     for _ in range(n_episodes):
         obs, _ = env.reset()
-        state = rssm.initial(1, device)
+        policy = _posterior_policy(rssm, agent, device, greedy=True)
         G = 0.0
         for t in range(max_steps):
-            obs_t = torch.from_numpy(obs.astype(np.float32)).unsqueeze(0).to(device)
-            # Posterior step with zero "previous action" (or sampled). We use the
-            # observe path with the last action one-hot zero -- acceptable for eval.
-            a_oh = torch.zeros(1, agent.n_actions, device=device)
-            with torch.no_grad():
-                state, _, _, _, _, _, _, _ = rssm.observe_step(state, a_oh, obs_t)
-                feat = torch.cat([state.h, state.s], dim=-1)
-                a = int(agent.actor(feat).logits.argmax(dim=-1).item())
+            a = policy(obs)
             obs, r, term, trunc, _ = env.step(a)
             G += r
             if term or trunc:
@@ -201,21 +225,12 @@ def train(seed: int = 0, n_iters: int = 25, episodes_per_iter: int = 2,
         episodes.append(ep)
 
     eval_curve = []
+    world_model_logs = []
     t0 = time.time()
     for it in range(n_iters):
         # 1) Collect with current actor (epsilon-greedy mixed with random).
-        def actor_policy(obs):
-            obs_t = torch.from_numpy(obs.astype(np.float32)).unsqueeze(0).to(device_t)
-            state = rssm.initial(1, device_t)
-            a_oh = torch.zeros(1, nA, device=device_t)
-            with torch.no_grad():
-                state, *_ = rssm.observe_step(state, a_oh, obs_t)
-                feat = torch.cat([state.h, state.s], dim=-1)
-                dist = agent.actor(feat)
-            if rng.random() < 0.2:
-                return int(rng.integers(0, nA))
-            return int(dist.sample().item())
         for _ in range(episodes_per_iter):
+            actor_policy = _posterior_policy(rssm, agent, device_t, rng, epsilon=0.2)
             episodes.append(_collect_episode(env, actor_policy, max_steps=max_steps))
             if len(episodes) > 50:
                 episodes = episodes[-50:]
@@ -223,9 +238,10 @@ def train(seed: int = 0, n_iters: int = 25, episodes_per_iter: int = 2,
         # 2) World model update (a few steps per iter).
         wm_logs = []
         for _ in range(8):
-            O, A, R, C = _sample_chunks(episodes, batch_size, chunk_len, rng)
-            log = _world_model_update(rssm, wm_opt, O, A, R, C, nA, kl_beta, free_nats)
+            O, A, R, C, M = _sample_chunks(episodes, batch_size, chunk_len, rng, return_mask=True)
+            log = _world_model_update(rssm, wm_opt, O, A, R, C, nA, kl_beta, free_nats, M)
             wm_logs.append(log)
+        world_model_logs.append({key: float(np.mean([log[key] for log in wm_logs])) for key in wm_logs[0]})
 
         # 3) Behaviour update: roll out imagination from posterior states.
         for _ in range(4):
@@ -234,6 +250,7 @@ def train(seed: int = 0, n_iters: int = 25, episodes_per_iter: int = 2,
             A_oh = F.one_hot(torch.from_numpy(A), nA).float().to(device_t)
             with torch.no_grad():
                 state = rssm.initial(batch_size, device_t)
+                state, *_ = rssm.observe_step(state, torch.zeros(batch_size, nA, device=device_t), O_t[:, 0])
                 for t in range(chunk_len):
                     state, *_ = rssm.observe_step(state, A_oh[:, t], O_t[:, t + 1])
             feats, lps, rs, cs = _imagine_from_states(rssm, agent, state, imagine_horizon, nA)
@@ -255,10 +272,12 @@ def train(seed: int = 0, n_iters: int = 25, episodes_per_iter: int = 2,
         ret = evaluate(eval_env, agent, rssm, n_episodes=3, max_steps=max_steps)
         eval_curve.append((it, ret))
 
+    env.close(); eval_env.close()
     return {
         "eval_curve": np.asarray(eval_curve, dtype=np.float32),
         "rssm": rssm, "agent": agent,
         "elapsed_sec": time.time() - t0,
+        "world_model_logs": world_model_logs,
     }
 
 

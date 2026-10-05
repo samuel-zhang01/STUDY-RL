@@ -5,6 +5,7 @@ from typing import Callable, Iterable
 
 import numpy as np
 import torch
+from common.rollouts import generalized_advantage_estimate
 
 
 # ---------------------------------------------------------------------- E1/E2
@@ -35,22 +36,17 @@ def compute_gae(
     last_value: float,
     gamma: float = 0.99,
     lam: float = 0.95,
+    *, next_values=None, terminals=None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """GAE(gamma, lam). Returns (advantages, returns)."""
-    rewards = np.asarray(rewards, dtype=np.float64)
-    values = np.asarray(values, dtype=np.float64)
-    dones = np.asarray(dones, dtype=np.float64)
-    T = len(rewards)
-    advantages = np.zeros(T, dtype=np.float64)
-    last_adv = 0.0
-    for t in range(T - 1, -1, -1):
-        v_next = last_value if t == T - 1 else values[t + 1]
-        nonterm = 1.0 - float(dones[t])
-        delta = rewards[t] + gamma * v_next * nonterm - values[t]
-        last_adv = delta + gamma * lam * nonterm * last_adv
-        advantages[t] = last_adv
-    returns = advantages + values
-    return advantages.astype(np.float32), returns.astype(np.float32)
+    """GAE; optional terminal flags distinguish time limits from termination.
+
+    next_values must use the final observation on same-step autoreset.
+    dones still stops the trace at either kind of episode boundary.
+    """
+    return generalized_advantage_estimate(
+        rewards, values, dones, last_value, gamma, lam,
+        next_values=next_values, terminals=terminals,
+    )
 
 
 # ---------------------------------------------------------------------- E6

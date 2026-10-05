@@ -122,7 +122,10 @@ A perfect value function also does not remove action or reward randomness from a
   from a vocabulary distribution; `sample_rollouts` constructs shaped rewards.
 - `compute_gae` implements the backward recursion above; check its terminal convention.
 - `ppo_step` uses old rollout log probabilities in its ratio denominator.
-- `AdaptiveKLController` changes `beta`, whereas PPO clipping changes the surrogate.
+- `AdaptiveKLController` changes `beta` using the rollout's mean per-token log-ratio
+  to the frozen reference. `history['kl']` records that signed Monte Carlo estimate.
+  `ppo_step['approx_kl']` instead compares old and updated policies, as a PPO diagnostic.
+  The update reuses the rollout's sampling temperature in its new log probabilities.
 - [project/rm.py](project/rm.py): `reward_loss` fits pairwise score differences.
 - [project/solutions.py](project/solutions.py): exercise 2 returns an exact categorical
   KL; it should not be confused with one selected token's signed log-ratio.

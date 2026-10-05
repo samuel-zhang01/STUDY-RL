@@ -63,11 +63,14 @@ def exercise_4(seed: int = 0, n_episodes: int = 300) -> Dict[str, Dict]:
 
 
 # -----------------------------------------------------------------------------
-# Exercise 5 ★★ — formal soundness proof: shielded total_unsafe == 0.
+# Exercise 5 ★★ — empirical check of the conditional soundness claim.
 # -----------------------------------------------------------------------------
 def exercise_5(seed: int = 0, n_episodes: int = 300) -> int:
-    """Return the total number of unsafe transitions under the shield. By the
-    soundness theorem this must be 0 on a deterministic environment."""
+    """Return observed unsafe transitions on the supplied deterministic grid.
+
+    Formal soundness additionally requires safe initialization, a complete
+    model, safe-set feasibility, and exact execution of the selected action.
+    """
     h = _train_shielded(n_episodes=n_episodes, seed=seed)
     return int(h["total_unsafe"])
 
@@ -90,12 +93,13 @@ def exercise_7(a_proposed: float, h_val: float, dh_da: float, alpha: float = 1.0
     half-space { a : dh_da * a >= -alpha * h_val } that enforces forward
     invariance of {h >= 0}.
 
-    Returns the minimum-norm a* satisfying the constraint.
+    Returns the feasible action closest to a_proposed in Euclidean distance.
     """
     rhs = -alpha * h_val
     # constraint: dh_da * a >= rhs
     if dh_da == 0:
-        # constraint independent of a; if violated at a=anything, infeasible — return a_proposed.
+        if rhs > 0:
+            raise ValueError("CBF constraint is infeasible: no action can satisfy it")
         return float(a_proposed)
     if dh_da * a_proposed >= rhs - 1e-12:
         return float(a_proposed)  # already feasible

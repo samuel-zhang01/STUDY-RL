@@ -121,7 +121,15 @@ Policy probability ratios and value predictions have different units, even if a 
 - [agent.py](project/agent.py): `PPOAgent.update_minibatch` combines actor, critic, entropy,
   and gradient clipping; a flat actor term does not imply all parameters stop moving.
 - [train.py](project/train.py): `_compute_gae` connects this week to week 8.
-  Trace which tensors are stored from the rollout and reused without updating their reference.
+  Termination removes bootstrapping; truncation retains the final observation's
+  value and ends the trace before autoreset. The common rollout helper preserves
+  final observations and requests same-step autoreset explicitly.
+- `PPOAgent.act` returns the sampled Gaussian latent action. Training stores
+  that sample for both old and new log densities and clips only the action
+  sent to the environment. Thus an unchanged actor gives ratio 1 even for a
+  sample outside the environment's bounds.
+- `use_value_clip` and `use_advantage_norm` control the actual update losses.
+  Their reported settings can now be used for an ablation.
 
 Training improvement on a particular short run is an empirical result, not an algebraic invariant.
 Separate “the loss matches these examples” from “three independent seeds improve.”

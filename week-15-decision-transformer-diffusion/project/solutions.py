@@ -50,7 +50,8 @@ def exercise_6_action_distribution(out: dict, seed: int = 0) -> np.ndarray:
         logits = model(torch.from_numpy(R_hist[..., None]).to(device),
                        torch.from_numpy(S_hist).to(device),
                        torch.from_numpy(A_hist).to(device),
-                       torch.from_numpy(T_hist).to(device))
+                       torch.from_numpy(T_hist).to(device),
+                       attention_mask=torch.tensor([[False] * (K - 1) + [True]], device=device))
     p = F.softmax(logits[0, -1], dim=-1).cpu().numpy()
     model.train()
     return p

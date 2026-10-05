@@ -174,6 +174,33 @@ the meaning, range, and conditioning to the local derivation.
 | Scalable oversight | Methods to evaluate AI outputs that exceed the evaluator's level |
 | Debate, IDA | Two-player + iterated distillation for scalable oversight |
 
+## Causal biology (week 26)
+
+| Term | Meaning |
+|---|---|
+| DAG | Directed acyclic graph; an arrow represents a proposed direct causal relationship under the model's assumptions |
+| SCM | Structural causal model: assignments of each variable from its parents and external noise; interventions replace an assignment |
+| $P(Y\mid A=a)$ / $P(Y\mid\mathrm{do}(A=a))$ | Outcomes among those observed with $A=a$ / outcomes under an intervention that sets $A=a$; confounding can make these differ |
+| ATE | Average treatment effect, $\mathbb{E}[Y(1)-Y(0)]$, for a specified population and intervention |
+| Confounder / mediator / collider | A common cause of treatment and outcome / a variable on a causal path / a common effect; their roles determine whether adjustment helps or biases an estimate |
+| Identification / estimation / discovery | Whether assumptions and available distributions determine a causal quantity / estimating that quantity from finite data / learning graph constraints from data and assumptions |
+| Consistency, exchangeability, positivity | Observed outcome matches the specified received intervention; no remaining confounding conditional on adjustment variables; both treatments occur in the target covariate strata |
+| Markov equivalence | Different causal graphs can imply the same conditional independences; observational evidence may identify an equivalence class rather than one graph |
+| Environment | A patient group, tissue, laboratory, or other domain with potentially different distributions or mechanisms; its label alone does not establish an intervention |
+| Invariance | Stability of a specified conditional mechanism across environments; observed stability needs assumptions to support a causal interpretation |
+| PC / FCI / S-FCI | Constraint-based graph-discovery methods; FCI allows latent confounding, and S-FCI uses constraints across environments |
+| ICP | Invariant causal prediction; its causal conclusions require assumptions about which mechanisms remain stable and statistical tests, beyond a residual diagnostic |
+| MCAR / MAR / MNAR | Missing completely at random / missingness explained by observed variables / missingness still depends on unobserved values |
+| Task-aware enhancement | Preprocessing or generation judged by a specified downstream task; better reconstruction or prediction alone does not establish preservation of intervention effects |
+| Patient-level split | Keep every record from a patient in the same partition; fit preprocessing on training patients and select settings on validation patients |
+
+For identification assumptions, see [Hernán and Robins, *Causal Inference:
+What If*](https://miguelhernan.org/whatifbook). For the multi-environment
+discovery method, see [Li, Jaber, and Bareinboim (NeurIPS
+2023)](https://proceedings.neurips.cc/paper_files/paper/2023/hash/368cba57d00902c752eaa9e4770bbbbe-Abstract-Conference.html).
+The [Week 26 guide](week-26-causal-discovery-biological-data/teaching_guide.md)
+explains which assumptions and methods its toy project actually implements.
+
 ## Acronyms
 
 CMDP, CPO, FOCOPS, P3O, OPE, IPS, SNIPS, DR, GAE, TRPO, PPO, SAC, TD3, DDPG, DQN, PER,

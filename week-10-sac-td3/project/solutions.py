@@ -35,6 +35,22 @@ def twin_critic_min(q1_target: torch.Tensor, q2_target: torch.Tensor) -> torch.T
     return torch.min(q1_target, q2_target)
 
 
+@torch.no_grad()
+def td3_target(rewards, dones, next_obs, target_actor, target_q1, target_q2,
+               *, target_noise=0.2, noise_clip=0.5, gamma=0.99):
+    """TD3 target smoothing for normalized [-1, 1] actions.
+
+    The noise has the actor's action shape, is scaled before clipping,
+    and affects both target critics evaluated at the same smoothed action.
+    This helper is a workbook building block, not a full TD3 trainer.
+    """
+    next_action = target_actor(next_obs)
+    noise = (torch.randn_like(next_action) * target_noise).clamp(-noise_clip, noise_clip)
+    next_action = (next_action + noise).clamp(-1.0, 1.0)
+    next_q = twin_critic_min(target_q1(next_obs, next_action), target_q2(next_obs, next_action))
+    return rewards + gamma * (1.0 - dones.float()) * next_q
+
+
 def soft_bellman_target(
     rewards: torch.Tensor,
     dones: torch.Tensor,

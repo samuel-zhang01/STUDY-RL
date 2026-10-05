@@ -78,9 +78,16 @@ def exercise_6_policy_evaluation_closed_form(env: GridWorld, policy: np.ndarray,
 
 # Ex 7 — Generalised policy iteration with truncated evaluation
 def exercise_7_gpi(env: GridWorld, gamma: float = 0.95,
-                   eval_sweeps: int = 1, max_outer: int = 50
+                   eval_sweeps: int = 1, max_outer: int = 50, tol: float = 1e-8
                    ) -> Tuple[np.ndarray, np.ndarray, int]:
-    """Modified policy iteration: ``eval_sweeps`` inner sweeps, then improve."""
+    """Modified policy iteration: truncated evaluation, then improve.
+
+    Policy stability alone is insufficient with truncated evaluation; stop
+    only when the optimal Bellman residual is also small. A max_outer exit
+    returns the current approximation rather than a convergence certificate.
+    """
+    if eval_sweeps < 1 or max_outer < 1:
+        raise ValueError("eval_sweeps and max_outer must be positive")
     P = env.transition_table()
     pi = np.zeros(env.nS, dtype=int)
     V = np.zeros(env.nS)
@@ -102,7 +109,8 @@ def exercise_7_gpi(env: GridWorld, gamma: float = 0.95,
             if best != pi[s]:
                 stable = False
                 pi[s] = best
-        if stable:
+        residual = np.max(np.abs(exercise_1_bellman_operator(env, V, gamma) - V))
+        if stable and residual < tol:
             return V, pi, outer + 1
     return V, pi, max_outer
 

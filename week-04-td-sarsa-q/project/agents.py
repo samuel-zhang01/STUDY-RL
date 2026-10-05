@@ -52,8 +52,8 @@ def sarsa(env, n_episodes: int = 500, alpha: float = 0.5, gamma: float = 1.0,
         while not done and t < max_steps:
             sn, r, term, trunc, _ = env.step(a)
             sn = int(sn); done = bool(term or trunc)
-            an = eps_greedy(Q, sn, eps, rng) if not done else 0
-            target = r + (0.0 if done else gamma * Q[sn, an])
+            an = eps_greedy(Q, sn, eps, rng) if not term else 0
+            target = r + (0.0 if term else gamma * Q[sn, an])
             Q[s, a] += alpha * (target - Q[s, a])
             s, a = sn, an
             G += r; t += 1
@@ -78,7 +78,7 @@ def q_learning(env, n_episodes: int = 500, alpha: float = 0.5, gamma: float = 1.
             a = eps_greedy(Q, s, eps, rng)
             sn, r, term, trunc, _ = env.step(a)
             sn = int(sn); done = bool(term or trunc)
-            target = r + (0.0 if done else gamma * Q[sn].max())
+            target = r + (0.0 if term else gamma * Q[sn].max())
             Q[s, a] += alpha * (target - Q[s, a])
             s = sn
             G += r; t += 1
@@ -103,7 +103,7 @@ def expected_sarsa(env, n_episodes: int = 500, alpha: float = 0.5, gamma: float 
             a = eps_greedy(Q, s, eps, rng)
             sn, r, term, trunc, _ = env.step(a)
             sn = int(sn); done = bool(term or trunc)
-            if not done:
+            if not term:
                 best = int(np.argmax(Q[sn]))
                 probs = np.full(nA, eps / nA)
                 probs[best] += 1 - eps
@@ -143,11 +143,11 @@ def double_q_learning(env, n_episodes: int = 500, alpha: float = 0.5, gamma: flo
             if rng.random() < 0.5:
                 # update Q1 using Q2 to evaluate the Q1-greedy action
                 a_star = int(np.argmax(Q1[sn]))
-                target = r + (0.0 if done else gamma * Q2[sn, a_star])
+                target = r + (0.0 if term else gamma * Q2[sn, a_star])
                 Q1[s, a] += alpha * (target - Q1[s, a])
             else:
                 a_star = int(np.argmax(Q2[sn]))
-                target = r + (0.0 if done else gamma * Q1[sn, a_star])
+                target = r + (0.0 if term else gamma * Q1[sn, a_star])
                 Q2[s, a] += alpha * (target - Q2[s, a])
             s = sn
             G += r; t += 1
@@ -159,7 +159,12 @@ def n_step_td_prediction(env, policy: Callable[[int, np.random.Generator], int],
                          n: int = 4, n_episodes: int = 300, alpha: float = 0.4,
                          gamma: float = 1.0, max_steps: int = 200, seed: int = 0
                          ) -> np.ndarray:
-    """n-step TD policy *evaluation*. `policy(s, rng) -> a`. Returns V."""
+    """n-step TD evaluation; bootstrap at truncation, never at termination.
+
+    The max_steps collection cap is also a truncation. policy(s, rng) -> a.
+    """
+    if n < 1:
+        raise ValueError("n must be positive")
     rng = np.random.default_rng(seed)
     nS = env.observation_space.n
     V = np.zeros(nS, dtype=np.float64)
@@ -167,6 +172,7 @@ def n_step_td_prediction(env, policy: Callable[[int, np.random.Generator], int],
         s = _rollout_init(env, rng)
         S = [s]; R = [0.0]  # R[0] unused; R[t] is reward after action t-1
         T = float("inf"); t = 0
+        terminated = False
         while True:
             if t < T:
                 a = policy(S[t], rng)
@@ -174,11 +180,14 @@ def n_step_td_prediction(env, policy: Callable[[int, np.random.Generator], int],
                 S.append(int(sn)); R.append(float(r))
                 if term or trunc or t + 1 >= max_steps:
                     T = t + 1
+                    terminated = bool(term)
             tau = t - n + 1
             if tau >= 0:
                 G = sum((gamma ** (i - tau - 1)) * R[i] for i in range(tau + 1, min(tau + n, T) + 1))
                 if tau + n < T:
                     G += (gamma ** n) * V[S[tau + n]]
+                elif not terminated:
+                    G += (gamma ** (T - tau)) * V[S[int(T)]]
                 V[S[tau]] += alpha * (G - V[S[tau]])
             if tau == T - 1:
                 break

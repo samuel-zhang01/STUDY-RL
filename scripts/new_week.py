@@ -7,6 +7,7 @@ extended_reading.tex, project/, and tests/.
 from __future__ import annotations
 import copy
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ NOTES_TEMPLATE = r"""\documentclass[11pt,oneside]{scrbook}
 \usepackage{../common/rlstudy}
 
 \title{{\color{rlblue}\textbf{Week %(n)s} \\ \Huge %(title)s}}
-\author{STUDY-RL — a self-paced Deep RL curriculum}
+\author{STUDY-RL --- a self-paced Deep RL curriculum}
 \date{\today}
 
 \begin{document}
@@ -46,10 +47,15 @@ TODO.
 \chapter{Implementation walkthrough}
 TODO.
 
+\chapter{Empirical results}
+TODO: generate a deterministic project figure and include it here.
+
+\chapter{Safety angle}
 \begin{safetyangle}
 Safety angle: \emph{TODO}.
 \end{safetyangle}
 
+\chapter{Matching application}
 \begin{matching}
 Matching application: \emph{TODO}.
 \end{matching}
@@ -67,7 +73,7 @@ EXTENDED_TEMPLATE = r"""\documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week %(n)s: %(title)s}
+\title{Extended reading --- Week %(n)s: %(title)s}
 \date{\today}
 \begin{document}
 \maketitle
@@ -163,6 +169,13 @@ def test_project_importable():
 
 
 def main(n: str, slug: str, title: str) -> int:
+    if not n.isdigit() or not 1 <= int(n) <= 99:
+        print("week number must be an integer from 1 to 99", file=sys.stderr)
+        return 2
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
+        print("slug must contain lowercase letters/digits separated by hyphens", file=sys.stderr)
+        return 2
+    n = f"{int(n):02d}"
     folder = ROOT / f"week-{n}-{slug}"
     if folder.exists():
         print(f"already exists: {folder}", file=sys.stderr)
@@ -170,9 +183,13 @@ def main(n: str, slug: str, title: str) -> int:
     (folder / "project").mkdir(parents=True)
     (folder / "tests").mkdir()
     ctx = {"n": n, "slug": slug, "title": title}
-    (folder / "notes.tex").write_text(NOTES_TEMPLATE % ctx)
+    tex_escape = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$",
+                  "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}",
+                  "~": r"\textasciitilde{}", "^": r"\textasciicircum{}"}
+    tex_ctx = {**ctx, "title": "".join(tex_escape.get(c, c) for c in title)}
+    (folder / "notes.tex").write_text(NOTES_TEMPLATE % tex_ctx)
     (folder / "teaching_guide.md").write_text(GUIDE_TEMPLATE % ctx)
-    (folder / "extended_reading.tex").write_text(EXTENDED_TEMPLATE % ctx)
+    (folder / "extended_reading.tex").write_text(EXTENDED_TEMPLATE % tex_ctx)
     nb = copy.deepcopy(WORKBOOK_TEMPLATE)
     for i, cell in enumerate(nb["cells"]):
         cell["id"] = f"week-{n}-cell-{i}"

@@ -108,14 +108,24 @@ A two-example Brier calculation is illustrative; estimating calibration needs mo
 
 - [cltr.py](project/cltr.py): `ips_ltr_value` uses target examination divided by logged examination.
   `expected_relevance` is the synthetic expected-click reference despite its shorter name.
-- [train.py](project/train.py): `dcg` and `ndcg_at_k` implement exponential gains;
-  check the exact gain convention before comparing a hand calculation to another library.
+- [train.py](project/train.py): `dcg` and `ndcg_at_k` use linear gains because
+  synthetic relevance is a continuous match probability. Example 3 uses
+  exponential gains for graded labels: with the project's linear convention,
+  its DCG is $1+3/\log_2(3)=2.892789$, ideal DCG is
+  $3+1/\log_2(3)=3.630930$, and NDCG is $0.796708$.
+- `simulate_hire_logs` records the full epsilon-greedy mixture probability,
+  including both routes to the greedy candidate. If only three candidates are
+  available and epsilon is 0.6, the greedy propensity is $0.4+0.6/3=0.6$;
+  each other candidate has probability $0.6/3=0.2$.
 - [fairness.py](project/fairness.py): `demographic_parity_gap` is the representation metric above.
   `equalised_opportunity_gap` conditions on synthetic qualification; inspect empty-group handling.
 - `exposure_by_group` averages exposure per candidate and across jobs over the entire ranking.
   It is different from total group exposure or exposure limited to the displayed top-k.
 - [calibration.py](project/calibration.py): fit calibrators on a calibration split and evaluate on held-out data.
   Neither a particular calibrator nor a fixed training-set size guarantees lower held-out ECE.
+  The local Beta variant uses unconstrained logistic coefficients, so its
+  mapping is not guaranteed monotone. The training pipeline calibrates the
+  two-tower score; its reranker score is a separate ranking diagnostic.
 - [two_tower.py](project/two_tower.py): `TwoTower.score` produces a similarity score.
   Training with in-batch negatives is not by itself probability calibration.
 

@@ -183,8 +183,11 @@ class PPOLagrangian:
 
         # ---- Dual variable update (projected gradient ascent) ----------
         mean_cost = float(np.mean(ep_costs)) if ep_costs else 0.0
-        violation = mean_cost - cfg.cost_limit
-        self.lam = float(np.clip(self.lam + cfg.lam_lr * violation, 0.0, cfg.lam_max))
+        # A partial rollout with no complete episodes supplies no episode-cost
+        # estimate. Zero observed completions must not mean zero episode cost.
+        if ep_costs:
+            violation = mean_cost - cfg.cost_limit
+            self.lam = float(np.clip(self.lam + cfg.lam_lr * violation, 0.0, cfg.lam_max))
 
         self.history["return"].append(float(np.mean(ep_returns)) if ep_returns else 0.0)
         self.history["cost"].append(mean_cost)

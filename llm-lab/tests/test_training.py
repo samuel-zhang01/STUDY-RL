@@ -8,8 +8,6 @@ import sys
 
 import pytest
 import torch
-from peft import LoraConfig, PeftModel, get_peft_model
-from transformers import LlamaConfig, LlamaForCausalLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from llm_lab.inference import compute_dtype, resolve_device
@@ -37,14 +35,18 @@ class LocalChatTokenizer:
 
 
 def tiny_adapter(attention_dropout=0.0):
+    # The numerical masking/loss tests need only torch. Real adapter checks
+    # remain optional when the lab's separate requirements are not installed.
+    peft = pytest.importorskip("peft", reason="install llm-lab/requirements.txt for adapter tests")
+    transformers = pytest.importorskip("transformers")
     torch.set_num_threads(1)
     torch.manual_seed(3)
-    config = LlamaConfig(vocab_size=64, hidden_size=32, intermediate_size=64,
+    config = transformers.LlamaConfig(vocab_size=64, hidden_size=32, intermediate_size=64,
                          num_hidden_layers=1, num_attention_heads=4, num_key_value_heads=2,
                          max_position_embeddings=128, attention_dropout=attention_dropout,
                          bos_token_id=1, eos_token_id=2, pad_token_id=2)
-    base = LlamaForCausalLM(config)
-    return get_peft_model(base, LoraConfig(task_type="CAUSAL_LM", target_modules="all-linear",
+    base = transformers.LlamaForCausalLM(config)
+    return peft.get_peft_model(base, peft.LoraConfig(task_type="CAUSAL_LM", target_modules="all-linear",
                                          r=4, lora_alpha=8, lora_dropout=0.0, bias="none"))
 
 
@@ -162,6 +164,7 @@ def test_non_cuda_nf4_is_rejected_without_a_model_download():
 
 def test_saved_adapter_reloads_on_original_base_with_same_logits(tmp_path):
     model = tiny_adapter()
+    from peft import PeftModel
     # Snapshot the original backbone before training. unload() removes LoRA
     # layers without merging them into the base weights.
     original_base = deepcopy(model).unload()

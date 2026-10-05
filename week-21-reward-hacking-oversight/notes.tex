@@ -494,11 +494,11 @@ CONSTITUTION = (
 
 def critique(text):
     return {
-        "no_swearing":      all(b not in text for b in _BAD_WORDS),
+        "no_swearing":      _BAD_WORD_PATTERN.search(text) is None,
         "under_40_chars":   len(text) <= 40,
         "lowercase":        text == text.lower(),
         "ends_with_period": text.endswith("."),
-        "no_x":             "x" not in text,
+        "no_x":             "x" not in text.lower(),
     }
 \end{minted}
 

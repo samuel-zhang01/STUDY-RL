@@ -13,8 +13,8 @@ with per-token credit assignment.  Key choices, all explicit:
   (GAE) on the token sequence.
 * PPO clipped surrogate; a separate value head shares the trunk with
   the policy and is trained with MSE against returns.
-* Adaptive KL controller (Schulman 2017, appendix) keeps observed KL
-  near a target.
+* A proportional adaptive KL controller uses the sampled policy-to-frozen-
+  reference log-ratio, averaged per generated token.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -63,6 +63,7 @@ class Rollout:
     values: torch.Tensor         # (B, T+1)
     rewards: torch.Tensor        # (B, T) — per-token (KL penalty + final r)
     rm_scores: torch.Tensor      # (B,)   — raw reward-model output
+    temperature: float = 1.0    # same distribution in sampling and PPO update
 
 
 def _gather_logprobs(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -87,7 +88,13 @@ def sample_rollouts(
     with per-token KL-shaped rewards.
     """
     block = policy.cfg.block_size
+    if not prompts or not 0 < max_new_tokens < block:
+        raise ValueError("Need nonempty prompts and 0 < max_new_tokens < block_size")
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("temperature must be finite and positive")
     enc = [encode(p)[-block + max_new_tokens:] for p in prompts]
+    if any(not e for e in enc):
+        raise ValueError("Each prompt needs at least one encodable token")
     P = max(len(e) for e in enc)
     prompt_ids = torch.zeros(len(prompts), P, dtype=torch.long, device=device)
     for i, e in enumerate(enc):
@@ -141,6 +148,7 @@ def sample_rollouts(
         values=values_t.detach(),
         rewards=per_tok_rewards.detach(),
         rm_scores=rm_scores.detach(),
+        temperature=temperature,
     )
 
 
@@ -163,7 +171,7 @@ def ppo_step(
     """One PPO update on a rollout.  Returns dict of diagnostics."""
     adv, returns = compute_gae(rollout.rewards, rollout.values, gamma, lam)
     # Normalise advantages.
-    adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+    adv = (adv - adv.mean()) / (adv.std(unbiased=False) + 1e-8)
 
     block = policy.cfg.block_size
     full = torch.cat([rollout.prompt_ids, rollout.response_ids], dim=1)[:, -block:]
@@ -182,7 +190,7 @@ def ppo_step(
         # In the (possibly truncated) full sequence of length L,
         # the response starts at index L - T, so we slice logits[:, L-T-1:L-1].
         L = full.size(1)
-        resp_logits = logits[:, L - T - 1: L - 1, :]
+        resp_logits = logits[:, L - T - 1: L - 1, :] / rollout.temperature
         new_logprobs = _gather_logprobs(resp_logits, rollout.response_ids)
 
         ratio = (new_logprobs - rollout.logprobs).exp()
@@ -213,25 +221,30 @@ def ppo_step(
             "value_loss": float(value_loss.item()),
             "entropy": float(entropy.item()),
             "approx_kl": float(approx_kl),
+            # Signed Monte Carlo estimate of KL(old policy || reference),
+            # distinct from the PPO old/new update diagnostic above.
+            "reference_kl": float((rollout.logprobs - rollout.ref_logprobs).mean()),
             "mean_reward": float(rollout.rm_scores.mean().item()),
         }
     return diagnostics
 
 
 # ---------------------------------------------------------------------------
-# Adaptive KL controller (Schulman 2017, App. B)
+# Proportional adaptive KL controller
 # ---------------------------------------------------------------------------
 
 class AdaptiveKLController:
     """Update beta multiplicatively to keep observed KL near a target."""
 
     def __init__(self, init_beta: float = 0.05, target_kl: float = 0.1, horizon: int = 10):
+        if init_beta < 0 or target_kl <= 0 or horizon < 1:
+            raise ValueError("beta must be nonnegative; target and horizon positive")
         self.beta = init_beta
         self.target = target_kl
         self.horizon = horizon
 
     def update(self, observed_kl: float) -> None:
-        # PPO-paper rule of thumb: proportional in log space, capped.
+        # Cap proportional feedback; this heuristic is not a hard KL bound.
         proportional_error = max(-0.2, min(0.2, observed_kl / self.target - 1.0))
         self.beta *= 1.0 + proportional_error * (1.0 / self.horizon)
 
@@ -300,9 +313,9 @@ def ppo_train(
             clip_eps=cfg.clip_eps, n_epochs=cfg.n_epochs,
             gamma=cfg.gamma, lam=cfg.lam,
         )
-        kl_ctl.update(diag["approx_kl"])
+        kl_ctl.update(diag["reference_kl"])
         history["reward"].append(diag["mean_reward"])
-        history["kl"].append(diag["approx_kl"])
+        history["kl"].append(diag["reference_kl"])
         history["policy_loss"].append(diag["policy_loss"])
         history["value_loss"].append(diag["value_loss"])
         history["beta"].append(kl_ctl.beta)
@@ -339,4 +352,4 @@ def train(seed: int = 0, **kwargs):
 
 if __name__ == "__main__":
     hist, _, _ = train()
-    print("Final mean reward:", hist[0]["reward"][-1])
+    print("Final mean reward:", hist["reward"][-1])

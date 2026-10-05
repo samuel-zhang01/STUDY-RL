@@ -56,7 +56,8 @@ class PendulumDR:
         u = float(np.clip(action, -self.max_torque, self.max_torque))
         # Semi-implicit Euler for an inverted pendulum.
         I = self.mass * self.length ** 2
-        torque_grav = -self.mass * self.g * self.length * np.sin(self.theta)
+        # theta=0 is upright: gravity pushes a small displacement away from 0.
+        torque_grav = self.mass * self.g * self.length * np.sin(self.theta)
         self.theta_dot = float(np.clip(
             self.theta_dot + (self.dt / I) * (torque_grav + u),
             -self.max_speed, self.max_speed,

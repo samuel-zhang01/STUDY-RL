@@ -6,9 +6,9 @@ the goal at least half the time, more or less) while keeping discounted cost
 <= cost_limit + 1 (mild overshoot tolerated).
 
 Run as
-    python -m week_22_cmdp_cpo_lagrangian.project.train
+    cd week-22-cmdp-cpo-lagrangian && PYTHONPATH=.. python -m project.train
 or import:
-    from week-22-cmdp-cpo-lagrangian.project.train import train
+    from project.train import train
 """
 from __future__ import annotations
 

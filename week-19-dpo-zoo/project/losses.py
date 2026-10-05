@@ -96,7 +96,9 @@ def orpo_loss(
     """L_ORPO = NLL(y_w | x)
               - beta * log sigmoid( log(odds(y_w)/odds(y_l)) )
 
-    where odds(y) = pi_theta(y) / (1 - pi_theta(y)).
+    Here logp_w/logp_l are MEAN completion-token log probabilities, as used
+    by ORPO (Hong et al. 2024, Eq. 1); unlike DPO they are not sequence sums.
+    The corresponding geometric-mean score defines odds = p / (1-p).
     In log space: log odds = logp - log(1 - exp(logp))
                            = logp - log1mexp(logp).
     """
@@ -109,9 +111,15 @@ def orpo_loss(
 def _log1mexp(x: torch.Tensor) -> torch.Tensor:
     """Numerically stable log(1 - exp(x)) for x <= 0."""
     # Mächler 2012.
-    return torch.where(
-        x > -0.693, torch.log(-torch.expm1(x)), torch.log1p(-torch.exp(x))
-    )
+    if (x > 0).any():
+        raise ValueError("log1mexp requires x <= 0")
+    # Do not evaluate both branches with torch.where: near zero, exp(x)
+    # rounds to 1 and the unused branch can still inject NaNs in backward.
+    near_zero = x > -0.6931471805599453
+    out = torch.empty_like(x)
+    out[near_zero] = torch.log(-torch.expm1(x[near_zero]))
+    out[~near_zero] = torch.log1p(-torch.exp(x[~near_zero]))
+    return out
 
 
 # ---------------------------------------------------------------------------

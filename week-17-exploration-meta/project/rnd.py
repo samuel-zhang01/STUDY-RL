@@ -43,11 +43,8 @@ class RND(nn.Module):
 
 
 def make_hard_grid(seed: int = 0) -> GridWorld:
-    """7x7 GridWorld with a corridor of pits the random policy nearly always falls into.
-    The single goal is at (6, 6); pits line the diagonal."""
-    # Hard exploration via *sparsity*: 7x7 grid with the goal in the far corner
-    # and no shaping reward. Pits are *only* on the start-side walls so a random
-    # policy rarely escapes the upper-left region within an episode budget.
+    """7x7 open GridWorld with sparse reward and no pits; goal at (6,6)."""
+    # Exploration is hard because the distant goal is the only positive reward.
     return GridWorld(rows=7, cols=7, start=(0, 0), goals=((6, 6),), pits=(),
                      slip_prob=0.0, step_reward=0.0, goal_reward=1.0, pit_reward=-1.0,
                      rng=np.random.default_rng(seed))

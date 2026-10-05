@@ -52,9 +52,9 @@ def exercise_6_imagined_vs_real(out: dict, n_steps: int = 30) -> dict:
 
 
 def exercise_7_world_model_loss_components(seed: int = 0) -> dict:
-    """Run a single world-model step and return the four loss components."""
+    """Run two training iterations; return final mean world-model losses."""
     out = train(seed=seed, n_iters=2)
-    return {"final_return": float(out["eval_curve"][-1, 1])}
+    return {**out["world_model_logs"][-1], "final_return": float(out["eval_curve"][-1, 1])}
 
 
 def exercise_8_recruitment_world_model_demo() -> str:

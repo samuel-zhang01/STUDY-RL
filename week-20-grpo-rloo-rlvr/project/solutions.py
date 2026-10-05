@@ -60,22 +60,17 @@ def exercise_3(rewards: np.ndarray, debias: bool = False, eps: float = 1e-6) -> 
 # ---------------------------------------------------------------------------
 
 def exercise_4(rewards: np.ndarray) -> tuple[float, float]:
-    """Compare the variance of the unbiased policy-gradient *coefficient*
-    under vanilla REINFORCE (raw rewards) vs under a *constant* baseline
-    equal to the empirical group mean.
+    """Compare raw-reward and within-group-centred coefficient variance.
 
-    For any constant baseline ``b`` independent of the action,
-    :math:`(r_i - b) \\nabla \\log \\pi(y_i \\mid x)` is unbiased for the
-    gradient and has variance
+    This diagnostic measures coefficients alone, without policy score
+    vectors. The self-including empirical group mean depends on the sampled
+    action and is not an independent, unbiased REINFORCE baseline. RLOO uses
+    the other samples' mean, giving G/(G-1) times the centred coefficient.
+    A variance-optimal policy-gradient baseline also depends on score-vector
+    magnitudes. Lower coefficient variance does not prove lower gradient
+    variance or unbiasedness.
 
-      :math:`\\Var[(r_i-b)\\nabla \\log \\pi] = \\E[(r_i-b)^2 \\|\\nabla\\log\\pi\\|^2] - g^2`.
-
-    Choosing :math:`b = \\bar r` minimises this — that is the *control-variate*
-    interpretation of RLOO and GRPO. On a row of i.i.d. Bernoulli rewards we
-    therefore expect :math:`\\Var[r_i - \\bar r] \\le \\Var[r_i]`.
-
-    Returns ``(var_reinforce, var_centered)``; the test expects
-    ``var_centered <= var_reinforce``.
+    Returns ``(var_reinforce, var_centered)``.
     """
     r = np.atleast_2d(np.asarray(rewards, dtype=np.float64))
     var_reinforce = r.var()

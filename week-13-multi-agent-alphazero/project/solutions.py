@@ -82,10 +82,11 @@ def exercise_8_simple_spread(n_episodes: int = 60, seed: int = 0) -> Tuple[float
 
 # E9 (3-star, open-ended) - Self-play vs.\ fixed AlphaZero opponent.
 def exercise_9_self_play_vs_fixed(seed: int = 0) -> Dict[str, float]:
-    """Train two networks for a few iterations: net_A with self-play,
-    net_B trained against a fixed weak opponent. Compare their winrates
-    vs.\\ random. The point: self-play produces stronger play than
-    against-a-weak-opponent."""
+    """Compare a self-play-trained net to an untrained net, both with MCTS.
+
+    This does not train a second agent against a fixed opponent or isolate
+    the effect of self-play. Small stochastic evaluations need not improve.
+    """
     torch.manual_seed(seed)
     np.random.seed(seed)
     net_a = AZNetwork()

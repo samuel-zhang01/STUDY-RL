@@ -7,6 +7,9 @@ Use this guide for returns-to-go, causal masking, and the diffusion noising exer
 Behavior cloning predicts an action from a state using supervised learning.
 Decision Transformer (DT) also sees a history and a desired remaining return.
 Its training target is still a recorded action; it does not use a Bellman backup.
+The dataset splits at the logger's `episode_end`, including collection time limits.
+Left-padded windows pass an explicit attention mask; padded tokens cannot affect
+the valid action predictions. The separate loss mask excludes padded targets.
 From week 14, retain the distinction between examples present in a dataset and unsupported extrapolation.
 
 ## Analogy: following a travel diary with a remaining budget

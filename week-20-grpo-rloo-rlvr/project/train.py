@@ -1,6 +1,6 @@
 """GRPO / RLOO / Dr.GRPO training loop on the toy arithmetic task.
 
-Target: with default hyperparameters, accuracy on the held-out test set
+Target: with default hyperparameters, accuracy on fresh prompts from the task
 should climb from a random-initialisation baseline (close to 0) to >0.5
 within ~500 steps on a single CPU in well under five minutes. With
 ``num_steps=1000`` we routinely see >0.85.
@@ -37,9 +37,9 @@ def grpo_advantages(rewards: torch.Tensor, eps: float = 1e-6, debias: bool = Fal
 
     .. math:: \\hat A_i = (r_i - \\bar r) / (\\sigma_r + \\varepsilon).
 
-    If ``debias=True`` we drop the division by the group standard deviation
-    (Dr.GRPO, Liu et al. 2025): keeping it introduces a length-bias because
-    longer groups tend to have larger ``\\sigma_r``.
+    If ``debias=True`` we drop division by the group standard deviation.
+    This avoids scaling question groups by their reward variability;
+    completion-length normalisation is a separate choice in the loss.
     """
     mean = rewards.mean(dim=-1, keepdim=True)
     if debias:
@@ -198,9 +198,9 @@ def grpo_step(
     adv = adv.view(P * G).detach()
 
     # 5. recompute log-probs *with grad* for the importance ratio.
-    new_logps = token_logprobs(model, full_ids, L_p)  # (P*G, T_c)
+    new_logps = token_logprobs(model, full_ids, L_p, cfg.temperature)  # (P*G, T_c)
     with torch.no_grad():
-        ref_logps = token_logprobs(ref_model, full_ids, L_p)
+        ref_logps = token_logprobs(ref_model, full_ids, L_p, cfg.temperature)
 
     # 6. PPO-clipped surrogate per token (broadcasting the sequence-level adv).
     ratio = torch.exp(new_logps - sample_logps.detach())
@@ -208,7 +208,7 @@ def grpo_step(
     surr2 = torch.clamp(ratio, 1 - cfg.clip_eps, 1 + cfg.clip_eps) * adv.unsqueeze(-1)
     pg_loss_tok = -torch.min(surr1, surr2) * mask
 
-    # 7. KL-to-reference (low-variance unbiased estimator k3 from
+    # 7. KL-to-reference (nonnegative k3 estimator from
     #    http://joschu.net/blog/kl-approx.html).
     log_ratio = ref_logps - new_logps
     kl_tok = (torch.exp(log_ratio) - log_ratio - 1.0) * mask
@@ -306,7 +306,8 @@ def sft_warmup(
 def train(seed: int = 0, **kwargs) -> dict:
     """Train a tiny CharLM on the arithmetic task with GRPO/RLOO/Dr.GRPO.
 
-    Target metric: held-out greedy accuracy. Random init starts near 0;
+    Target metric: fresh-sample greedy accuracy. Prompts can overlap training
+    and SFT warmup; this is not a disjoint held-out test. Random init starts near 0;
     we expect >0.5 by 500 steps and >0.85 by 1000 steps. The smoke test
     asserts >baseline after 30 steps.
     """

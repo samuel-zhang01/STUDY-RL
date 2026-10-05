@@ -68,3 +68,31 @@ def test_adaptive_kl_penalty_doubles_when_overshooting():
     assert new_b == 2.0
     new_b = adaptive_kl_penalty_update(beta=1.0, measured_kl=0.002, target_kl=0.01)
     assert new_b == 0.5
+
+
+def test_ppo_stores_the_sample_matching_old_log_prob():
+    from project.agent import PPOAgent
+    torch.manual_seed(0)
+    agent = PPOAgent.build(2, 1, lr=0.)
+    with torch.no_grad():
+        agent.actor.mu_head.bias.fill_(4.)
+    obs = np.zeros((2,2), dtype=np.float32)
+    actions, old_logp, _ = agent.act(obs)
+    assert np.any(actions > 1.)  # sampled latent, clipped only by the env
+    with torch.no_grad():
+        new_logp = agent.actor.dist(torch.tensor(obs)).log_prob(torch.tensor(actions)).sum(-1)
+    np.testing.assert_allclose(new_logp.numpy(), old_logp, atol=1e-6)
+
+
+def test_ppo_optional_losses_and_singleton_minibatch_are_honored():
+    from project.agent import PPOAgent
+    agent = PPOAgent.build(2,1,lr=0.)
+    obs = torch.zeros(1,2); actions = torch.zeros(1,1)
+    with torch.no_grad():
+        old_logp = agent.actor.dist(obs).log_prob(actions).sum(-1)
+        value = agent.critic(obs)
+    metrics = agent.update_minibatch(obs, actions, old_logp, torch.tensor([2.]), value + 1., value + 3.,
+        use_value_clip=False, use_advantage_norm=False)
+    assert abs(metrics['pi_loss'] + 2.) < 1e-6
+    assert abs(metrics['v_loss'] - .5) < 1e-6
+    assert np.isfinite(list(metrics.values())).all()

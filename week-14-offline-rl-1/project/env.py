@@ -43,9 +43,17 @@ def collect_logged_dataset(
 ):
     """Collect a logged offline dataset with mixture behaviour policy.
 
-    Returns dict of numpy arrays with keys s, a, r, s2, done, s_idx, s2_idx, a_log_prob.
+    Returns s, a, r, s2, done, episode_end, s_idx, s2_idx, a_log_prob.
+    ``done`` marks an absorbing MDP terminal; ``episode_end`` also marks a
+    collection time limit. Bellman updates bootstrap through time limits;
+    sequence models and trajectory OPE must split at every episode_end.
+    Propensities condition on the episode's sampled logger mode.
     States are one-hot (nS=25). Actions are discrete in {0,1,2,3}.
     """
+    if n_episodes < 1 or max_steps < 1:
+        raise ValueError("n_episodes and max_steps must be positive")
+    if not 0 <= eps_logger <= 1 or not 0 <= random_frac <= 1:
+        raise ValueError("logger probabilities must be in [0,1]")
     env = make_env(seed=seed)
     nS, nA = env.nS, env.nA
     # Pre-solve the MDP to extract a near-optimal policy for the logger.
@@ -56,7 +64,7 @@ def collect_logged_dataset(
         Q_star[s, int(pi_star[s])] = 1.0
     rng = np.random.default_rng(seed)
 
-    S, A, R, S2, D, SI, SI2, LP = [], [], [], [], [], [], [], []
+    S, A, R, S2, D, END, SI, SI2, LP = [], [], [], [], [], [], [], [], []
     for ep in range(n_episodes):
         use_random = rng.random() < random_frac
         eps = 1.0 if use_random else eps_logger
@@ -72,6 +80,7 @@ def collect_logged_dataset(
             s2_idx = env.s2idx(s2)
             S.append(_onehot(s_idx, nS)); A.append(a); R.append(r)
             S2.append(_onehot(s2_idx, nS)); D.append(float(done))
+            END.append(bool(done or t == max_steps - 1))
             SI.append(s_idx); SI2.append(s2_idx); LP.append(np.log(prob + 1e-12))
             s = s2
             if done:
@@ -83,6 +92,7 @@ def collect_logged_dataset(
         "r": np.asarray(R, dtype=np.float32),
         "s2": np.asarray(S2, dtype=np.float32),
         "done": np.asarray(D, dtype=np.float32),
+        "episode_end": np.asarray(END, dtype=bool),
         "s_idx": np.asarray(SI, dtype=np.int64),
         "s2_idx": np.asarray(SI2, dtype=np.int64),
         "a_log_prob": np.asarray(LP, dtype=np.float32),

@@ -150,10 +150,13 @@ not a pointwise guarantee at every state or at a changed future state distributi
   solves the matrix-vector system in Example 3.
 - [train.py](project/train.py) collects `(time, environment, feature)` arrays
   and computes GAE separately for each environment before flattening.
-- The training loop combines termination and truncation. It also clips sampled
-  Gaussian actions and stores the clipped values; scoring those as ordinary
-  Gaussian draws is a likelihood mismatch. Treat the trainer as a teaching
-  prototype until boundary handling and action-distribution consistency are addressed.
+- The training loop stores the original Gaussian sample and clips only the
+  action sent to the environment. The score-function estimator differentiates
+  the latent sample's density; clipping is part of the environment response.
+- A true terminal removes the value bootstrap. A time-limit truncation keeps
+  the final observation's value but ends the GAE trace, so rewards from the
+  reset episode cannot leak backward. [common/rollouts.py](../common/rollouts.py)
+  also makes vector autoreset explicit. See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
 - [agent.py](project/agent.py) trains A2C. The project supplies TRPO building
   blocks and notes, not a complete TRPO training implementation.
 

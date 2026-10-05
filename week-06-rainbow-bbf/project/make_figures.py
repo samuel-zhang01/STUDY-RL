@@ -77,9 +77,9 @@ def main(out_dir: str | None = None, n_steps: int = 8000, seeds: int = 2) -> Non
     n_resets = 200
     sig = 1.0 * (0.999 ** np.arange(n_resets))
     ax.plot(np.arange(n_resets), sig, color=RL_PALETTE["teal"],
-            label=r"$\sigma$ (typical decay under SGD)")
+            label=r"$\sigma$ (illustrative schedule, not measured)")
     ax.axhline(0.1, color=RL_PALETTE["red"], ls="--", lw=0.7,
-               label="exploration floor")
+               label="illustrative reference (not enforced by agent)")
     ax.set_xlabel("training reset (every batch)")
     ax.set_ylabel(r"$\sigma$ (parameter noise scale)")
     ax.set_title("NoisyNets replace the $\\varepsilon$-schedule with learned noise")

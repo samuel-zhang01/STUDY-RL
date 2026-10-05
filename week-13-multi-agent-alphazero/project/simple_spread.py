@@ -5,9 +5,11 @@ This is a pure-NumPy reimplementation (no pettingzoo / gymnasium dependency)
 designed for CPU MAPPO training in <2 minutes. Observations are local; the
 critic in MAPPO gets the centralised state.
 
-Reward: each step every agent gets -min_dist_to_nearest_landmark - 0.1 *
-collision_penalty. Episode is 25 steps. The optimal policy is a stable
-matching of agents to landmarks (Hungarian algorithm style).
+Reward: each agent gets the same negative sum, over landmarks, of the
+nearest-agent distance, minus 0.1 per colliding pair. Episodes last 25 steps.
+This coverage objective is not a one-to-one assignment cost: an agent can
+be nearest to several landmarks, so Hungarian matching solves a different
+constrained objective.
 """
 from __future__ import annotations
 

@@ -1,14 +1,15 @@
 """Tiny MAML on a meta-bandit with two task distributions.
 
 Task distribution:
-- Task type A: arm 0 is best with reward ~ N(1, 0.1), others N(0, 0.1).
-- Task type B: arm K-1 is best with reward ~ N(1, 0.1), others N(0, 0.1).
+- Task type A: arm 0 has expected reward 1, the others 0.
+- Task type B: arm K-1 has expected reward 1, the others 0.
 
 The MAML policy is a softmax over arms parametrised by theta in R^K. Inner
-adaptation: K steps of REINFORCE-like update on a freshly drawn task. Outer
+adaptation: K exact expected-reward gradient steps on a freshly drawn task. Outer
 update: gradient of post-adaptation expected reward w.r.t. theta.
 
-This is the canonical "K-arm bandit" meta-RL toy from Finn et al.\\ 2017.
+This is a MAML-inspired full-information toy. It omits sampled reward noise,
+separate support/query observations, and exploration to infer an unknown task.
 """
 from __future__ import annotations
 import numpy as np

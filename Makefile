@@ -26,16 +26,17 @@ notebooks:
 	done
 
 tests:
-	@for w in common $(WEEKS); do \
-	  PYTHONPATH=. $(PY) -m pytest "$$w/tests" -q --maxfail=3 || exit 1; \
+	@for w in common $(WEEKS) scripts; do \
+	  OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=. $(PY) -m pytest "$$w/tests" -q --maxfail=3 || exit 1; \
 	done
+	$(MAKE) llm-tests
 
 qa: all
 	$(PY) scripts/qa_report.py
 
 # Optional lab: install llm-lab/requirements.txt first. No model downloads in tests.
 llm-tests:
-	PYTHONPATH=llm-lab $(PY) -m pytest llm-lab/tests -q
+	OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=llm-lab $(PY) -m pytest llm-lab/tests -q
 
 llm-notebook:
 	PYTHONPATH=llm-lab $(PY) -m llm_lab.execute_workbook

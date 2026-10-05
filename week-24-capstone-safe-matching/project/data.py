@@ -81,12 +81,13 @@ def _true_relevance(job: JobPosting, cand: Candidate) -> float:
 
 def _logging_policy_score(job: JobPosting, cand: Candidate,
                           group_bias: float = 0.6) -> float:
-    """Noisy score the *logging* policy uses to pick actions, with a bias toward
+    """Deterministic score the *logging* policy uses to pick actions, with a bias toward
     group 0 (mimicking historical discrimination)."""
     rel = _true_relevance(job, cand)
-    bias = group_bias if cand.group == 0 else (1.0 - group_bias)
-    # Some noise + bias.
-    return rel * bias
+    # Additive distortion around the 0.5 relevance midpoint produces observable
+    # selection bias while both actions keep exploration support.
+    bias = group_bias - 0.5
+    return rel + (bias if cand.group == 0 else -bias)
 
 
 def generate_dataset(n_candidates: int = 1000, n_jobs: int = 50,
@@ -100,6 +101,8 @@ def generate_dataset(n_candidates: int = 1000, n_jobs: int = 50,
         interactions (List[LoggedInteraction])
         logging_eps (float)
     """
+    if min(n_candidates, n_jobs, n_interactions) < 1 or not 0 < eps <= 1:
+        raise ValueError("positive dataset sizes and eps in (0,1] are required for OPE")
     rng = np.random.default_rng(seed)
     jobs = [JobPosting(job_id=i, skills=_skills_for_job(rng),
                        title=f"Role-{i}") for i in range(n_jobs)]
@@ -125,7 +128,7 @@ def generate_dataset(n_candidates: int = 1000, n_jobs: int = 50,
         prop = p_show if a == 1 else (1.0 - p_show)
         interactions.append(LoggedInteraction(
             job_id=j.job_id, candidate_id=c.candidate_id,
-            action=a, propensity=max(1e-3, prop), reward=reward,
+            action=a, propensity=prop, reward=reward,
             true_relevance=rel,
         ))
     return {

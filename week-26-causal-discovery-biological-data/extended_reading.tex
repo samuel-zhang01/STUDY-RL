@@ -1,0 +1,334 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,left=2.4cm,right=3.2cm,top=2.4cm,bottom=2.4cm]{geometry}
+\usepackage{../common/rlstudy}
+\title{\textbf{Week 26: Extended reading}\\\large Causal biology, environment shifts, and task-aware enhancement}
+\author{STUDY-RL}
+\date{Sources checked October 5, 2026}
+\begin{document}
+\maketitle
+
+\section*{How to use this reading pack}
+Read the teaching guide first. These five papers cover different questions, and
+their guarantees are not interchangeable. For each paper, identify the mathematical
+object being recovered, its data assumptions, and the meaning of its evaluation.
+The short excerpts below are verified source text. Commentary, discussion prompts,
+and numerical thought experiments are supplied by this course.
+
+The public Synlico event announcement motivates the topic. It does not supply a
+reproducible technical description of the proprietary enhancement model. We therefore
+include one independent task-driven augmentation paper and one verified paper by
+Yingzhen Yang, without presenting either as the event's undisclosed algorithm.
+
+\begin{keyidea}
+Keep four records while reading:
+\begin{enumerate}
+\item the estimand or graph information the method targets;
+\item which causal and observation mechanisms may change;
+\item which assumptions are scientific inputs rather than learned outputs;
+\item which components are absent from our small NumPy project.
+\end{enumerate}
+\end{keyidea}
+
+For effect-estimation foundations, begin with Miguel A. Hern\'an and James M.
+Robins (2020), \emph{Causal Inference: What If}, Chapman \& Hall/CRC.
+\url{https://miguelhernan.org/whatifbook}. Chapters 1--3, 6--9, and 13 connect the
+target question to consistency, exchangeability, positivity, graphs, measurement,
+and standardization. The author page hosts the living online book and companion code.
+
+This pack is an introduction to a research area, not sufficient preparation for
+designing a biomedical causal study unaided. Its exercises are deliberately inspectable:
+our covariances and effects are known because we choose the synthetic assignments.
+
+\clearpage
+\section*{Paper 1: multi-environment discovery with latent causes}
+\textbf{Full citation.} Adam Li, Amin Jaber, Elias Bareinboim (2023).
+\emph{Causal discovery from observational and interventional data across multiple
+environments}. Advances in Neural Information Processing Systems 36, 16942--16956.
+DOI: \texttt{10.52202/075280-0741}. No arXiv ID was verified; cite the official
+proceedings version.
+\url{https://proceedings.neurips.cc/paper_files/paper/2023/hash/368cba57d00902c752eaa9e4770bbbbe-Abstract-Conference.html}.
+
+\paragraph{Summary.} The paper develops cross-domain structure-learning constraints
+for systems that can contain hidden causes. Its selection-diagram and S-Markov
+framework supports the S-FCI algorithm. The formal observational/interventional
+equivalence is conditional on the modeled setting, rather than a claim that arbitrary
+biological batches are experiments.
+
+\paragraph{Why it matters for this week.} This is a public peer-reviewed connection
+to Amin Jaber's multi-environment research. It explains why environments can supply
+information beyond one observational distribution, while preserving unresolved structure.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``there exist latent confounders''
+\end{quote}
+\emph{Source location: abstract, proceedings PDF p.~1.}
+\emph{Commentary.} This small phrase makes hidden common causes part of the problem,
+rather than eliminating them by declaration. When reading any application, ask which
+variables and context assumptions support its retained graph information.
+
+\paragraph{Reading questions.} Write down the observed-variable set and the possible
+latent causes. Locate the role of selection variables: which mechanisms can differ
+between domains? Separate an observational domain from a domain with known laboratory
+interventions. Explain what an unresolved orientation means for a proposed target effect.
+
+\paragraph{Course-created thought experiment.} Our forward and reverse Gaussian SCMs
+have covariance $\begin{pmatrix}1&0.8\\0.8&1\end{pmatrix}$. In one environment,
+changing only the distribution of a measurement artifact need not distinguish their
+biological directions. A controlled intervention on $X$ instead changes the response
+mean to $0.8x$ in the forward model and leaves it zero in the reverse model. Explain
+which additional intervention-specific assumptions make that contrast interpretable.
+
+\paragraph{Implementation boundary.} Our project does not implement S-FCI,
+conditional-independence tests, selection-diagram construction, or do-calculus.
+It neither reproduces the paper's experiments nor inherits its soundness result.
+Its standardization fixture assumes a measured confounder, a substantially narrower
+effect-estimation setting than the paper's latent-variable discovery problem.
+
+\begin{pitfall}
+Replacing unknown endpoints by a favorite DAG and then simulating an intervention
+does not remove the uncertainty in the endpoints. Track the alternatives that could
+change the intervention answer.
+\end{pitfall}
+
+\clearpage
+\section*{Paper 2: invariant causal prediction}
+\textbf{Full citation.} Jonas Peters, Peter B\"uhlmann, Nicolai Meinshausen (2016).
+\emph{Causal inference by using invariant prediction: identification and confidence
+intervals}. Journal of the Royal Statistical Society, Series B 78(5), 947--1012.
+DOI: \texttt{10.1111/rssb.12167}. arXiv: \texttt{1501.01332}.
+\url{https://arxiv.org/abs/1501.01332}.
+
+\paragraph{Summary.} ICP uses a target's invariant conditional mechanism across
+environments to support parent-set inference with suitable testing assumptions.
+In informative settings, invariance can help identify causal predictors; without
+enough distinguishing variation, several sets can remain compatible.
+
+\paragraph{Why it matters for this week.} It separates the target-parent problem
+from recovery of an entire biological graph. Its formal testing machinery explains
+why the project's residual summary must not be reported as causal confidence.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``the set of causal predictors becomes identifiable''
+\end{quote}
+\emph{Source location: Summary, journal p.~947; also the arXiv abstract.}
+\emph{Commentary.} This statement concerns sufficient assumptions discussed by the
+paper. In our work, ask which environment changes could distinguish predictor sets,
+and which changes would instead violate the target's invariant mechanism.
+
+\paragraph{Reconstruct the premise.} In the course equation
+$Y=\beta^\top X_S+U_Y$, assume $\beta$ and the distribution of $U_Y$ remain fixed
+and $U_Y$ stays independent of the predictors. Conditioning on $X_S=x$ gives the
+same random quantity $\beta^\top x+U_Y$ in each environment. Changed predictor
+marginals alone do not alter it. Now change $\beta$ or a measurement rule and identify
+which equality no longer holds.
+
+\paragraph{Diagnostic versus test.} The workbook compares residual means and variances.
+Groups $(-1,1)$ and $(-2,2)$ have equal means and variances one and four. A mean-only
+diagnostic misses their difference. Conversely, matching both moments would still
+not establish the complete conditional-distribution premise.
+
+\paragraph{Reading questions.} What is intersected, and why? What prevents a failure
+to reject from becoming a proof of an individual edge? Which assumptions concern
+interventions on the target? How are type-I error, power, and identification different?
+Use the paper's formal statement when answering; our regression experiment supplies
+none of those guarantees.
+
+\begin{pitfall}
+Ordinary held-out prediction error, an environment-average loss, and a calibrated
+invariance test are different objects. A stable error bar does not turn one into another.
+\end{pitfall}
+
+\clearpage
+\section*{Paper 3: a public example of task-driven augmentation}
+\textbf{Full citation.} Krishna Chaitanya, Neerav Karani, Christian Baumgartner,
+Olivio Donati, Anton Becker, Ender Konukoglu (2019; author order follows the cited
+preprint). \emph{Semi-Supervised and Task-Driven Data Augmentation}.
+Information Processing in Medical Imaging (IPMI 2019), LNCS 11492, 29--41.
+DOI: \texttt{10.1007/978-3-030-20351-1\_3}. arXiv: \texttt{1902.05396}.
+\url{https://arxiv.org/abs/1902.05396}.
+
+\paragraph{Summary.} This medical-image segmentation work learns transformations
+with a downstream task objective while maintaining image/annotation correspondence.
+It supplies a concrete public meaning of task-driven enhancement. Its imaging results
+do not establish biological graph recovery or an omics enhancement method.
+
+\paragraph{Why it matters for this week.} Improving a downstream objective is a
+different requirement from making transformed data look realistic. Label preservation
+and a held-out evaluation protocol must be specified as part of the design.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``optimized to be conducive to the task''
+\end{quote}
+\emph{Source location: abstract, cited arXiv PDF p.~1.}
+\emph{Commentary.} The task must be named. Our fixture's task is prediction MSE under
+changing proxies, so a transformation selected for that task should not be reused
+unexamined for estimating dependencies between genes.
+
+\paragraph{Translate the idea carefully.} For segmentation, spatial changes must
+keep the image and its mask consistent. For our continuous-marker fixture, permuting
+the known nuisance changes a feature while preserving the outcome because the SCM
+does not let that nuisance generate the outcome. If we permuted a true cause, the
+same label-preservation argument would fail. Biological knowledge or a validated
+observation model would be needed to justify transformations outside this fixture.
+
+\paragraph{A design checklist for the exercise.} State which variable may change,
+which target stays fixed, which distributions the transformation should preserve,
+and which evaluation quantity will choose its strength. Fix the candidate family
+before evaluation. Fit learned transformations only on permitted training patients.
+Include the unchanged-data predictor and an ablation that omits the suspect feature.
+
+\paragraph{Implementation boundary.} Our nuisance permutation is an instructor-created
+heuristic. We do not reproduce this paper's generative networks, spatial transformations,
+joint losses, image datasets, or experiments. We also do not attribute this independent
+paper or our permutation to Yingzhen Yang or Synlico.
+
+\begin{pitfall}
+Augmented rows share their source information. Treating them as new independent
+patients would misstate both sample size and uncertainty.
+\end{pitfall}
+
+\clearpage
+\section*{Paper 4: negative controls for imputation artifacts}
+\textbf{Full citation.} Tallulah S. Andrews and Martin Hemberg (2018; version 2
+published 2019). \emph{False signals induced by single-cell imputation}.
+F1000Research 7:1740. DOI: \texttt{10.12688/f1000research.16613.2}.
+No arXiv ID was verified.
+\url{https://f1000research.com/articles/7-1740}.
+
+\paragraph{Summary.} The study evaluates false signals using negative controls
+after single-cell imputation. It motivates examining manufactured dependencies,
+not only recovery of known positive signals. This is empirical evidence about
+tested settings, not a universal theorem that every imputation harms every task.
+
+\paragraph{Why it matters for this week.} Discovery depends on statistical relationships.
+An enhancement pipeline can change those relationships, so reconstruction quality
+or a visually smooth embedding is not a sufficient structure-learning evaluation.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``all methods can introduce false positive signals into data''
+\end{quote}
+\emph{Source location: Introduction, paragraph discussing negative controls in the
+version-2 primary article.}
+\emph{Commentary.} The wording expresses a possibility in the study's evaluated
+methods and settings. In our lesson, use an explicitly absent dependency as a control
+and state exactly which transformation and sample it diagnoses.
+
+\paragraph{Course-created counterexample.} Let $G_1,G_2$ be independent, mean-zero
+markers with variance one. Define $H_1=H_2=(G_1+G_2)/2$. Their variances and covariance
+are each $1/2$, giving correlation one. This transparent construction is not a
+reimplementation of a published method. It demonstrates why shared smoothing can
+alter dependencies even when output variance decreases.
+
+\paragraph{Missingness versus zero.} The project's NaN mask is known and MCAR.
+Zero is retained as an observed value. In real measurements, a zero does not by itself
+reveal a missing-value mechanism. Before borrowing an imputation result, record the
+assay, normalization, observation mask, and unit of independence. Otherwise the toy
+missingness contract can silently become an unjustified biological assumption.
+
+\paragraph{Reading questions.} What constitutes a negative control in the study?
+Which downstream inference is being tested? What changes if donor-related observations
+appear in both fitting and evaluation? How could a pipeline improve prediction and
+still create false candidate edges? Identify separate metrics for those two outcomes.
+
+\begin{pitfall}
+A marker value created by a model is not an additional experiment on that marker.
+Track raw and enhanced observations separately when assessing evidence.
+\end{pitfall}
+
+\clearpage
+\section*{Paper 5: verified research context for Yingzhen Yang}
+\textbf{Full citation.} Yingzhen Yang and Ping Li (2022).
+\emph{Noisy $\ell_0$-sparse subspace clustering on dimensionality reduced data}.
+Proceedings of the Thirty-Eighth Conference on Uncertainty in Artificial Intelligence
+(UAI 2022), PMLR 180:2235--2245. arXiv: \texttt{2206.11079}.
+\url{https://proceedings.mlr.press/v180/yang22e.html}.
+
+\paragraph{Summary.} The paper studies sparse subspace detection with noisy data
+and dimensionality reduction under explicit mathematical models. It provides related
+research context about learning structure despite noise. Subspace detection is not
+the same object as identifying a directed causal graph.
+
+\paragraph{Why it matters for this week.} The speaker's verified public work makes
+noise and structural assumptions a useful discussion topic. It does not disclose the
+particular enhancement model referenced by the Synlico event announcement.
+
+\paragraph{Annotated key passage.}
+\begin{quote}
+``Real data often suffer from noise''
+\end{quote}
+\emph{Source location: abstract, proceedings PDF p.~1.}
+\emph{Commentary.} A theorem's treatment of noise specifies more than the word
+``noisy.'' Ask about the disturbance distribution, geometric conditions, observation
+mechanism, and scale at which a guarantee applies before transferring it to patient data.
+
+\paragraph{Separate structural objects.} A clustering relation can summarize proximity
+or membership in a low-dimensional subspace. A causal graph asserts directed mechanism
+relationships. An accurate cluster can be useful in a biological workflow without
+identifying the direction of a gene effect. Conversely, a causal argument does not
+automatically prove that a dimensionality-reduction step preserves every needed signal.
+
+\paragraph{Course-created translation exercise.} In the classical measurement example
+$W=X+\epsilon$, $Y=2X+U$, assume independent mean-zero disturbances with
+$\Var(X)=\Var(\epsilon)=1$. The population regression coefficient on $W$ is
+$2\Var(X)/(\Var(X)+\Var(\epsilon))=1$. Reducing measurement noise could change
+this coefficient without identifying whether $X$ causes $Y$ in observationally
+ambiguous settings. Keep the measurement and graph-identification questions separate.
+
+\paragraph{Questions for the speaker.} What is the downstream task for enhancement?
+Which mathematical noise model describes the observed assay? What changes when the
+training and evaluation units are donors rather than cells? Which controls reveal
+invented structure? Which guarantees apply to the enhancement implementation actually
+used? These questions are invitations to clarify, not assertions about undisclosed methods.
+
+\begin{pitfall}
+A verified publication by a speaker does not establish that it is the method used
+in a company platform or the method presented at a particular event.
+\end{pitfall}
+
+\clearpage
+\section*{Connecting the papers to an evidence-backed experiment}
+Our project deliberately separates an identifiable measured-confounder ATE fixture
+from a prediction experiment with changing proxies. It includes patient grouping,
+frozen preprocessing, validation-only candidate selection, a no-proxy ablation, and
+a fixed-model patient bootstrap. It does not merge these into a claim about real
+drug efficacy or recovery of biological gene networks.
+
+The central numerical findings are easy to inspect: adjusting the known binary
+confounder recovers an effect near one; the unadjusted difference is near 2.2; a
+validation-selected transformation improves held-out prediction in the default fixture;
+removing the proxy entirely is often better in the unseen environment. The final
+point explains why enhancement success should be reported with its baselines and limits.
+
+\paragraph{Broader multi-context background.} Joris M. Mooij, Sara Magliacane,
+Tom Claassen (2020), \emph{Joint Causal Inference from Multiple Contexts}, JMLR
+21(99), 1--108, arXiv:\texttt{1611.10351}.
+\url{https://jmlr.org/papers/v21/17-123.html}.
+Use this framework reference to distinguish context assumptions from particular
+PC/FCI implementations. It is supplementary reading rather than a sixth annotated paper.
+
+\paragraph{A route to experimental validation.} Replogle and colleagues (2022),
+\emph{Mapping information-rich genotype-phenotype landscapes with genome-scale
+Perturb-seq}, Cell 185(14), 2559--2575.e28, DOI:\texttt{10.1016/j.cell.2022.05.013}.
+\url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9380471/}.
+This primary perturbation study illustrates molecular hypothesis testing. Its full
+author list is recorded in the source dossier. A cell-context perturbation response
+is distinct from a patient's treatment effect.
+
+\paragraph{Your one-page memo.} Name the question, unit, population, intervention,
+and timing. List the assumptions needed for identification and across-environment
+transport. Show the exact splits and fit/select/evaluate boundaries. Report baseline,
+enhancement, and ablation on one held-out metric, then identify one unresolved causal
+alternative and one experiment that could discriminate it. Distinguish a conditional
+sampling interval from uncertainty about the causal model.
+
+\paragraph{Sourced from.}
+\href{../research/causal_biology.md}{\texttt{research/causal\_biology.md}}
+records source URLs, versions, event provenance, overlap with existing weeks, and
+the distinction between researched methods and the course-created mini-project.
+The related support and matching background is in
+\href{../research/bandits_matching_sota.md}{\texttt{research/bandits\_matching\_sota.md}}.
+\end{document}

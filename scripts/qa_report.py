@@ -6,7 +6,6 @@ passed. Use the build and test targets for fresh validation.
 """
 from __future__ import annotations
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -15,7 +14,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def main() -> int:
     rows = []
-    weeks = sorted(ROOT.glob("week-*"))
+    weeks = sorted(w for w in ROOT.glob("week-*") if w.is_dir())
+    if not weeks:
+        print("No week bundles found", file=sys.stderr)
+        return 1
     for w in weeks:
         has_notes_pdf = (w / "notes.pdf").exists()
         has_workbook = (w / "workbook.ipynb").exists()
@@ -29,9 +31,17 @@ def main() -> int:
             "workbook.executed": has_executed,
             "extended_reading.pdf": has_reading,
             "tests/": has_tests_dir,
+            "teaching_guide.md": (w / "teaching_guide.md").is_file(),
+            "project/solutions.py": (w / "project" / "solutions.py").is_file(),
+            "notes.tex": (w / "notes.tex").is_file(),
+            "extended_reading.tex": (w / "extended_reading.tex").is_file(),
         })
     print(json.dumps(rows, indent=2))
-    missing = [r for r in rows if not all([r["notes.pdf"], r["workbook.ipynb"]])]
+    # Executed notebooks are optional in this inventory: make notebooks supplies
+    # fresh execution evidence. Require the rest of each shipped bundle.
+    required = ("notes.pdf", "workbook.ipynb", "extended_reading.pdf", "tests/",
+                "teaching_guide.md", "project/solutions.py", "notes.tex", "extended_reading.tex")
+    missing = [r for r in rows if not all(r[key] for key in required)]
     if missing:
         print(f"\n{len(missing)} week(s) missing core deliverables", file=sys.stderr)
         return 1

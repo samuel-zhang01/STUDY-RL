@@ -4,13 +4,12 @@ Usage:
     python -m project.cli rank \
         --job '{"title": "Engineer", "skills": [...16 floats...]}' \
         --candidates candidates.json \
-        [--checkpoint runs/model.pt]
 
 `candidates.json` is a list of objects:
     {"name": "Alice", "group": 0, "skills": [16 floats]}
 
-If `--checkpoint` is not provided, the CLI trains a fresh model from scratch
-(takes ~30 s on CPU) and uses that. The output is a ranked list:
+The CLI trains a fresh synthetic model and optionally fine-tunes it. The output
+is a ranked list; recommendation probabilities are policy scores, not hire probabilities:
     1. Alice    score=0.83  group=0
     2. Bob      score=0.71  group=1
     ...
@@ -59,7 +58,8 @@ def _load_candidates(path: str) -> List[Candidate]:
 def rank(net, job: JobPosting, candidates: List[Candidate]) -> List[Dict]:
     out = []
     for c in candidates:
-        ctx = context_vector(job, c, include_group=True)
+        base = net if hasattr(net, "act_prob") else net.base
+        ctx = context_vector(job, c, include_group=base.include_group)
         with torch.no_grad():
             x = torch.as_tensor(ctx, dtype=torch.float32).unsqueeze(0)
             if hasattr(net, "act_prob"):
@@ -91,15 +91,16 @@ def main(argv=None):
     cands = _load_candidates(args.candidates)
     from .online_ppo_lag import PPOLagConfig
     ppo_cfg = PPOLagConfig(cost_limit=args.cost_limit, n_updates=args.ppo_updates)
-    out = train(seed=args.seed, ppo_cfg=ppo_cfg)
+    out = train(seed=args.seed, ppo_cfg=ppo_cfg, finetune=not args.no_finetune)
     net = out["iql"]["model"] if args.no_finetune else out["ppo"]["net"]
 
     ranked = rank(net, job, cands)
     print("\nRanked candidates:")
     for i, r in enumerate(ranked, 1):
         print(f"  {i:2d}. {r['name']:20s}  score={r['score']:.3f}  group={r['group']}")
-    a = out["audit_after"]
-    print("\nFairness + OPE audit (after Lagrangian fine-tune):")
+    a = out["audit_before"] if args.no_finetune else out["audit_after"]
+    stage = "IQL-only" if args.no_finetune else "after Lagrangian fine-tune"
+    print(f"\nFairness + OPE audit ({stage}):")
     print(f"  demographic_parity_gap   = {a['demographic_parity_gap']:.4f}")
     print(f"  equal_opportunity_gap    = {a['equal_opportunity_gap']:.4f}")
     print(f"  snips_value (off-policy) = {a['snips_value']:.4f}")

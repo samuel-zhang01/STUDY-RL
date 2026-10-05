@@ -74,16 +74,21 @@ def simulate_hire_logs(ds, scores: np.ndarray, rng: np.random.Generator,
     """Simulate (cand, hire) outcomes drawn from a Bernoulli on the true match.
     Logger is epsilon-greedy on `scores` (top-N ordered then exploration)."""
     logs = []
-    n_cands = scores.shape[1]
+    if top_n < 1 or not 0 <= eps <= 1:
+        raise ValueError("top_n must be positive and eps must be in [0, 1]")
     for j in range(scores.shape[0]):
         order = np.argsort(-scores[j])[:top_n]
+        n_available = len(order)
+        if n_available == 0:
+            raise ValueError("Cannot log a ranking with no candidates")
         for _ in range(n_per_job):
             if rng.uniform() < eps:
                 c = int(rng.choice(order))
-                p_b = (1 - eps) * (1.0 / top_n if c in order else 0.0) + eps / top_n
             else:
                 c = int(order[0])
-                p_b = (1 - eps) + eps / top_n
+            # The recorded propensity is the complete mixture probability,
+            # regardless of which branch generated the action.
+            p_b = eps / n_available + (1 - eps) * float(c == order[0])
             mu = ds.true_match(c, j)
             r = int(rng.binomial(1, mu))
             logs.append((j, c, r, p_b, mu))

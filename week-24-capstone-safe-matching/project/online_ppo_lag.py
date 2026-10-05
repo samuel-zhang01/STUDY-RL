@@ -11,14 +11,16 @@ Cost = demographic-parity gap measured over a sliding window of recent
 recommendations:
     c_t = | mean_{recent}[a | g=0] - mean_{recent}[a | g=1] |
 
-This is a *delayed*, *population-level* cost; classical PPO-Lagrangian copes
-with this just fine because we aggregate it per-update.
-
-The dual variable lambda is learned online to satisfy J_c <= d.
+The moving-window cost is a diagnostic, not an immediate bandit cost with a
+valid score-function gradient. We optimize a differentiable empirical gap in
+policy recommendation probabilities alongside the reward PPO surrogate, and
+update lambda using that same gap. This finite-sample surrogate supplies no
+population fairness guarantee.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+import copy
 from collections import deque
 from typing import Dict, List, Optional, Tuple
 
@@ -73,13 +75,13 @@ def _sample_rollout(data: Dict, net: PPOActorCritic, n_steps: int,
                     cost_window: deque, cfg: PPOLagConfig, rng: np.random.Generator):
     """Sample (job, candidate) pairs uniformly, query the policy, build rollout."""
     jobs = data["jobs"]; cands = data["candidates"]
-    obs_buf, act_buf, lp_buf, r_buf, c_buf, v_buf, vc_buf = [], [], [], [], [], [], []
+    obs_buf, act_buf, lp_buf, r_buf, c_buf, v_buf, vc_buf, group_buf = [], [], [], [], [], [], [], []
     n_recs_by_group = [0, 0]
     n_seen_by_group = [0, 0]
     for _ in range(n_steps):
         j = jobs[int(rng.integers(0, len(jobs)))]
         c = cands[int(rng.integers(0, len(cands)))]
-        ctx = context_vector(j, c, include_group=True)
+        ctx = context_vector(j, c, include_group=net.base.include_group)
         x = torch.as_tensor(ctx, dtype=torch.float32).unsqueeze(0)
         with torch.no_grad():
             logits, v, vc = net(x)
@@ -105,6 +107,7 @@ def _sample_rollout(data: Dict, net: PPOActorCritic, n_steps: int,
         obs_buf.append(ctx); act_buf.append(a); lp_buf.append(lp)
         r_buf.append(reward); c_buf.append(cost)
         v_buf.append(float(v.item())); vc_buf.append(float(vc.item()))
+        group_buf.append(c.group)
         n_recs_by_group[c.group] += int(a == 1)
         n_seen_by_group[c.group] += 1
     parity = abs(
@@ -114,7 +117,15 @@ def _sample_rollout(data: Dict, net: PPOActorCritic, n_steps: int,
     return (np.stack(obs_buf), np.array(act_buf), np.array(lp_buf, dtype=np.float32),
             np.array(r_buf, dtype=np.float32), np.array(c_buf, dtype=np.float32),
             np.array(v_buf, dtype=np.float32), np.array(vc_buf, dtype=np.float32),
-            float(np.mean(r_buf)), parity)
+            float(np.mean(r_buf)), parity, np.array(group_buf))
+
+
+def expected_parity_gap(logits, groups):
+    """Differentiable |mean pi(show|g=0) - mean pi(show|g=1)| on one batch."""
+    p_show = F.softmax(logits, dim=-1)[:, 1]
+    if not (groups == 0).any() or not (groups == 1).any():
+        raise ValueError("Parity requires observations from both groups")
+    return (p_show[groups == 0].mean() - p_show[groups == 1].mean()).abs()
 
 
 def ppo_lag_finetune(data: Dict, base: IQLPolicy,
@@ -127,8 +138,9 @@ def ppo_lag_finetune(data: Dict, base: IQLPolicy,
     cfg = cfg or PPOLagConfig()
     np.random.seed(seed); torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
-    ctx_dim = len(context_vector(data["jobs"][0], data["candidates"][0], include_group=True))
-    net = PPOActorCritic(base, ctx_dim)
+    ctx_dim = len(context_vector(data["jobs"][0], data["candidates"][0], include_group=base.include_group))
+    # Preserve the offline checkpoint for a meaningful before/after comparison.
+    net = PPOActorCritic(copy.deepcopy(base), ctx_dim)
     opt_pi = torch.optim.Adam(net.base.pi.parameters(), lr=cfg.pi_lr)
     opt_v = torch.optim.Adam(
         list(net.v_trunk.parameters()) + list(net.v_head.parameters())
@@ -136,20 +148,20 @@ def ppo_lag_finetune(data: Dict, base: IQLPolicy,
         lr=cfg.vf_lr,
     )
     lam = float(cfg.lam_init)
-    history = {"return": [], "cost": [], "lambda": [], "parity": []}
+    history = {"return": [], "cost": [], "lambda": [], "parity": [], "expected_parity": []}
     cost_window = deque(maxlen=cfg.window)
 
     for it in range(cfg.n_updates):
-        obs, acts, old_lp, rs, cs, vs, vcs, mean_r, parity = _sample_rollout(
+        obs, acts, old_lp, rs, cs, vs, vcs, mean_r, parity, groups = _sample_rollout(
             data, net, cfg.steps_per_update, cost_window, cfg, rng,
         )
         # Targets: contextual bandit, returns = immediate reward / cost.
         adv_r = rs - vs
-        adv_c = cs - vcs
         # standardise reward advantage only
         adv_r = (adv_r - adv_r.mean()) / (adv_r.std() + 1e-8)
-        adv_total = (adv_r - lam * adv_c) / (1.0 + lam)
+        adv_total = adv_r / (1.0 + lam)
         obs_t = torch.as_tensor(obs, dtype=torch.float32)
+        groups_t = torch.as_tensor(groups)
         acts_t = torch.as_tensor(acts, dtype=torch.long)
         old_lp_t = torch.as_tensor(old_lp, dtype=torch.float32)
         adv_t = torch.as_tensor(adv_total, dtype=torch.float32)
@@ -168,20 +180,24 @@ def ppo_lag_finetune(data: Dict, base: IQLPolicy,
                 clip = torch.clamp(ratio, 1 - cfg.clip_ratio, 1 + cfg.clip_ratio) * adv_t[mb]
                 pi_loss = -(torch.min(ratio * adv_t[mb], clip)).mean() \
                           - cfg.ent_coef * dist.entropy().mean()
+                full_logits = net.base.action_logits(obs_t)
+                gap = expected_parity_gap(full_logits, groups_t)
+                pi_loss = pi_loss + lam * gap / (1.0 + lam)
                 opt_pi.zero_grad()
                 pi_loss.backward()
                 torch.nn.utils.clip_grad_norm_(net.base.pi.parameters(), 0.5)
                 opt_pi.step()
                 v_loss = F.mse_loss(v, ret_r_t[mb]) + F.mse_loss(vc, ret_c_t[mb])
                 opt_v.zero_grad(); v_loss.backward(); opt_v.step()
-        # Lambda update on the *parity gap* (population, not the smoothed
-        # cost). This is the population-level Lagrangian.
-        lam = float(np.clip(lam + cfg.lam_lr * (parity - cfg.cost_limit),
+        with torch.no_grad():
+            expected_gap = float(expected_parity_gap(net.base.action_logits(obs_t), groups_t))
+        lam = float(np.clip(lam + cfg.lam_lr * (expected_gap - cfg.cost_limit),
                             0.0, cfg.lam_max))
         history["return"].append(float(mean_r))
         history["cost"].append(float(cs.mean()))
         history["lambda"].append(lam)
         history["parity"].append(float(parity))
+        history["expected_parity"].append(expected_gap)
         if verbose:
             print(f"it={it:3d} R={mean_r:+.3f} parity={parity:.3f} lam={lam:.3f}")
     return {"net": net, "history": history, "cfg": cfg}

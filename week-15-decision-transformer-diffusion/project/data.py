@@ -24,7 +24,7 @@ make_env = _mod.make_env
 
 
 def build_dt_dataset(n_episodes: int = 200, context_len: int = 8, seed: int = 0):
-    """Returns (episodes, context_len) where episodes is a list of dicts.
+    """Returns (episodes, context_len, n_states, n_actions).
 
     Each episode dict has keys:
       states:     (T, nS) one-hot
@@ -33,7 +33,8 @@ def build_dt_dataset(n_episodes: int = 200, context_len: int = 8, seed: int = 0)
       timesteps: (T,) int64
     """
     raw = collect_logged_dataset(n_episodes=n_episodes, seed=seed)
-    s = raw["s"]; a = raw["a"]; r = raw["r"]; done = raw["done"].astype(bool)
+    s = raw["s"]; a = raw["a"]; r = raw["r"]
+    done = raw["episode_end"]
     episodes = []
     start = 0
     for t in range(len(a)):

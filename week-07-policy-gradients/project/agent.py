@@ -97,7 +97,7 @@ class REINFORCEAgent:
         if self.use_baseline and self.value is not None and self.opt_v is not None:
             v = self.value(obs_t)
             adv = ret_t - v.detach()
-            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+            adv = (adv - adv.mean()) / (adv.std(correction=0) + 1e-8)
             pi_loss = -(logp * adv).mean()
             v_loss = 0.5 * F.mse_loss(v, ret_t)
 
@@ -112,7 +112,7 @@ class REINFORCEAgent:
             return {"pi_loss": float(pi_loss.item()), "v_loss": float(v_loss.item())}
 
         # vanilla REINFORCE: standardise returns to keep optimiser scale sane
-        adv = (ret_t - ret_t.mean()) / (ret_t.std() + 1e-8)
+        adv = (ret_t - ret_t.mean()) / (ret_t.std(correction=0) + 1e-8)
         pi_loss = -(logp * adv).mean()
         self.opt_pi.zero_grad(); pi_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 0.5)

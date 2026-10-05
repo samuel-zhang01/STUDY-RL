@@ -127,9 +127,11 @@ contradictory or cyclic preferences may force compromises.
 - [project/solutions.py](project/solutions.py) isolates the implicit reward, stable
   logarithm, and loss variants before the workbook's bake-off.
 
-Read the caller as well as the loss: whether ORPO receives summed or averaged
-response log probabilities changes the convention. The toy module documents summed inputs;
-do not silently equate every toy variant with a published recipe.
+Read the caller as well as the loss: DPO uses summed completion log probabilities,
+while the ORPO branch passes mean completion log probabilities (`-nll`) into its odds
+transformation, following [Hong et al., Eq. 1](https://aclanthology.org/2024.emnlp-main.626/).
+KTO's branch still uses an in-batch reference-point proxy; it omits the separate
+unpaired KL-estimation batch, so the bake-off is not a reproduction of the full recipe.
 Keep the reference frozen and check completion masking before diagnosing optimiser behaviour.
 Report held-out preferences, length distributions, and chosen/rejected likelihoods separately.
 

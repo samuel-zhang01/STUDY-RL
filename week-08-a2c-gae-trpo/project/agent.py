@@ -79,7 +79,7 @@ class A2CAgent:
         adv_t = torch.as_tensor(advantages, dtype=torch.float32)
         ret_t = torch.as_tensor(returns, dtype=torch.float32)
 
-        adv_t = (adv_t - adv_t.mean()) / (adv_t.std() + 1e-8)
+        adv_t = (adv_t - adv_t.mean()) / (adv_t.std(correction=0) + 1e-8)
 
         logp, entropy = self._log_prob(obs_t, acts_t)
         v = self.value(obs_t)

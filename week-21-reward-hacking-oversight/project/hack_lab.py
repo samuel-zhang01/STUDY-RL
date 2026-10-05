@@ -201,21 +201,27 @@ def hack_train(seed: int = 0, **kwargs) -> dict:
         # Effective reward = proxy minus optional length penalty.
         eff_reward = proxies - cfg.length_penalty * lens
         # Group baseline = mean over batch.
-        adv = torch.tensor(eff_reward - eff_reward.mean(), dtype=torch.float32, device=device)
+        baseline = (eff_reward.sum() - eff_reward) / max(1, len(eff_reward) - 1)
+        adv = torch.tensor(eff_reward - baseline, dtype=torch.float32, device=device)
 
-        new_lp = token_logprobs(model, full_ids, L_p)
+        logits = model(full_ids[:, :-1])[:, L_p - 1:] / cfg.temperature
+        distribution = torch.distributions.Categorical(logits=logits)
+        new_lp = distribution.log_prob(comp_ids)
         with torch.no_grad():
-            ref_lp = token_logprobs(ref_model, full_ids, L_p)
+            ref_lp = token_logprobs(ref_model, full_ids, L_p, cfg.temperature)
 
         # KL (k3) and entropy on the sampling distribution.
         log_ratio = ref_lp - new_lp
         kl_tok = (torch.exp(log_ratio) - log_ratio - 1.0) * mask
-        ent_tok = (-new_lp) * mask  # entropy estimate via -log pi(y_sampled)
+        # Exact conditional entropy has a useful gradient. Treating sampled
+        # -log pi tokens as a differentiable entropy loss alone omits the
+        # score-function term and gives zero expected gradient.
+        ent_tok = distribution.entropy() * mask
 
         # Plain REINFORCE on sequence-level reward, broadcast to tokens.
         pg_tok = -(new_lp * adv.unsqueeze(-1)) * mask
         denom = mask.sum(dim=-1).clamp_min(1.0)
-        pg_loss = (pg_tok.sum(dim=-1) / denom).mean()
+        pg_loss = pg_tok.sum(dim=-1).mean()
         kl_loss = (kl_tok.sum(dim=-1) / denom).mean()
         ent_loss = -(ent_tok.sum(dim=-1) / denom).mean()  # negative -> maximise
         loss = pg_loss + cfg.kl_coef * kl_loss + cfg.entropy_coef * ent_loss

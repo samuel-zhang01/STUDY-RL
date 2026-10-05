@@ -59,7 +59,7 @@ def train(seed: int = 0, env_id: str = "LunarLander-v3", n_steps: int = 5000,
         a = agent.act(np.asarray(s, dtype=np.float32))
         s2, r, term, trunc, _ = env.step(a)
         done = bool(term)  # only bootstrap-block on true terminal
-        agent.push(s, a, r, s2, done or trunc)
+        agent.push(s, a, r, s2, done)
         ep_ret += r; ep_len += 1
         loss = agent.learn()
         if loss is not None and step % log_every == 0:
@@ -80,6 +80,7 @@ def train(seed: int = 0, env_id: str = "LunarLander-v3", n_steps: int = 5000,
                         if log.episode_returns else float("nan")),
     }
     log.meta = log_meta  # type: ignore[attr-defined]
+    env.close()
     return log
 
 

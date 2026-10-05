@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Re-compile every notes.tex / extended_reading.tex / syllabus.tex with the
-# updated shared style. Run in parallel-ish to keep it fast.
+# updated shared style. Builds run sequentially and preserve failure status.
 set -u
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
@@ -9,7 +9,7 @@ fail=0
 
 build() {
     local dir="$1" stem="$2"
-    cd "$ROOT/$dir"
+    cd "$ROOT/$dir" || return 1
     rm -f "$stem.aux" "$stem.log" "$stem.toc" "$stem.out" "$stem.fls" "$stem.fdb_latexmk" 2>/dev/null
     if $LATEXMK "$stem.tex" >/dev/null 2>&1; then
         echo "OK    $dir/$stem.pdf"

@@ -22,26 +22,46 @@ import numpy as np
 LogEntry = Tuple[np.ndarray, int, float, float, np.ndarray]
 
 
+def _checked_entries(log, pi):
+    if not log:
+        raise ValueError("OPE requires a nonempty log")
+    for x, a, r, pb, slate in log:
+        p = np.asarray(pi(slate), dtype=float)
+        if (p.shape != (len(slate),) or not np.isfinite(p).all()
+                or (p < 0).any() or not np.isclose(p.sum(), 1.0)):
+            raise ValueError("Target policy must return a probability vector over the slate")
+        if not 0 <= a < len(slate) or not np.isfinite(pb) or not 0 < pb <= 1 or not np.isfinite(r):
+            raise ValueError("Logged action, reward, or propensity is invalid; positivity is required")
+        yield x, a, r, pb, slate, p
+
+
 def ips(log: List[LogEntry], pi: Callable[[np.ndarray], np.ndarray]) -> float:
     s = 0.0
-    for x, a, r, pb, slate in log:
-        p = pi(slate)
-        s += (p[a] / max(pb, 1e-8)) * r
+    for x, a, r, pb, slate, p in _checked_entries(log, pi):
+        s += (p[a] / pb) * r
     return s / len(log)
 
 
 def snips(log: List[LogEntry], pi: Callable[[np.ndarray], np.ndarray]) -> float:
     num, den = 0.0, 0.0
-    for x, a, r, pb, slate in log:
-        w = pi(slate)[a] / max(pb, 1e-8)
+    for x, a, r, pb, slate, p in _checked_entries(log, pi):
+        w = p[a] / pb
         num += w * r
         den += w
-    return num / max(den, 1e-8)
+    if den == 0:
+        raise ValueError("SNIPS is undefined with zero total target weight")
+    return num / den
 
 
 def snips_ci(log: List[LogEntry], pi: Callable[[np.ndarray], np.ndarray],
              alpha: float = 0.05) -> Tuple[float, float, float]:
-    """Bootstrap CI for SNIPS. Returns (point, lo, hi)."""
+    """IID-row percentile bootstrap for a FIXED target; returns (point, lo, hi).
+
+    No coverage guarantee is supplied for adaptive/clustered logs or weak
+    overlap. Freeze the target before calling; do not re-fit on bootstrap rows.
+    """
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must be in (0,1)")
     rng = np.random.default_rng(0)
     point = snips(log, pi)
     n = len(log)
@@ -78,27 +98,25 @@ class RidgeRewardModel:
 
 def doubly_robust(log: List[LogEntry], pi: Callable, qhat: RidgeRewardModel) -> float:
     s = 0.0
-    for x, a, r, pb, slate in log:
+    for x, a, r, pb, slate, p_vec in _checked_entries(log, pi):
         q_vec = qhat.q(slate)
-        p_vec = pi(slate)
         baseline = float((p_vec * q_vec).sum())
-        correction = (p_vec[a] / max(pb, 1e-8)) * (r - q_vec[a])
+        correction = (p_vec[a] / pb) * (r - q_vec[a])
         s += baseline + correction
     return s / len(log)
 
 
 def direct_method(log: List[LogEntry], pi: Callable, qhat: RidgeRewardModel) -> float:
     s = 0.0
-    for x, a, r, pb, slate in log:
+    for x, a, r, pb, slate, p_vec in _checked_entries(log, pi):
         q_vec = qhat.q(slate)
-        p_vec = pi(slate)
         s += float((p_vec * q_vec).sum())
     return s / len(log)
 
 
 def effective_sample_size(log: List[LogEntry], pi: Callable) -> float:
     ws = []
-    for x, a, r, pb, slate in log:
-        ws.append(pi(slate)[a] / max(pb, 1e-8))
+    for x, a, r, pb, slate, p in _checked_entries(log, pi):
+        ws.append(p[a] / pb)
     w = np.asarray(ws)
     return float(w.sum() ** 2 / max((w ** 2).sum(), 1e-12))

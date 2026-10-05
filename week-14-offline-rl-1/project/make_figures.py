@@ -14,7 +14,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from common.plotting import use_rl_style, RL_PALETTE
 from common.seed import seed_everything
 
-from .train import train
+from .train import train, evaluate_policy
+from .env import make_env
+from common.tabular import value_iteration
 
 
 def main(seed: int = 0, out_dir: str | None = None) -> None:
@@ -32,7 +34,10 @@ def main(seed: int = 0, out_dir: str | None = None) -> None:
         ev = out["eval_returns"]
         ax.plot(ev[:, 0], ev[:, 1], label=f"{algo} (final={out['final_return']:.2f})",
                 color=colours[algo])
-    ax.axhline(2.18, ls="--", color=RL_PALETTE["gray"], label="optimal eval")
+    env = make_env(seed)
+    _, dp_policy, _ = value_iteration(env, gamma=0.95)
+    dp_return = evaluate_policy(env, dp_policy, n_episodes=100)
+    ax.axhline(dp_return, ls="--", color=RL_PALETTE["gray"], label="DP-policy eval (100 episodes)")
     ax.set_xlabel("gradient step")
     ax.set_ylabel("greedy-policy return (eval)")
     ax.set_title("Offline RL on synthetic GridWorld: extrapolation error vs conservatism")

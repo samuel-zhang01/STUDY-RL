@@ -124,6 +124,14 @@ Risk-neutral expected return does not distinguish equal-mean reward distribution
   Different tie-breaking policies can have the same optimal value vector.
 - `exercise_7_gpi` stops when its policy is stable. With truncated evaluation,
   that alone is not a certificate of value accuracy: also inspect $\|T_*V-V\|$.
+- Modified policy iteration must check the Bellman residual as well as policy
+  stability: a stable action choice after one evaluation sweep can still have
+  inaccurate values. In a one-state, reward-1 loop with gamma 0.5, the policy
+  never changes, but values must approach $1/(1-0.5)=2$ rather than stop at 1.
+- Car transfers respect both source inventory and destination capacity. At
+  inventory $(2,2)$ with capacity 2, requesting a transfer of two moves zero
+  cars and pays zero transfer cost. The Poisson tail horizon is at least the
+  inventory cap, preserving capped transition probabilities.
 - [carrental.py](project/carrental.py), `CarRentalMDP.actions_list`, maps stored
   action indices to signed numbers of cars moved. A heatmap of indices is misleading.
 

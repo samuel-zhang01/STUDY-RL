@@ -99,8 +99,13 @@ nonlinear optimisation or arbitrary step sizes safe.
 
 \begin{example}[Baird 1995's counterexample]
 A 7-state MDP, linear function approximator, deterministic target policy that always
-sends to state 7, and a uniform behaviour policy. Reward 0 everywhere so $V^\pi \equiv 0$.
-Semi-gradient off-policy TD diverges: $\|w_t\|_2 \to \infty$.
+sends to state 7. The behaviour chooses that solid action with probability
+$1/7$ and a dashed action leading uniformly to the six upper states with
+probability $6/7$. The action importance ratio is 7 on solid actions and 0
+on dashed actions; a state-sampling probability alone is not this ratio.
+Reward is zero everywhere so $V^\pi \equiv 0$. The local demo uses unit-norm
+features and this behaviour transition model; parameter growth on a finite
+run illustrates the failure of a general convergence guarantee.
 \end{example}
 
 \begin{figure}[h]
@@ -295,11 +300,10 @@ action tensor, silently picking $\Qfn(s,a_0)$ for all batch elements.
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.95\linewidth]{figs/fig_dqn_lunar_curve.pdf}
-\caption{DQN on LunarLander-v3 (20k env steps, 2 seeds). Smooth ascent past zero and
-toward $+100$. The original Mnih recipe needs about 200k steps for $>150$; this short
-run is the figure used in the syllabus and matches the smoke target of the mini-project.
-The full target (return $\ge 150$ at 200k steps) is the project goal you will run
-yourself.}
+\caption{Historical DQN run on LunarLander-v3 (20k environment steps, 2 seeds).
+This finite experiment illustrates episode-return variation; it does not
+certify convergence or guarantee the full-training target. The current
+trainer retains bootstrapping at external time-limit truncations.}
 \end{figure}
 
 \begin{figure}[h]
@@ -363,7 +367,7 @@ the matching setting:
     baseline.
   \item Action-availability \emph{varies} per lead (broker capacity, geographic match).
     Use \emph{action masking}: set $\Qfn(s, a_\text{invalid}) = -\infty$ before the
-    argmax. The deadly triad does not bite because the masked action has zero probability
+    argmax. Masking prevents selection of that action, but does not remove the deadly triad or ensure stable value learning
     under both behaviour and target.
 \end{itemize}
 \end{matching}

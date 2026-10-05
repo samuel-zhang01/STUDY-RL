@@ -1,15 +1,10 @@
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = [
-  "common",
-  "week-01-mdps-bandits",
-  "week-02-bellman-dp",
-  "week-03-monte-carlo",
-  "week-14-offline-rl-1",
-  "week-15-decision-transformer-diffusion",
-  "week-16-model-based",
-  "week-17-exploration-meta",
-]
+# Weeks reuse a local `project` package and package-qualified test names.
+# `make tests` runs every dynamically discovered week in an isolated process.
+# Default pytest covers the shared tools and optional lab without aliasing weeks.
+testpaths = ["common/tests", "scripts/tests", "llm-lab/tests"]
+pythonpath = [".", "llm-lab"]
 addopts = "-ra --strict-markers --import-mode=importlib"
 markers = [
   "slow: training runs that take > 30s",

@@ -80,3 +80,22 @@ def test_exercise_8_car_rental_runs():
     assert pi.shape == (25,)
     assert n >= 1
     assert np.isfinite(V).all()
+
+
+def test_gpi_does_not_stop_at_premature_policy_stability():
+    env = GridWorld(rows=1, cols=1, goals=(), step_reward=1.)
+    values, _, sweeps = S.exercise_7_gpi(env, gamma=.5, eval_sweeps=1, max_outer=100)
+    np.testing.assert_allclose(values, [2.], atol=1e-7)
+    assert sweeps > 1
+
+
+def test_car_transfers_preserve_inventory_and_respect_destination_capacity():
+    from project.carrental import CarRentalMDP
+    env = CarRentalMDP(cap=2, lambda_req=(0.,0.), lambda_ret=(0.,0.), poisson_cap=1)
+    assert env.poisson_cap >= env.cap
+    reward, probs = env.expected_reward_and_next((2,2), 2)
+    assert reward == 0.
+    assert probs[env.s2idx((2,2))] == 1.
+    reward, probs = env.expected_reward_and_next((2,1), 2)
+    assert reward == -2.
+    assert probs[env.s2idx((1,2))] == 1.

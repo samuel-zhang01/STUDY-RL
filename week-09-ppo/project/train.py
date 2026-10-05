@@ -15,6 +15,9 @@ import numpy as np
 import torch
 
 from common.seed import seed_everything
+from common.rollouts import (
+    sync_vector_env, transition_next_observations, generalized_advantage_estimate,
+)
 
 from .agent import PPOAgent
 
@@ -37,21 +40,15 @@ def _make_vec_env(env_id: str, num_envs: int, seed: int):
         return _f
 
     # detail #1: vectorised env
-    return gym.vector.SyncVectorEnv([thunk(i) for i in range(num_envs)])
+    return sync_vector_env([thunk(i) for i in range(num_envs)])
 
 
-def _compute_gae(rewards, values, dones, last_value, gamma, lam):
-    T = len(rewards)
-    advantages = np.zeros(T, dtype=np.float32)
-    last_adv = 0.0
-    for t in range(T - 1, -1, -1):
-        v_next = last_value if t == T - 1 else values[t + 1]
-        nonterm = 1.0 - float(dones[t])
-        delta = rewards[t] + gamma * v_next * nonterm - values[t]
-        last_adv = delta + gamma * lam * nonterm * last_adv
-        advantages[t] = last_adv
-    returns = advantages + values
-    return advantages, returns
+def _compute_gae(rewards, values, dones, last_value, gamma, lam, *,
+                 next_values=None, terminals=None):
+    return generalized_advantage_estimate(
+        rewards, values, dones, last_value, gamma, lam,
+        next_values=next_values, terminals=terminals,
+    )
 
 
 def train(
@@ -112,17 +109,27 @@ def train(
         all_vals = np.zeros((rollout_steps, num_envs), dtype=np.float32)
         all_rews = np.zeros((rollout_steps, num_envs), dtype=np.float32)
         all_dones = np.zeros((rollout_steps, num_envs), dtype=np.float32)
+        all_terminals = np.zeros_like(all_dones)
+        all_next_vals = np.zeros_like(all_vals)
 
         for t in range(rollout_steps):
             a, lp, v = agent.act(obs)
-            nxt, r, term, trunc, _ = envs.step(a)
+            # Preserve Gaussian samples for PPO ratios; clip only at the
+            # environment boundary, using this environment's actual bounds.
+            env_actions = np.clip(a, envs.single_action_space.low, envs.single_action_space.high)
+            nxt, r, term, trunc, infos = envs.step(env_actions)
             done = np.logical_or(term, trunc)
+            bootstrap_obs = transition_next_observations(nxt, infos, done)
+            with torch.no_grad():
+                next_v = agent.critic(torch.as_tensor(bootstrap_obs, dtype=torch.float32)).cpu().numpy()
             all_obs[t] = obs
             all_acts[t] = a
             all_logp[t] = lp
             all_vals[t] = v
             all_rews[t] = r
             all_dones[t] = done.astype(np.float32)
+            all_terminals[t] = term.astype(np.float32)
+            all_next_vals[t] = next_v
 
             current_returns += r
             for i in range(num_envs):
@@ -140,7 +147,8 @@ def train(
         rets = np.zeros_like(all_rews)
         for i in range(num_envs):
             a, r = _compute_gae(all_rews[:, i], all_vals[:, i], all_dones[:, i],
-                                float(last_vals[i]), gamma, lam)
+                                float(last_vals[i]), gamma, lam,
+                                next_values=all_next_vals[:, i], terminals=all_terminals[:, i])
             advs[:, i] = a; rets[:, i] = r
 
         if initial_window_mean is None and len(win) > 0:
@@ -166,6 +174,7 @@ def train(
                 m = agent.update_minibatch(
                     obs_flat[idx], act_flat[idx], logp_old[idx],
                     adv_flat[idx], ret_flat[idx], v_old[idx],
+                    use_value_clip=use_value_clip, use_advantage_norm=use_advantage_norm,
                 )
                 for k, v in m.items():
                     ep_metrics[k].append(v)

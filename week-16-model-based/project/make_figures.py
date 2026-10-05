@@ -43,31 +43,26 @@ def main(seed: int = 0, out_dir: str | None = None) -> None:
         state, *_ = rssm.observe_step(state, a_oh, obs_t)
         # Imagine 20 steps in the world model.
         imagined = []
+        actions = []
         s = state
         import torch.nn.functional as F
         for _ in range(20):
             feat = torch.cat([s.h, s.s], dim=-1)
             a = agent.actor(feat).logits.argmax(dim=-1)
+            actions.append(int(a.item()))
             a_oh = F.one_hot(a, agent.n_actions).float()
             s, r, c = rssm.imagine_step(s, a_oh)
             # Decode imagined obs.
             recon = rssm.decoder(torch.cat([s.h, s.s], dim=-1))
             imagined.append(recon.detach().cpu().numpy().squeeze())
-    # Real rollout 20 steps under same actor.
+    # Execute the same action sequence from the same initial observation.
+    # Different imagined/real policies would confound dynamics-error comparison.
     real = [obs]
-    s = state
-    for _ in range(20):
-        obs_t = torch.from_numpy(obs.astype(np.float32)).unsqueeze(0).to(device)
-        with torch.no_grad():
-            state2 = s
-            a_oh = torch.zeros(1, agent.n_actions, device=device)
-            state2, *_ = rssm.observe_step(s, a_oh, obs_t)
-            feat = torch.cat([state2.h, state2.s], dim=-1)
-            a = int(agent.actor(feat).logits.argmax(dim=-1).item())
-            s = state2
+    for a in actions:
         obs, r, term, trunc, _ = env.step(a)
         real.append(obs.astype(np.float32))
         if term or trunc: break
+    env.close()
 
     imagined = np.asarray(imagined); real = np.asarray(real[1:1 + len(imagined)])
     if len(real):

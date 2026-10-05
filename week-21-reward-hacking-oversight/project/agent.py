@@ -142,8 +142,8 @@ def completion_mask(comp_ids, eos_id):
     return (after_eos == 0).float()
 
 
-def token_logprobs(model, ids, comp_start):
-    logits = model(ids[:, :-1])
+def token_logprobs(model, ids, comp_start, temperature=1.0):
+    logits = model(ids[:, :-1]) / temperature
     lp = F.log_softmax(logits, dim=-1)
     targets = ids[:, 1:]
     chosen = lp.gather(-1, targets.unsqueeze(-1)).squeeze(-1)

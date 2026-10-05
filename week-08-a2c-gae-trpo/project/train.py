@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from common.seed import seed_everything
+from common.rollouts import sync_vector_env, transition_next_observations
 
 from .agent import A2CAgent
 from .solutions import compute_gae
@@ -34,7 +35,7 @@ def _make_vector_env(env_id: str, num_envs: int, seed: int):
             return e
         return _f
 
-    return gym.vector.SyncVectorEnv([thunk(i) for i in range(num_envs)])
+    return sync_vector_env([thunk(i) for i in range(num_envs)])
 
 
 def train(
@@ -72,6 +73,8 @@ def train(
         all_rews = np.zeros((rollout_steps, num_envs), dtype=np.float32)
         all_vals = np.zeros((rollout_steps, num_envs), dtype=np.float32)
         all_dones = np.zeros((rollout_steps, num_envs), dtype=np.float32)
+        all_terminals = np.zeros_like(all_dones)
+        all_next_vals = np.zeros_like(all_vals)
 
         for t in range(rollout_steps):
             actions = np.zeros((num_envs, act_dim), dtype=np.float32)
@@ -85,17 +88,24 @@ def train(
                 eps = torch.randn_like(mu)
                 a = (mu + std * eps).cpu().numpy()
                 v = agent.value(obs_t).cpu().numpy()
-            actions[:] = np.clip(a, -1.0, 1.0)
+            actions[:] = np.clip(a, envs.single_action_space.low, envs.single_action_space.high)
             values[:] = v
 
-            nxt, r, term, trunc, _ = envs.step(actions)
+            nxt, r, term, trunc, infos = envs.step(actions)
             done = np.logical_or(term, trunc)
+            bootstrap_obs = transition_next_observations(nxt, infos, done)
+            with torch.no_grad():
+                next_v = agent.value(torch.as_tensor(bootstrap_obs, dtype=torch.float32)).cpu().numpy()
 
             all_obs[t] = obs
-            all_acts[t] = actions
+            # Score the sampled Gaussian latent action; only the environment
+            # receives its clipped image. Clipped actions have a different law.
+            all_acts[t] = a
             all_rews[t] = r
             all_vals[t] = values
             all_dones[t] = done.astype(np.float32)
+            all_terminals[t] = term.astype(np.float32)
+            all_next_vals[t] = next_v
 
             current_returns += r
             for i in range(num_envs):
@@ -117,6 +127,7 @@ def train(
                 rewards=all_rews[:, i], values=all_vals[:, i],
                 dones=all_dones[:, i], last_value=float(last_vals[i]),
                 gamma=gamma, lam=lam,
+                next_values=all_next_vals[:, i], terminals=all_terminals[:, i],
             )
             advs_list.append(adv); rets_list.append(ret)
 

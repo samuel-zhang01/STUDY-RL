@@ -6,6 +6,11 @@ import numpy as np
 
 
 def seed_everything(seed: int) -> None:
+    """Seed Python, NumPy, and Torch RNGs.
+
+    PYTHONHASHSEED affects child processes; this process's hash seed was
+    chosen at interpreter startup. CUDA kernels are not made deterministic.
+    """
     random.seed(seed)
     np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)

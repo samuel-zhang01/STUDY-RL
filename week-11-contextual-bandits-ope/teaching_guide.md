@@ -125,7 +125,12 @@ A reward model can extrapolate to B, but that is a modeling assumption.
 - [agents.py](project/agents.py): `EpsilonGreedyLogger.propensities` is the full action distribution.
   The propensity is the chance of the action, including exploration *and* exploitation routes.
 - [train.py](project/train.py): the oracle value is available because the environment is synthetic.
+  Logs and oracle now use the same latent reward parameters; changing those
+  between collection and evaluation would measure a different environment.
   A real logged dataset does not contain an oracle for unchosen actions.
+- The environment has logistic reward means. LinUCB and LinTS are linear
+  approximations here; their correctly specified linear-payoff regret bounds
+  do not directly certify this experiment.
 
 MIPS marginalizes over action embeddings: both numerator and denominator must marginalize actions,
 using target and logger policies respectively. Embedding dimension alone does not determine variance.

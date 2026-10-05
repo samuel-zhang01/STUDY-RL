@@ -94,3 +94,14 @@ def test_polyak_update():
         tgt.weight.fill_(0.0); tgt.bias.zero_()
     polyak_update(tgt, src, tau=0.5)
     assert torch.allclose(tgt.weight, torch.full((2, 2), 0.5))
+
+
+def test_td3_smoothing_uses_actions_and_both_critics_with_terminal_mask():
+    from project.solutions import td3_target
+    obs = torch.zeros(2, 3)
+    actor = lambda s: torch.full((len(s), 2), 4.)
+    q1 = lambda s, a: a.sum(-1)
+    q2 = lambda s, a: a.sum(-1) - 1.
+    out = td3_target(torch.ones(2), torch.tensor([0.,1.]), obs, actor, q1, q2,
+        target_noise=0., gamma=.9)
+    assert torch.allclose(out, torch.tensor([1.9, 1.]))

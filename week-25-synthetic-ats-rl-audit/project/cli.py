@@ -30,8 +30,7 @@ def match_score(cv: dict, jd: dict) -> dict:
     sen_gap = abs(float(cv["years"]) / 10.0 - float(jd["seniority"]))
     fit = float(np.exp(-sen_gap))
     base = 100.0 * (0.7 * 0.5 * (sim + 1.0) + 0.3 * fit)
-    # Apply LinTS-style posterior shrinkage: pull extreme heuristic scores
-    # back toward the mean. Without learned weights we just damp the tails.
+    # An invented heuristic blend, not a learned posterior or LinTS inference.
     blended = base * 0.95 + 5.0 * fit
     fairness_flag = "OK"
     if cv.get("group", 0) == 1 and base < 50:

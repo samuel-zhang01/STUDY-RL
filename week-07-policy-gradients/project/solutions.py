@@ -50,13 +50,12 @@ def reinforce_with_baseline_loss(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Returns (policy_loss, value_loss) for REINFORCE + V-baseline.
 
-    `values` should be the *detached* value-net output for the policy loss; the
-    caller is expected to compute the value-net forward separately for the
-    value loss so gradients flow only to phi.
+    Pass differentiable value-net outputs. This function detaches them for
+    the actor and retains their graph for the critic loss.
     """
     adv = returns - values.detach()
     if standardize:
-        adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+        adv = (adv - adv.mean()) / (adv.std(correction=0) + 1e-8)
     policy_loss = -(log_probs * adv).mean()
     value_loss = 0.5 * ((values - returns) ** 2).mean()
     return policy_loss, value_loss
@@ -94,12 +93,21 @@ def snips_estimator(
     """Self-Normalised Importance Sampling estimator.
 
     V_SNIPS(pi_e) = sum_i w_i r_i / sum_i w_i, where w_i = pi_e(a_i|s_i)/pi_b(a_i|s_i).
-    Lower variance than IPS, biased but consistent.
+    Biased but consistent under overlap and suitable moment assumptions.
+    It can have lower variance than IPS; this is not a universal guarantee.
     """
     behaviour_log_probs = np.asarray(behaviour_log_probs, dtype=np.float64)
     target_log_probs = np.asarray(target_log_probs, dtype=np.float64)
     rewards = np.asarray(rewards, dtype=np.float64)
-    # Clip log-ratio for numerical safety on extreme propensities.
-    log_w = np.clip(target_log_probs - behaviour_log_probs, -20.0, 20.0)
-    w = np.exp(log_w)
-    return float((w * rewards).sum() / (w.sum() + 1e-12))
+    if (rewards.ndim != 1 or rewards.size == 0 or
+            behaviour_log_probs.shape != rewards.shape or target_log_probs.shape != rewards.shape):
+        raise ValueError("Inputs must be nonempty one-dimensional arrays of equal shape")
+    if not np.all(np.isfinite(behaviour_log_probs)):
+        raise ValueError("Logged actions must have finite nonzero behaviour probabilities")
+    log_w = target_log_probs - behaviour_log_probs
+    if np.any(np.isnan(log_w)) or np.any(np.isposinf(log_w)) or not np.any(np.isfinite(log_w)):
+        raise ValueError("SNIPS requires finite ratios and positive total target weight")
+    # Common rescaling cancels in SNIPS; unlike clipping it preserves the
+    # estimator exactly, even for extreme but supported log-ratios.
+    w = np.exp(log_w - np.max(log_w))
+    return float((w * rewards).sum() / w.sum())

@@ -73,3 +73,14 @@ def test_exercise_8_snips_basic():
     assert abs(v - 3.8 / 4.0) < 1e-10
     # Edge: all zero weights -> 0.0
     assert S.exercise_8_snips(r, np.zeros(4), np.ones(4)) == 0.0
+
+
+def test_bakeoff_is_reproducible_across_python_hash_seeds():
+    import json
+    import subprocess
+    script = "from project.solutions import exercise_5_bakeoff; import numpy as np,json; print(json.dumps(exercise_5_bakeoff(np.array([.2,.8]),T=50,n_seeds=1),sort_keys=True))"
+    outputs = []
+    for hash_seed in ('1', '2'):
+        env = dict(os.environ, PYTHONHASHSEED=hash_seed)
+        outputs.append(subprocess.check_output([sys.executable, '-c', script], cwd=WEEK, env=env, text=True))
+    assert json.loads(outputs[0]) == json.loads(outputs[1])

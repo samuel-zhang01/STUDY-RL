@@ -163,10 +163,16 @@ class RainbowAgent:
         if (not deterministic) and (not c.noisy) and self.rng.random() < self.epsilon():
             return int(self.rng.integers(0, c.n_actions))
         with torch.no_grad():
-            if c.noisy:
+            was_training = self.q.training
+            if c.noisy and not deterministic:
                 self.q.reset_noise()
-            x = torch.as_tensor(obs, dtype=torch.float32, device=c.device).unsqueeze(0)
-            q = self.q(x)
+            if deterministic:
+                self.q.eval()
+            try:
+                x = torch.as_tensor(obs, dtype=torch.float32, device=c.device).unsqueeze(0)
+                q = self.q(x)
+            finally:
+                self.q.train(was_training)
             return int(q.argmax(dim=-1).item())
 
     def push(self, s, a, r, s2, done) -> None:

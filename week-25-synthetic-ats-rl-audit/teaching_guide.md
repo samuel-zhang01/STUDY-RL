@@ -122,12 +122,14 @@ A sampled argmax is one random decision, not the marginal selection probability 
 
 - [project/train.py](project/train.py): `collect_logs` randomises only within the
   heuristic shortlist. Its epsilon mass does not create support outside that shortlist.
-- `train` fits `LinTSReranker` and a reward model on `log`, then evaluates on `log` again.
-  This demonstrates mechanics; it is not an independent estimate after policy selection.
+- `train` fits `LinTSReranker` and a reward model on `training_log`, then evaluates
+  a fixed posterior-mean exploitation policy on a fresh log stream. The stream
+  shares the synthetic population and shortlist rule, but supplies no fitting labels.
 - [project/bandit.py](project/bandit.py): `score` samples a fresh parameter on every call.
-  The OPE target callback consequently changes across rows and estimator calls.
-  Freeze a target definition and integrate or consistently estimate its action probabilities
-  before comparing repeatable fixed-policy estimates or bootstrapped intervals.
+  The training driver freezes `theta_hat` for its OPE target; it does not evaluate
+  the marginal Thompson-sampling distribution. The `LinTS` result key is retained
+  for compatibility. Synthetic `ground_truth_values` give expected performance
+  under the evaluation job distribution for comparison with estimator noise.
 - [project/audit.py](project/audit.py): `run_audit` audits the supplied choices.
   The choices returned by `train` are **behaviour-policy** choices, not deployed LinTS choices.
 - [project/constrained.py](project/constrained.py): `train_lagrangian` is a deterministic
@@ -137,8 +139,10 @@ A sampled argmax is one random decision, not the marginal selection probability 
 
 The test asserting a particular LinTS-versus-uniform ordering is an empirical benchmark,
 not an algorithmic guarantee. A failure deserves investigation rather than a changed theorem.
-The function `equalised_odds_gap` currently checks only a true-positive-rate gap;
-equalised odds would additionally require the false-positive-rate gap.
+`equalised_odds_gap` checks both true-positive and false-positive gaps; missing
+conditional outcomes yield NaN. `selection_rates` reports selected-group shares,
+which cannot be interpreted as group-conditional applicant selection rates
+without exposure denominators. Its toy ratio is not a four-fifths hiring audit.
 
 ## Retrieve and transfer
 

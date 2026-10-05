@@ -47,6 +47,12 @@ class GridWorld:
         return self.state
 
     def step(self, action: int) -> Tuple[Tuple[int, int], float, bool, dict]:
+        if action not in ACTIONS:
+            raise ValueError(f"Unknown action: {action}")
+        # The simulator and transition_table share the same absorbing-state
+        # convention: terminal-entry reward is paid once, then zero thereafter.
+        if self.state in self.terminal_set:
+            return self.state, 0.0, True, {}
         if self.slip_prob > 0 and self.rng.random() < self.slip_prob:
             action = int(self.rng.integers(0, 4))
         dr, dc = ACTIONS[action]

@@ -21,6 +21,8 @@ from .data import (
 def demographic_parity_gap(actions: np.ndarray, groups: np.ndarray) -> float:
     """|P(a=1 | g=0) - P(a=1 | g=1)|. Lower is closer to demographic parity."""
     actions = np.asarray(actions); groups = np.asarray(groups)
+    if not (groups == 0).any() or not (groups == 1).any():
+        return float("nan")  # undefined conditional rate is not zero
     if (groups == 0).any():
         p0 = float(actions[groups == 0].mean())
     else:
@@ -38,8 +40,10 @@ def equal_opportunity_gap(actions: np.ndarray, groups: np.ndarray,
     actions = np.asarray(actions); groups = np.asarray(groups); y = np.asarray(y_true)
     pos0 = (groups == 0) & (y == 1)
     pos1 = (groups == 1) & (y == 1)
-    tpr0 = float(actions[pos0].mean()) if pos0.any() else 0.0
-    tpr1 = float(actions[pos1].mean()) if pos1.any() else 0.0
+    if not pos0.any() or not pos1.any():
+        return float("nan")
+    tpr0 = float(actions[pos0].mean())
+    tpr1 = float(actions[pos1].mean())
     return float(abs(tpr0 - tpr1))
 
 
@@ -54,11 +58,19 @@ def snips_ope(interactions: List[LoggedInteraction],
     in interaction i. Returns the SNIPS estimate of E_{pi_target}[reward].
     """
     rewards = np.array([it.reward for it in interactions], dtype=float)
-    props = np.array([max(1e-3, it.propensity) for it in interactions], dtype=float)
+    props = np.array([it.propensity for it in interactions], dtype=float)
+    target_action_probs = np.asarray(target_action_probs, dtype=float)
+    if (not len(interactions) or target_action_probs.shape != rewards.shape
+            or not np.isfinite(props).all() or (props <= 0).any() or (props > 1).any()
+            or not np.isfinite(target_action_probs).all()
+            or (target_action_probs < 0).any() or (target_action_probs > 1).any()):
+        raise ValueError("SNIPS needs aligned nonempty rows, positive propensities, and target probabilities")
     w = target_action_probs / props
     num = float((w * rewards).sum())
     den = float(w.sum())
-    return num / max(1e-9, den)
+    if den == 0:
+        raise ValueError("SNIPS is undefined with zero target weight")
+    return num / den
 
 
 # ---------------------------------------------------------------------------
@@ -83,11 +95,12 @@ def calibration_curve(probs: np.ndarray, y_true: np.ndarray,
 # ---------------------------------------------------------------------------
 def red_team_eval(model_act_prob_fn, data: Dict, n_episodes: int = 200,
                   noise_levels: Iterable[float] = (0.0, 0.05, 0.10, 0.20),
-                  swap_groups: bool = True) -> Dict:
+                  swap_groups: bool = True, include_group: bool = True) -> Dict:
     """Red-team battery:
         1. Skill-feature noise injection at several levels.
         2. Group-attribute swap (does removing/flipping g change the action
-           distribution? - a counterfactual fairness probe).
+           distribution? This is feature sensitivity, not a causal
+           counterfactual-fairness test).
 
     `model_act_prob_fn(ctx)` -> np.ndarray of shape (2,) action probabilities.
     """
@@ -99,8 +112,9 @@ def red_team_eval(model_act_prob_fn, data: Dict, n_episodes: int = 200,
         for _ in range(n_episodes):
             j = jobs[int(rng.integers(0, len(jobs)))]
             c = cands[int(rng.integers(0, len(cands)))]
-            ctx = context_vector(j, c, include_group=True)
-            ctx = ctx + rng.normal(0, noise, size=ctx.shape).astype(np.float32)
+            ctx = context_vector(j, c, include_group=include_group)
+            skill_width = len(ctx) - int(include_group)
+            ctx[:skill_width] += rng.normal(0, noise, size=skill_width).astype(np.float32)
             p = model_act_prob_fn(ctx)
             rec_rates.append(float(p[1]))
         results["noise"][float(noise)] = float(np.mean(rec_rates))
@@ -111,8 +125,10 @@ def red_team_eval(model_act_prob_fn, data: Dict, n_episodes: int = 200,
         for _ in range(n_episodes):
             j = jobs[int(rng.integers(0, len(jobs)))]
             c = cands[int(rng.integers(0, len(cands)))]
-            ctx0 = context_vector(j, c, include_group=True)
-            ctx0_flipped = ctx0.copy(); ctx0_flipped[-1] = 1.0 - ctx0[-1]
+            ctx0 = context_vector(j, c, include_group=include_group)
+            ctx0_flipped = ctx0.copy()
+            if include_group:
+                ctx0_flipped[-1] = 1.0 - ctx0[-1]
             p1 = model_act_prob_fn(ctx0)
             p2 = model_act_prob_fn(ctx0_flipped)
             if int(p1[1] > 0.5) != int(p2[1] > 0.5):
@@ -131,16 +147,21 @@ def full_audit(net: torch.nn.Module, data: Dict,
     a (B,2) tensor) and return a clean dict.
     """
     rng = np.random.default_rng(0)
+    base = net if hasattr(net, "act_prob") else net.base
+    include_group = base.include_group
+    interactions = data["interactions"][:n_episodes]
+    if not interactions:
+        raise ValueError("Audit requires nonempty interactions")
     jobs = data["jobs"]; cands = data["candidates"]
     actions: List[int] = []
     groups: List[int] = []
     y_true: List[int] = []
     probs: List[float] = []
     target_action_probs: List[float] = []
-    for it in data["interactions"][:n_episodes]:
+    for it in interactions:
         j = next(jj for jj in jobs if jj.job_id == it.job_id)
         c = next(cc for cc in cands if cc.candidate_id == it.candidate_id)
-        ctx = context_vector(j, c, include_group=True)
+        ctx = context_vector(j, c, include_group=include_group)
         with torch.no_grad():
             x = torch.as_tensor(ctx, dtype=torch.float32).unsqueeze(0)
             if hasattr(net, "act_prob"):
@@ -158,7 +179,7 @@ def full_audit(net: torch.nn.Module, data: Dict,
     probs = np.array(probs); target_action_probs = np.array(target_action_probs)
     dp = demographic_parity_gap(actions, groups)
     eo = equal_opportunity_gap(actions, groups, y_true)
-    snips = snips_ope(data["interactions"][:n_episodes], target_action_probs)
+    snips = snips_ope(interactions, target_action_probs)
     cal = calibration_curve(probs, y_true)
     def act_prob_fn(ctx):
         with torch.no_grad():
@@ -166,7 +187,7 @@ def full_audit(net: torch.nn.Module, data: Dict,
             if hasattr(net, "act_prob"):
                 return net.act_prob(x).squeeze(0).numpy()
             return net.base.act_prob(x).squeeze(0).numpy()
-    redteam = red_team_eval(act_prob_fn, data, n_episodes=200)
+    redteam = red_team_eval(act_prob_fn, data, n_episodes=200, include_group=include_group)
     return {
         "demographic_parity_gap": dp,
         "equal_opportunity_gap": eo,
@@ -174,5 +195,6 @@ def full_audit(net: torch.nn.Module, data: Dict,
         "calibration": cal,
         "red_team": redteam,
         "mean_rec_rate": float(actions.mean()),
-        "n_episodes": n_episodes,
+        "n_episodes": len(interactions),
+        "calibration_interpretation": "Selection probabilities versus relevance labels; policy probabilities are not calibrated outcome predictions.",
     }
