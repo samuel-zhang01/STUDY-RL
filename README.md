@@ -36,15 +36,22 @@ cd STUDY-RL
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
+python -m pip install 'swig==4.*'
 python -m pip install -r requirements.txt
 python -m ipykernel install --user --name study-rl --display-name "STUDY-RL"
 ```
 
 `requirements.txt` installs the scientific stack, CPU-capable PyTorch,
-classic-control Gymnasium environments, notebook tools, and test tools for the
+classic-control and Box2D Gymnasium environments, notebook tools, and test tools for the
 bundled projects. It does not install every optional paper benchmark or the
 pretrained LLM lab. If you need an NVIDIA-specific PyTorch build, install the
 wheel for your hardware first, following [the NVIDIA guide](llm-lab/NVIDIA.md).
+
+Box2D is needed by the LunarLander DQN/Rainbow exercises. Install SWIG before
+the requirements so pip can build its Python bindings when no compatible
+wheel is available. A native build also needs a C++ compiler (Xcode Command
+Line Tools on macOS, or the platform's compiler toolchain). See
+[Gymnasium's Box2D installation notes](https://gymnasium.farama.org/environments/box2d/).
 
 Verify the installation with a small first-week check:
 
@@ -228,6 +235,9 @@ STUDY-RL/
 - **Missing environment or CUDA package:** the core install supports bundled
   teaching projects. Use the optional extras only when required and follow
   the hardware-specific guide for the PyTorch build.
+- **`Box2D is not installed` or a Box2D build fails:** install SWIG first with
+  `python -m pip install 'swig==4.*'`, ensure a C++ compiler is available, then
+  rerun `python -m pip install -r requirements.txt`.
 - **PDF build reports `minted`/highlighter errors:** check TeX Live and the
   highlighter used by its `minted` version. Read the committed PDFs while
   fixing the local build setup.

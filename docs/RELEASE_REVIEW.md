@@ -1,8 +1,9 @@
 # Public-release preparation review
 
 Prepared on **6 October 2026**. This review covers the release tree and locally
-sanitized Git history. The GitHub repository stays private until its old
-history is replaced and the remote result is verified.
+sanitized Git history. The sanitized history has been pushed to GitHub and
+verified in a fresh mirror clone. The repository remains private because
+GitHub still serves original content through cached commit-SHA views.
 
 ## Audit scope and findings
 
@@ -38,8 +39,9 @@ from the public release. Historical revisions affected by content removal are
 not guaranteed to be complete runnable snapshots.
 
 The history cleanup uses
-[git-filter-repo](https://github.com/newren/git-filter-repo). The maintainer must
-replace the private remote history before making the repository public;
+[git-filter-repo](https://github.com/newren/git-filter-repo). The remote branch
+has been replaced using an explicit force-push lease. Cached original content
+still needs to be purged before making the repository public;
 [GitHub's sensitive-data removal guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
 explains the additional remote and cached-reference considerations.
 
@@ -57,7 +59,9 @@ PDF/notebook build instructions, troubleshooting, and scope boundaries.
 Original contributions use MIT; third-party attribution and model terms are
 covered in `THIRD_PARTY_NOTICES.md`.
 
-The default requirements now target the bundled CPU projects. Optional paper
+The default requirements now target the bundled CPU projects, including the
+Box2D environments used by the DQN/Rainbow exercises. SWIG is installed before
+the requirements when compiling Box2D bindings. Optional paper
 benchmark dependencies are in `requirements-extras.txt`, and the LLM lab keeps
 its separate tested dependencies. Credentials, local settings, private keys,
 model weights, and generated reports are ignored. `make clean` removes only
@@ -66,7 +70,10 @@ ignored caches and preserves tracked files, shipped PDFs, and environments.
 CI definitions run isolated CPU tests, release-file checks, and a redacted
 full-history credential scan. GitHub Actions are pinned to commit IDs and the
 Gitleaks executable is pinned to a release with a fixed SHA-256 checksum.
-These new workflows still need their first run on GitHub.
+The first GitHub history-secret-scan workflow passed. The first fresh Linux
+course run caught a missing Box2D extra that the existing macOS environment had
+masked; the course requirements and SWIG setup have been corrected and are
+being rechecked in CI.
 
 ## Validation
 
@@ -88,9 +95,8 @@ PyTorch 2.14.0, Gymnasium 1.3.0, pytest 9.1.1, Transformers 5.16.1, and
 PEFT 0.20.0. CPU thread counts were limited for tests and plots. Existing
 non-failing PyTorch/Gymnasium/PEFT warnings remain visible in the test output.
 
-The core install was checked in the existing environment, not a completely
-empty environment on every platform. Fresh Linux installation is covered by
-the proposed CI workflow but has not yet run remotely. GPU training, optional
+The core install was checked in the existing macOS environment and is being
+rechecked through a fresh Linux CI installation. GPU training, optional
 large benchmark environments, pretrained-model quality, every bibliography
 entry, and production/clinical safety were not revalidated for this release.
 Earlier measured LLM results remain documented in
@@ -126,5 +132,8 @@ text/PDF credential scan returned no Gitleaks findings.
 All **259 flagged original blob objects** are absent from the cleaned local
 object database. Local application diff-snapshot refs were also backed up and
 removed so they cannot retain the old tree. Only the sanitized `main` ref is
-intended for publication. The private remote and private backup still contain
-the old history until the maintainer explicitly completes the remote cleanup.
+intended for publication. A fresh GitHub mirror contains none of the flagged
+original objects and passes both secret scans and the complete source/PDF/
+metadata privacy checks. GitHub cached original content and the private local
+backup still retain the old material. A private GitHub Support cache-purge
+request has been prepared but has not been submitted.

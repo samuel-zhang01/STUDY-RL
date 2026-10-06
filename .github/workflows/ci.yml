@@ -31,8 +31,10 @@ jobs:
       - name: Install CPU dependencies
         run: |
           python -m pip install --upgrade pip
+          python -m pip install 'swig==4.*'
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r requirements.txt -r llm-lab/requirements.txt
+          python -m pip check
       - name: Check release files and documentation
         run: make release-check PY=python
       - name: Run isolated weekly suites and offline lab tests

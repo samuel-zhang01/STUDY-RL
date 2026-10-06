@@ -11,6 +11,7 @@ Use Python 3.12 and run commands from the repository root:
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
+python -m pip install 'swig==4.*'
 python -m pip install -r requirements.txt
 make course-tests PY=python
 make release-check PY=python

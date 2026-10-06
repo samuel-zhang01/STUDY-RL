@@ -50,6 +50,7 @@ Each `week-NN-slug/` contains these learning materials:
 ```bash
 # Setup from the repository root
 python3.12 -m venv .venv && source .venv/bin/activate
+python -m pip install 'swig==4.*'
 python -m pip install -r requirements.txt
 
 # Build everything
