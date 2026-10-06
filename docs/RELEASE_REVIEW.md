@@ -70,10 +70,12 @@ ignored caches and preserves tracked files, shipped PDFs, and environments.
 CI definitions run isolated CPU tests, release-file checks, and a redacted
 full-history credential scan. GitHub Actions are pinned to commit IDs and the
 Gitleaks executable is pinned to a release with a fixed SHA-256 checksum.
-The first GitHub history-secret-scan workflow passed. The first fresh Linux
-course run caught a missing Box2D extra that the existing macOS environment had
-masked; the course requirements and SWIG setup have been corrected and are
-being rechecked in CI.
+The first fresh Linux course run caught a missing Box2D extra that the existing
+macOS environment had masked. The course requirements and SWIG setup were
+corrected. At code revision `30fc1f6`, both
+[course CI](https://github.com/samuel-zhang01/STUDY-RL/actions/runs/37489594099)
+and the [history secret scan](https://github.com/samuel-zhang01/STUDY-RL/actions/runs/37489594637)
+passed; the fresh Linux course run passed all 428 tests.
 
 ## Validation
 
@@ -87,7 +89,7 @@ being rechecked in CI.
 | Lecture/reading builds | All 52 weekly PDFs and the syllabus compile |
 | PDF layout | All 53 main PDFs pass the raster edge and compile-log checks; affected pages and charts were visually reviewed |
 | Shipped PDF privacy | All 138 shipped PDFs checked for former private names, internal paths, personal addresses, and home paths |
-| Core installation | `pip install -r requirements.txt` succeeds in the existing Python 3.12 environment; JupyterLab CLI and dependency consistency checked |
+| Core installation | Existing macOS environment and fresh Linux CI installation pass; SWIG/Box2D included, JupyterLab CLI and dependency consistency checked |
 | Repository hygiene | `git diff --check` passes; cleanup safeguards tested |
 
 Validation used macOS/Apple Silicon, Python 3.12.15, NumPy 2.5.2, SciPy 1.18.1,
@@ -95,8 +97,9 @@ PyTorch 2.14.0, Gymnasium 1.3.0, pytest 9.1.1, Transformers 5.16.1, and
 PEFT 0.20.0. CPU thread counts were limited for tests and plots. Existing
 non-failing PyTorch/Gymnasium/PEFT warnings remain visible in the test output.
 
-The core install was checked in the existing macOS environment and is being
-rechecked through a fresh Linux CI installation. GPU training, optional
+The core install was checked in the existing macOS environment and a fresh
+Linux CI installation. The Linux run used Python 3.12.14, PyTorch 2.14.1+cpu,
+Gymnasium 1.4.0, Box2D 2.3.10, NumPy 2.5.3, and SciPy 1.18.1. GPU training, optional
 large benchmark environments, pretrained-model quality, every bibliography
 entry, and production/clinical safety were not revalidated for this release.
 Earlier measured LLM results remain documented in
