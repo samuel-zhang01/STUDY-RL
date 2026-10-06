@@ -3,8 +3,8 @@
 \usepackage{../common/rlstudy}
 \usepackage{longtable}
 
-\title{{\color{rlblue}\textbf{STUDY-RL}}\\\Huge A 24-week self-paced curriculum in Deep Reinforcement Learning}
-\author{Foundations \textperiodcentered{} Deep RL \textperiodcentered{} LLM RL \\ Safety-critical RL \textperiodcentered{} Matching applications}
+\title{{\color{rlblue}\textbf{STUDY-RL}}\\\Huge Deep Reinforcement Learning\\\Large 24 core weeks plus applied audit and causal biology}
+\author{Foundations \textperiodcentered{} Deep RL \textperiodcentered{} LLM RL \\ Safety-critical RL \textperiodcentered{} Matching \textperiodcentered{} Causal biology}
 \date{\today}
 
 \begin{document}
@@ -18,11 +18,14 @@
 This document is the master syllabus for \textsc{STUDY-RL}, a 24-week self-paced curriculum
 designed for a learner who is fluent in modern deep learning but new to reinforcement learning.
 An additional applied audit in week 25 connects the core material to a synthetic
-ATS experiment and an application review.
+ATS experiment and an application review. Week 26 adds causal inference and
+discovery across biological environments, with task-aware enhancement of noisy,
+sparse measurements. It extends the OPE and offline-data lessons rather than
+repeating their policy-value estimators.
 It threads three goals through every week:
 \begin{enumerate}
-  \item \textbf{Strong applied mathematics} — every algorithm derived from first principles with intuition and code.
-  \item \textbf{State-of-the-art content} — modern best-practice as of mid-2026 (DPO/GRPO/RLVR, DreamerV3, EfficientZero v2, BBF, CrossQ, diffusion policies, LLM-as-agent\ldots).
+  \item \textbf{Applied mathematics} --- connect assumptions, derivations, worked examples, and code; distinguish exact results from approximations.
+  \item \textbf{Modern research topics} --- selected readings on DPO/GRPO/RLVR, DreamerV3, EfficientZero v2, BBF, CrossQ, diffusion policies, and LLM agents. Topic coverage is not a claim that every method is implemented or remains the best current choice.
   \item \textbf{Two applied threads} — \emph{safety-critical RL} (one callout per lecture plus a dedicated 3-week track) and \emph{matching/ranking} (insurance lead matching and recruitment candidate matching, woven through bandits, OPE, fairness).
 \end{enumerate}
 
@@ -60,17 +63,19 @@ workbook with graded exercises (\texttt{workbook.ipynb}), curated extended readi
   \item[T8 — Exploration \& meta-RL] (Week 17) RND, ICM, BYOL-Explore, MAML/PEARL, in-context RL.
   \item[T9 — LLM RL] (Weeks 18--21) RLHF/PPO, DPO/IPO/KTO/ORPO/SimPO, GRPO/RLOO/RLVR, PRMs and reasoning RL.
   \item[T10 — Safety-critical RL] (Weeks 22--24) CMDPs, CPO, shielding, formal verification, scalable oversight, capstone.
+  \item[T11 --- Applied audit] (Week 25) Synthetic ATS experiments, evaluation assumptions, and an RL enhancement audit.
+  \item[T12 --- Causal biology] (Week 26) Confounding, identification versus discovery, Markov equivalence, multi-environment causal learning, and task-aware enhancement.
 \end{description}
 
 \section{Week-by-week schedule}
-The schedule below describes topic coverage and suggested larger experiments.
-Several bundled mini-projects use smaller synthetic environments or reduced
-models; each weekly teaching guide identifies the implementation actually
-present and its limitations. A successful toy run is not a reproduction of a
-paper's benchmark result.
+The topic column includes algorithms studied in the readings. The project
+column describes the bundled implementation; each weekly teaching guide
+explains its simplifications. A successful toy run is not a reproduction of a
+paper's benchmark result. Larger benchmark environments require separate
+experiment configuration and evaluation.
 \begin{longtable}{@{}p{1.4cm}p{6.4cm}p{6.0cm}@{}}
 \toprule
-\textbf{Week} & \textbf{Topic} & \textbf{Mini-project} \\
+\textbf{Week} & \textbf{Topic} & \textbf{Bundled mini-project} \\
 \midrule
 \endhead
 01 & MDPs, bandits, the RL framing & Multi-armed bandit testbed + UCB/TS \\
@@ -78,31 +83,50 @@ paper's benchmark result.
 03 & Monte Carlo prediction \& control & Blackjack on-policy MC \\
 04 & TD, SARSA, Q-learning, Expected SARSA & CliffWalking + Taxi-v3 \\
 05 & Function approximation \& Deep Q-Networks & DQN on LunarLander \\
-06 & Rainbow DQN + modern tricks (BBF, NoisyNets) & Rainbow on Atari (1 game, 100k steps) \\
+06 & Rainbow DQN + modern tricks (BBF, NoisyNets) & Rainbow-lite ablations on LunarLander \\
 07 & Policy gradients \& REINFORCE & REINFORCE + baselines on CartPole \\
 08 & A2C, GAE, natural PG, TRPO & A2C+GAE on LunarLander-Continuous \\
 09 & Proximal Policy Optimization (deep dive) & PPO on BipedalWalker + the 37 details checklist \\
-10 & SAC, TD3, CrossQ for continuous control & SAC on MuJoCo Hopper \\
+10 & SAC, TD3, CrossQ for continuous control & SAC on Pendulum \\
 11 & Bandits + contextual bandits + OPE & Off-policy evaluation of a synthetic insurance lead--market matcher \\
 12 & RL for ranking / matching (counterfactual LTR, fairness, two-sided) & ATS-style candidate--job ranker with fairness audit \\
-13 & Multi-agent RL + AlphaZero case study & Tennis self-play + small AlphaZero on Connect-Four \\
-14 & Offline RL fundamentals (CQL, IQL, AWR, TD3+BC) & IQL on D4RL halfcheetah-medium-replay \\
-15 & Decision Transformer + diffusion policies & DT on D4RL hopper-medium + a diffusion-policy toy task \\
-16 & Model-based RL (Dreamer V3, MuZero, TD-MPC2) & DreamerV3-lite on DM-Control walker-walk \\
-17 & Exploration + meta-RL + in-context RL & RND + MAML toy + Decision-Pretrained Transformer \\
-18 & RLHF + PPO for LLMs (from scratch and via TRL) & Summarization PPO on a Pythia-160M with LoRA \\
-19 & DPO + IPO + KTO + ORPO + SimPO & DPO vs.\ KTO vs.\ SimPO bake-off on Qwen-0.5B + UltraFeedback \\
-20 & GRPO + RLOO + RLVR + process reward models & GRPO with verifiable rewards on GSM8K-style math \\
+13 & Multi-agent RL + AlphaZero case study & Tic-Tac-Toe search/self-play and small MAPPO coordination/spread tasks \\
+14 & Offline RL fundamentals (CQL, IQL, AWR, TD3+BC) & Tabular IQL, CQL, and naive Q on synthetic GridWorld logs \\
+15 & Decision Transformer + diffusion policies & Small DT on synthetic GridWorld trajectories and numerical diffusion exercises \\
+16 & Model-based RL (Dreamer V3, MuZero, TD-MPC2) & Dreamer-lite on CartPole \\
+17 & Exploration + meta-RL + in-context RL & RND and a full-information MAML-inspired bandit toy \\
+18 & RLHF + PPO for LLMs (from scratch and via TRL) & Character-model SFT, reward learning, and PPO; optional real LoRA lab \\
+19 & DPO + IPO + KTO + ORPO + SimPO & Character-model preference objectives; optional real DPO lab \\
+20 & GRPO + RLOO + RLVR + process reward models & Group-relative updates on synthetic arithmetic prompts \\
 21 & Reward hacking, length bias, KL control, scalable oversight & Reward-hack lab + Constitutional-AI mini-loop \\
-22 & Constrained MDPs, Lagrangian methods, PPO-Lagrangian, CPO & Safety-Gymnasium PointGoal1 with PPO-Lagrangian \\
-23 & Safe exploration, shielding, robust RL, formal methods & LTL-shielded gridworld + distributionally robust DQN \\
+22 & Constrained MDPs, Lagrangian methods, PPO-Lagrangian, CPO & PPO-Lagrangian on synthetic LavaGridWorld \\
+23 & Safe exploration, shielding, robust RL, formal methods & Model-based grid shield and a pendulum safety toy \\
 24 & Capstone: safe candidate-matching policy & End-to-end: offline-pretrained $\to$ constrained online $\to$ audited \\
+25 & Applied synthetic ATS RL enhancement audit & Synthetic ATS logging, OPE, constraints, and audit \\
+26 & Causal discovery across biological environments; task-aware data enhancement & Synthetic patient effects, invariance diagnostics, and held-out-environment enhancement ablations \\
 \bottomrule
 \end{longtable}
 
 \section{Prerequisites}
 Fluent PyTorch, comfortable with probability, linear algebra, basic optimization theory.
 You do \emph{not} need prior RL experience.
+
+\section{Causal-biology extension: one-week plan}
+Week 26 takes about ten hours across five study sessions. Start after week 11;
+week 14 supplies additional context about support and extrapolation. The later
+policy and LLM tracks are not required. Read its teaching guide, calculate a
+confounded and adjusted effect, compare observationally equivalent graphs,
+study which mechanisms can change across environments, and evaluate enhancement
+with patient-disjoint training, validation, and test sets. The workbook and
+mini-project use invented data with known mechanisms.
+
+The extension is motivated by Synlico's scientific discussion on causal
+discovery across environments and task-aware enhancement. Primary sources and
+their limitations are recorded in \texttt{research/causal\_biology.md}.
+Multi-environment S-FCI and invariant causal prediction are reading topics;
+the numerical diagnostic in the project is not a reproduction of either
+algorithm. Company descriptions of proprietary enhancement do not supply
+independent evidence of clinical or target-discovery performance.
 
 \chapter{Bibliography pointers}
 The per-week \texttt{extended\_reading.pdf} carries the focused paper list for that lecture.

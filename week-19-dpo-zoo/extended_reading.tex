@@ -2,14 +2,285 @@
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week 19: DPO and the Preference Zoo}
+\title{Extended reading --- Week 19: DPO and the Preference Zoo}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
-\begin{itemize}
-  \item TODO
+\section*{How to read this list}
+Each paper below: full citation, one-paragraph summary, a
+\emph{Why it matters for this week} note, and one annotated key
+passage with brief commentary.
+
+\section*{1. Rafailov et al.\ 2023 --- Direct Preference Optimization}
+\textbf{Citation.} R. Rafailov, A. Sharma, E. Mitchell, S. Ermon,
+C.\,D.\ Manning, C. Finn, \emph{Direct Preference Optimization: Your
+Language Model is Secretly a Reward Model}, arXiv:2305.18290, NeurIPS
+2023.
+
+\paragraph{Summary.} Derives, in three pages, the equivalence between
+the KL-regularised RL objective and a closed-form supervised
+contrastive loss. The reward model can be re-parametrised through
+the policy as $r_\theta = \beta\log(\pi_\theta/\pi_\text{ref})$; the
+partition function cancels in pairwise comparisons; what remains is
+a logistic-regression-style loss on the policy. Empirically, DPO
+matches or beats PPO-RLHF on summarisation and dialogue at a
+fraction of the compute and engineering cost.
+
+\paragraph{Why it matters for this week.} This is the paper the
+whole week is built around. The 4-step derivation in our notes is
+their Theorem~1.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``This change of variables enables us to express the RL objective in
+terms of the policy directly, avoiding the need to learn an
+explicit reward model... The resulting optimization problem can be
+solved using a standard supervised learning algorithm, without the
+need for RL.''
+\end{quote}
+\noindent The two clauses are operationally massive. ``Avoiding the
+need to learn an explicit reward model'' kills three of the four
+models in the RLHF pipeline. ``Without the need for RL'' kills the
+remaining engineering surface (rollouts, GAE, clipping, KL
+controller, value head). The community's adoption of DPO within
+twelve months was almost entirely a story about this engineering
+simplification.
+
+\section*{2. Azar et al.\ 2024 --- IPO and the $\Psi$PO framework}
+\textbf{Citation.} M.\,G.\ Azar, M. Rowland, B. Piot, D. Guo, D.
+Calandriello, M. Valko, R. Munos, \emph{A General Theoretical
+Paradigm to Understand Learning from Human Preferences},
+arXiv:2310.12036, AISTATS 2024.
+
+\paragraph{Summary.} Generalises DPO into $\Psi$PO, a family
+parametrised by the choice of link function $\Psi$. Shows DPO's
+logistic link saturates as preferences become deterministic,
+collapsing the implicit KL constraint. Proposes IPO --- a squared
+loss, $\Psi(u) = (u - 1/(2\beta))^2$ --- whose unique optimum has a
+\emph{finite} margin and avoids the saturation pathology.
+
+\paragraph{Why it matters for this week.} The link-function plot in
+the notes (\texttt{fig\_links.pdf}) is theirs.
+IPO is the cleanest theoretical advance over DPO; KTO, ORPO, and
+SimPO are best understood as alternative \emph{structural} (not
+link-function) choices on top of this framework.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``As the preferences become more deterministic, the empirical
+optima of DPO drive the implicit reward gap to infinity, regardless
+of the value of $\beta$. IPO instead has a finite optimum...''
+\end{quote}
+\noindent The two-sentence rebuke of DPO. The IPO ``finite optimum''
+is also the reason IPO does \emph{not} need a KL leash: the squared
+loss provides its own regularisation by pinning the margin to a
+finite target.
+
+\section*{3. Ethayarajh et al.\ 2024 --- KTO}
+\textbf{Citation.} K. Ethayarajh, W. Xu, N. Muennighoff, D. Jurafsky,
+D. Kiela, \emph{KTO: Model Alignment as Prospect Theoretic
+Optimization}, arXiv:2402.01306, 2024.
+
+\paragraph{Summary.} Frames alignment through Kahneman--Tversky
+prospect theory: human preferences are noisy and asymmetric --- gains
+relative to a reference are felt less strongly than equal-sized
+losses. KTO replaces the BT pairwise model with a per-sample
+\emph{utility} that is concave on gains and convex on losses,
+allowing training on \emph{unpaired} thumbs-up / thumbs-down labels.
+
+\paragraph{Why it matters for this week.} Production data is rarely
+in clean pairwise form; KTO is the practical way to use the messy,
+unpaired feedback that the deployed product accumulates. The
+synthetic insurance matching story in the notes lives here.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``KTO does not need preferences --- only a binary signal of whether
+an output is desirable or undesirable for a given input. This makes
+it far easier to use in the real world, where this kind of data is
+much more abundant.''
+\end{quote}
+\noindent The pragmatic case for KTO in one sentence. The deeper
+theoretical contribution is that the prospect-theory utility is
+\emph{not} an arbitrary heuristic: it falls out of empirically
+calibrated human-decision data, giving KTO a behavioural-science
+foundation that DPO lacks.
+
+\section*{4. Hong et al.\ 2024 --- ORPO}
+\textbf{Citation.} J. Hong, N. Lee, J. Thorne, \emph{ORPO: Monolithic
+Preference Optimization without Reference Model}, arXiv:2403.07691,
+EMNLP 2024.
+
+\paragraph{Summary.} A single-stage method that fuses SFT NLL with a
+log-odds-ratio penalty on preference pairs, eliminating the
+reference policy entirely. The result: a one-stage pipeline that
+trains on the same data DPO uses, at half the memory, with a small
+quality bump on AlpacaEval and IFEval.
+
+\paragraph{Why it matters for this week.} ORPO is the natural
+contrast to DPO on the ``do I need a reference?'' axis. It also
+forces us to grapple with numerically stable log-odds-ratio
+computation --- a subtle bit of practical engineering exposed in
+\texttt{losses.\_log1mexp}.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``Despite ORPO being a single-step training method, models trained
+with ORPO surpass much larger Llama-2-Chat and Zephyr variants
+trained with the conventional multi-stage RLHF pipeline.''
+\end{quote}
+\noindent The bold empirical claim. With caveats: ORPO's
+single-stage nature couples preference data quality to SFT data
+quality very tightly. On clean curated data it shines; on messy
+production data it can amplify bias.
+
+\section*{5. Meng, Xia, Chen 2024 --- SimPO}
+\textbf{Citation.} Y. Meng, M. Xia, D. Chen, \emph{SimPO: Simple
+Preference Optimization with a Reference-Free Reward},
+arXiv:2405.14734, NeurIPS 2024.
+
+\paragraph{Summary.} The most ergonomic DPO variant: reference-free,
+length-normalised, and with a target margin parameter $\gamma$. The
+implicit reward is the average per-token log-probability. Gemma-2-9B
++ SimPO hits 72.4\% length-controlled win rate on AlpacaEval-2
+without RLHF.
+
+\paragraph{Why it matters for this week.} SimPO is the recommended
+starting baseline for DPO-family work in 2026: it requires no
+reference model, has built-in length-normalisation (which by itself
+solves one of DPO's biggest headaches), and has only two
+hyper-parameters.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``We propose SimPO, a simple yet effective approach to preference
+optimization that uses the average log probability of a sequence as
+the implicit reward. This eliminates the need for a reference model
+and naturally aligns with the metric used at inference time.''
+\end{quote}
+\noindent The ``aligns with inference'' point is subtle and
+important. DPO's implicit reward is the \emph{sum} of token
+log-probabilities, but decoding ranks candidates by the
+length-normalised score (perplexity). SimPO simply aligns training
+with the inference objective.
+
+\section*{6. Liu et al.\ 2024 --- Iterative Length-Regularized DPO}
+\textbf{Citation.} W. Liu, K. Bai, Y. Ren, Y. Bian, J. Bian, Z.
+Wang, \emph{Iterative Length-Regularized Direct Preference
+Optimization: A Case Study on Improving 7B Language Models to
+GPT-4 Level}, arXiv:2406.11817, 2024.
+
+\paragraph{Summary.} Two ideas: (i) iterate DPO by regenerating
+preferences with the latest policy, refreshing the implicit-reward
+target; (ii) add a length-regularization term to the DPO loss to
+combat length inflation. The combination pushes Llama-3-8B to
+GPT-4-level on AlpacaEval, a striking result given the model size.
+
+\paragraph{Why it matters for this week.} Bridges DPO and the
+iterative-DPO / self-rewarding literature of week~20. Also the most
+direct piece of evidence that length bias --- the failure mode SimPO
+addresses architecturally --- can be fixed equally well at the loss
+level.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``Iterative DPO without length regularization can win the
+AlpacaEval-2 game on raw win rate while losing the length-controlled
+win rate by a wide margin. This is a clear signal that the policy
+is being rewarded for verbosity rather than quality.''
+\end{quote}
+\noindent The honest empirical observation that AlpacaEval-2's
+length-controlled metric was \emph{designed} to expose: optimisers
+hunt the easiest path to winning, and verbosity is the easiest path
+under sum-log-prob accounting.
+
+\newpage
+\section*{7. Xu et al.\ 2024 --- CPO for machine translation}
+\textbf{Citation.} H. Xu, A. Sharaf, Y. Chen, W. Tan, L. Shen,
+B. Van Durme, K. Murray, Y.\,J.\ Kim, \emph{Contrastive Preference
+Optimization: Pushing the Boundaries of LLM Performance in Machine
+Translation}, arXiv:2401.08417, 2024.
+
+\paragraph{Summary.} Introduces CPO --- SFT NLL on the chosen
+translation plus a contrastive log-ratio between chosen and rejected.
+No reference model, halving the memory footprint vs.\ DPO. Achieves
+state-of-the-art on multiple WMT language pairs at the time of
+publication.
+
+\paragraph{Why it matters for this week.} The clearest empirical
+case for the \emph{halfway-house} family (SFT + contrastive, no
+reference): MT is a domain where the SFT signal dominates and the
+preference signal is polish.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``By removing the reference model, CPO not only reduces memory
+requirements but also liberates the optimisation from the
+constraint of having to stay close to a possibly suboptimal
+reference.''
+\end{quote}
+\noindent The two-edged blade of reference-free training: cheaper,
+but you lose the regularising effect of the SFT anchor. CPO's
+solution --- include the SFT NLL term --- is one of three reasonable
+substitutes (the others being a target margin like SimPO's $\gamma$
+and a length normaliser).
+
+\section*{8. Yuan et al.\ 2024 --- Self-Rewarding Language Models}
+\textbf{Citation.} W. Yuan, R.\,Y.\ Pang, K. Cho, X. Li, S. Sukhbaatar,
+J. Xu, J. Weston, \emph{Self-Rewarding Language Models},
+arXiv:2401.10020, 2024.
+
+\paragraph{Summary.} The same LLM plays generator, judge, and
+learner. LLM-as-a-judge prompting produces preference scores; DPO
+updates the policy on those scores; the loop iterates. Three
+iterations of self-rewarding Llama-2-70B beats Claude 2, Gemini Pro
+and GPT-4-0613 on AlpacaEval-2.
+
+\paragraph{Why it matters for this week.} Bridges DPO and the
+iterative-DPO family of week~20. The DPO loss is unchanged; what
+changes is the preference data source. The result is striking but
+the failure mode --- self-confirmation drift --- is also striking.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\itshape
+``To use the model itself as a reward judge, we use prompts that
+instruct it to assess responses, providing a numerical score that
+we can use as a reward signal for further training. Crucially, the
+model's ability to judge improves alongside its ability to
+generate.''
+\end{quote}
+\noindent The optimistic claim. The pessimistic one is that the
+model's biases as a judge co-evolve with its biases as a generator,
+producing a runaway feedback loop. Both claims are true to some
+extent; the equilibrium depends on data freshness and the
+quality of the initial judge.
+
+\newpage
+\section*{Pointers for further depth}
+
+\begin{itemize}[leftmargin=*]
+  \item \textsc{Rainbow PO} --- arXiv:2410.04203, 2024. A unifying
+        survey that places DPO, IPO, KTO, ORPO, SimPO, CPO inside a
+        single ``link function $\times$ normalisation'' lattice.
+  \item \textsc{DPO survey} --- arXiv:2410.15595, 2024--2025. A
+        comprehensive survey of the DPO family up to late 2024.
+  \item \textsc{Tang et al.\ 2024} --- \emph{Generalised Preference
+        Optimization}, arXiv:2402.05749. An importance-weighted
+        analysis of when DPO and explicit-RM-RL gradients agree.
+  \item \textsc{Park et al.\ 2024} --- \emph{Disentangling Length
+        from Quality in DPO}, arXiv:2403.19159. A clean empirical
+        decomposition of why DPO inflates length.
+  \item \textsc{Iterative DPO Study} --- arXiv:2503.12854, 2025.
+        Comprehensive study of iterative-DPO design choices: how
+        often to refresh, how many pairs per iteration, when to
+        stop.
+  \item \textsc{Tülu-3} --- arXiv:2411.15124, 2024. The clearest
+        recipe for combining SFT, DPO, and RLVR end-to-end.
 \end{itemize}
+
+\section*{Sourced from}
+\texttt{research/llm\_rl\_sota.md} §2 (the DPO zoo) and §6 (iterative /
+online DPO).
 
 \end{document}

@@ -1,0 +1,68 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{Extended reading --- Week 7: Policy Gradients and REINFORCE}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section*{1.\ Williams (1992) --- Simple statistical gradient-following algorithms for connectionist reinforcement learning}
+Ronald J.\ Williams, \emph{Machine Learning}, 8(3--4): 229--256, 1992. (No arXiv ID; pre-arXiv era.)
+
+\paragraph{Summary.} The paper that named REINFORCE. Williams introduces the family of likelihood-ratio gradient estimators for episodic RL, proves their unbiasedness, and gives convergence results under stepsize conditions. The algorithm is presented with characteristic neural-network framing (units that sample their own outputs from a parametric distribution) and motivates the term ``score function'' in the RL context.
+
+\paragraph{Why it matters for this week.} This is the algorithm we implement. The proof of unbiasedness and the variance discussion are exactly the structure of our notes' Chapter 2. Read \S 2 of the original; the rest is historical context.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\emph{``If $W_{ij}$ is given an increment proportional to $(r - b_{ij})\, \partial \ln g_i / \partial W_{ij}$, then the expected value of the increment along $W_{ij}$ is proportional to $\partial E\{r\} / \partial W_{ij}$.''}\end{quote}
+This sentence is the policy gradient theorem in dialect: $W_{ij}$ are policy parameters, $g_i$ is the parametric output density of unit $i$, $b_{ij}$ is the per-parameter baseline. Read it twice --- the $b_{ij}$ subscript is doing real work and is more general than the state-baseline we use today.
+
+\section*{2.\ Sutton, McAllester, Singh, Mansour (1999) --- Policy gradient methods for reinforcement learning with function approximation}
+NeurIPS 1999. (No arXiv ID.)
+
+\paragraph{Summary.} The companion paper that lifts Williams' result to function approximation and gives the modern statement of the policy gradient theorem: the gradient is an expectation over the state-visitation distribution of $\nabla \log \Policy \cdot \Qfn$, which crucially \emph{does not} require differentiating through the state distribution. Introduces the compatible-function-approximation condition under which a learned $\Qfn_\phi$ can substitute for $\Qfn^\Policy$ without introducing bias.
+
+\paragraph{Why it matters for this week.} This paper justifies the use of neural-network policies and value heads. The ``no need to differentiate through $d^\Policy$'' result is what allows our derivation in Chapter 2 to bypass the stationary-distribution gradient.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\emph{``$\partial \rho / \partial \theta = \sum_s d^\pi(s) \sum_a \partial \pi(s,a)/\partial \theta \cdot Q^\pi(s,a)$''}\end{quote}
+That the right-hand side is an expectation w.r.t.\ $d^\pi$ and \emph{not} an expectation that involves $\partial d^\pi/\partial \theta$ is the entire reason PG is practical with deep nets. Compare this with the analogous result for the average-reward formulation in their Theorem 2 --- a useful exercise.
+
+\section*{3.\ Greensmith, Bartlett, Baxter (2004) --- Variance reduction techniques for gradient estimates in reinforcement learning}
+\emph{Journal of Machine Learning Research}, 5: 1471--1530, 2004.
+
+\paragraph{Summary.} The most thorough treatment of baselines and actor-critic variance. Derives tight bounds on the variance of REINFORCE-style estimators, characterises the optimal state-dependent baseline, and shows when the value function is a good approximation.
+
+\paragraph{Why it matters for this week.} This is the formal answer to ``how good is the $\Vfn_\phi$ baseline?'' --- a question that the workbook asks empirically. Section 3 gives the closed-form optimal baseline in the form quoted in our Chapter 2.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\emph{``The variance-minimising baseline is $b^\star(s) = \E[\|\nabla \log \pi\|^2 G | s] / \E[\|\nabla \log \pi\|^2 | s]$.''}\end{quote}
+Note that $b^\star$ is \emph{not} simply $\Vfn^\Policy$; it is a gradient-weighted version. In practice $\Vfn_\phi$ is close enough --- the residual variance is tiny compared to the variance you remove by introducing any baseline. This is why we do not bother with the exact $b^\star$.
+
+\section*{4.\ Chen, Beutel, Covington, Jain, Belletti, Chi (2019) --- Top-K Off-Policy Correction for a REINFORCE Recommender System}
+WSDM 2019. arXiv:1812.02353.
+
+\paragraph{Summary.} How YouTube serves real-time recommendations using REINFORCE. The paper presents (i) a softmax-over-millions policy parameterisation, (ii) the top-$K$ off-policy correction $\lambda_K(s,a) = K(1-\Policy_\theta(a\given s))^{K-1}$ that accounts for sampling without replacement, (iii) propensity-weighted importance sampling to correct for the gap between behaviour policy (the production logger) and target policy (the model being trained).
+
+\paragraph{Why it matters for this week.} This is REINFORCE in production at the largest scale that exists, and it is the template for any matching application of policy gradients. Their pipeline is, almost exactly, the system you would build for synthetic ATS candidate-to-role matching.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\emph{``Most of the lift in our online A/B tests comes from the top-$K$ correction, not from any architectural improvement.''}\end{quote}
+The takeaway: when you adapt PG to ranking, the off-policy correction is the load-bearing piece. Implementations that skip it leave a lot of value on the table.
+
+\section*{5.\ Gao, Schulman, Hilton (2022) --- Scaling Laws for Reward Model Overoptimization}
+arXiv:2210.10760.
+
+\paragraph{Summary.} Empirical study of how RLHF (which is, at its core, PPO-on-REINFORCE-style policy gradient) over-optimises the proxy reward model. Shows the proxy-vs-true reward gap follows a clean scaling law in KL from the initial policy.
+
+\paragraph{Why it matters for this week.} The reward-hacking failure mode we flag in the safety angle has now been quantified. This paper is the citation when explaining why we will spend weeks 18--22 on alignment-aware variants of PG.
+
+\paragraph{Annotated key passage.}
+\begin{quote}\emph{``The gold reward $R_{\mathrm{gold}}$ as a function of $\sqrt{\KL}$ is well-fit by $R_{\mathrm{gold}}(\KL) = R_{\mathrm{max}} - \alpha\, d \cdot (\sqrt{\KL} - \sqrt{\KL_0})^2$''}\end{quote}
+This quadratic-in-$\sqrt{\KL}$ form is what motivates the KL constraints in TRPO/PPO that we will derive next week. Without a KL penalty, REINFORCE walks straight off the cliff.
+
+\section*{Sourced from}
+\texttt{research/deeprl\_core\_sota.md} \S 2.1--2.2, \texttt{research/bandits\_matching\_sota.md} (Chen et al.\ 2019), \texttt{research/safety\_rl\_sota.md} \S 5 (Gao et al.\ 2022).
+
+\end{document}

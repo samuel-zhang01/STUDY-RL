@@ -7,101 +7,300 @@
 \begin{document}
 \maketitle
 
-\section*{1. Yu, Velu, Vinitsky, Wang, Bayen, Wu (2022) --- ``The Surprising Effectiveness of PPO in Cooperative Multi-Agent Games''}
-\textit{NeurIPS 2022. arXiv:2103.01955.}
+\section*{Five papers}
 
-\paragraph{Summary.}
-MAPPO --- PPO with a centralised critic and parameter-shared actor --- matches or beats QMIX, MADDPG, and COMA across the StarCraft Multi-Agent Challenge, MPE, and the Hanabi benchmark. The paper carefully ablates five design choices (value normalisation, observation normalisation, gradient clipping, PPO clip range, advantage normalisation) and ships a recipe that just works.
+\subsection*{1. Silver et al.\ --- \emph{Mastering the game of Go without human knowledge} (Nature 2017)}
 
-\paragraph{Why it matters this week.}
-Until 2021 the cooperative-MARL community had effectively abandoned vanilla policy gradients --- value-decomposition methods (QMIX, VDN) dominated. MAPPO showed the abandonment was premature; the right hyperparameters and a global critic recover everything. This is now the default cooperative-MARL algorithm.
+AlphaGo Zero. The paper that replaced AlphaGo's expert-game-bootstrapped
+training with pure self-play and a single policy-value network. The
+algorithmic spine of this week's mini-project.
 
-\paragraph{Key passage.}
+\textbf{Why it matters.} Before AGZ, ``reinforcement learning'' meant
+``train against an existing baseline''. AGZ showed that tabula-rasa
+self-play could reach super-human play in three days on TPUs --- no
+human games, no hand-crafted features. The training loop is exactly the
+self-play + MCTS + policy/value loop you implemented in the project.
+
 \begin{quote}
-``We find that, with simple modifications, PPO achieves strong results in [\ldots] cooperative multi-agent games. \emph{In contrast to the common belief that on-policy methods are sample-inefficient}, our results show that MAPPO is competitive with or superior to off-policy methods, while requiring fewer hyperparameter tweaks.''
+``Starting from random play, and given no domain knowledge except the
+game rules, AlphaGo Zero achieved superhuman performance, winning 100-0
+against the previously published, champion-defeating AlphaGo.''
 \end{quote}
 
-\emph{Commentary.} The italics are the heart of the contribution. The conventional wisdom about on-policy methods being sample-inefficient came from single-agent benchmarks; in MARL the off-policy methods' inability to handle non-stationarity costs them more than PPO's on-policy data hunger.
+\emph{Commentary.} The 100-0 is striking but the algorithmic content is
+the more important contribution: a unified policy/value network, MCTS
+that uses both heads, and a self-improvement training loop with no
+external supervision. Every reproduction of AlphaGo Zero (and AlphaZero,
+KataGo, MuZero) follows the same template.
 
-\section*{2. Silver, Hubert, Schrittwieser et al.\ (2018) --- ``A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play''}
-\textit{Science 362, 1140--1144. (AlphaZero paper.)}
+\subsection*{2. Silver et al.\ --- \emph{A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play} (Science 2018)}
 
-\paragraph{Summary.}
-A single algorithm --- self-play + MCTS + a two-headed network + the policy-iteration view --- trained from scratch on chess, shogi, and Go, beat the strongest hand-engineered programs in each. No human game knowledge except the rules.
+AlphaZero. The generalisation of AGZ to chess and shogi: same algorithm,
+no game-specific code, no opening books, no endgame tablebases. Beat
+Stockfish (the world's strongest chess engine) and Elmo (the strongest
+shogi engine).
 
-\paragraph{Why it matters this week.}
-AlphaZero is the cleanest demonstration of \emph{learning} an evaluation function from \emph{search}. The MCTS visit distribution is a policy-improvement operator; training the network to match it converts that improvement into amortised inference, which then powers the next search. This is policy iteration with two function approximators (the prior $\pi_\theta$ and the value $v_\theta$).
+\textbf{Why it matters.} It proved that the AGZ recipe was \emph{general}
+--- it works for any two-player zero-sum game with perfect information.
+The chess result was particularly striking: chess had been ``solved'' by
+classical alpha-beta search for two decades; AlphaZero's neural-MCTS
+beat the best alpha-beta engine after 4 hours of training.
 
-\paragraph{Key passage.}
 \begin{quote}
-``Each MCTS uses the neural network $f_\theta$ to guide its simulations. [\ldots] The output of the search are the visit-count probabilities $\pi$ over the root state. The neural network is then trained by self-play reinforcement learning: it plays games against itself with parameters $\theta$, and is updated [\ldots] to make $p$ more closely match $\pi$ and the predicted value $v$ more closely match the game outcome $z$.''
+``The same general-purpose reinforcement learning algorithm achieves
+superhuman performance in chess, shogi, and Go.''
 \end{quote}
 
-\emph{Commentary.} ``Match $\pi$'' is the policy-improvement step --- the visit-count distribution is strictly better at the root than $\pi_\theta$ because of MCTS lookahead. ``Match $z$'' is the policy-evaluation step. Iterate, and you have generalised policy iteration with both pieces amortised into a network.
+\emph{Commentary.} The key technical change from AGZ to AZ was the
+removal of the game-symmetry augmentation (Go has 8-fold symmetry, chess
+has none). Otherwise the architecture is identical. The lesson: the
+algorithm itself does the heavy lifting; domain knowledge enters via
+the environment, not via custom training tricks.
 
-\section*{3. Lowe, Wu, Tamar, Harb, Abbeel, Mordatch (2017) --- ``Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments''}
-\textit{NeurIPS 2017. arXiv:1706.02275. (MADDPG.)}
+\subsection*{3. Yu et al.\ --- \emph{The Surprising Effectiveness of PPO in Cooperative Multi-Agent Games} (NeurIPS 2022, arXiv:2103.01955)}
 
-\paragraph{Summary.}
-The original CTDE actor-critic. Each agent has its own actor (local obs only) and its own critic that takes the global state \emph{and all agents' actions} as input. The critic is centralised; the actor is decentralised. Solves cooperative, competitive, and mixed environments where independent DDPG fails.
+MAPPO. The paper that established centralised-PPO as the production
+default for cooperative MARL, displacing MADDPG / QMIX / COMA on most
+benchmarks despite being algorithmically simpler.
 
-\paragraph{Why it matters this week.}
-MADDPG defined the CTDE recipe MAPPO would later refine. Reading it makes clear what MAPPO inherited (centralised critic, joint training) and what it changed (PPO surrogate replaces DDPG's deterministic gradient; parameter sharing replaces per-agent critics).
+\textbf{Why it matters.} MAPPO is what you implemented in the project. It
+is the right default. The paper's ablations identified the key tricks:
+careful value normalisation, agent-specific value targets, large
+minibatches. The lesson: simpler algorithms with careful engineering
+often beat more sophisticated algorithms with naive engineering.
 
-\paragraph{Key passage.}
 \begin{quote}
-``We propose a centralised critic that has access to the observations and actions of all agents [\ldots] this avoids the non-stationarity problem [\ldots] from the perspective of any individual agent, the environment appears non-stationary as the other agents' policies change.''
+``With proper implementation tricks --- value normalisation, agent-specific
+features in the centralised critic, action masking, and large minibatch
+size --- MAPPO matches or exceeds SOTA across SMAC, MA-MuJoCo, and Hanabi.''
 \end{quote}
 
-\emph{Commentary.} This single sentence diagnoses the core MARL problem (non-stationarity) and prescribes the cure (centralised information at training time). Everything in cooperative deep MARL since 2017 builds on it.
+\emph{Commentary.} The implementation-trick list is invaluable; the
+paper's appendix has the cleanest description of MAPPO best practice
+anywhere. Use it as a checklist when scaling MAPPO to a new env.
 
-\section*{4. Wang, Gleave, Tu, Mei et al.\ (2023) --- ``Adversarial Policies Beat Superhuman Go AIs''}
-\textit{ICML 2023. arXiv:2211.00241.}
+\subsection*{4. Rashid et al.\ --- \emph{QMIX: Monotonic Value Function Factorisation for Deep Multi-Agent Reinforcement Learning} (ICML 2018)}
 
-\paragraph{Summary.}
-KataGo --- the strongest open-source Go bot, comfortably super-human in standard play --- can be defeated by an adversarial policy that exploits a narrow tactical pattern (a ``cyclic group'' attack). Crucially, the adversarial policy is itself weak in normal play; the exploit lives entirely in a region of state-space that self-play never visited.
+QMIX. Value-decomposition for cooperative MARL: factorise the joint
+$Q$-function as a monotone aggregator over per-agent $Q$-functions; this
+allows decentralised greedy execution that is consistent with joint
+argmax.
 
-\paragraph{Why it matters this week.}
-This is the single most important paper for \emph{any} safety-conscious deployment of self-play. The lesson is that self-play certifies in-distribution skill, not robustness. The same blind spot is what makes RLHF reward models vulnerable to jailbreaks: optimisation pressure against the training distribution doesn't guarantee performance off-distribution.
+\textbf{Why it matters.} For value-based MARL methods, QMIX is the
+SOTA baseline. Its monotonicity restriction is also the canonical
+example of the trade-off between expressiveness and decomposability ---
+QMIX is decentralisable but cannot represent XOR-style coordination.
 
-\paragraph{Key passage.}
 \begin{quote}
-``Despite KataGo's strength in standard play, our adversaries achieve $>$97\% win-rate against KataGo at superhuman strength settings. The adversaries do not exhibit strong play in general --- they are not capable of beating a beginner-level human player at standard Go --- they simply exploit a specific weakness in KataGo's policy.''
+``We enforce that $Q_{\mathrm{tot}}$ is monotonic in each agent's
+$Q_a$, which ensures that the joint argmax operation on $Q_{\mathrm{tot}}$
+can be performed by selecting each agent's individual argmax of $Q_a$.''
 \end{quote}
 
-\emph{Commentary.} ``They do not exhibit strong play in general'' is the part to internalise. The next time someone says ``but our self-play agent is super-human'', ask: \emph{at what?} If you only measure in-distribution win-rate you have not measured robustness.
+\emph{Commentary.} Variants like QPLEX (Wang et al.\ ICLR 2021) relax
+the monotonicity to a richer dueling decomposition; the QPLEX paper
+also documents the XOR counter-example clearly. Read QMIX first then
+QPLEX to understand the full design space.
 
-\section*{5. Lanctot, Zambaldi, Gruslys, Lazaridou, Tuyls, Pérolat, Silver, Graepel (2017) --- ``A Unified Game-Theoretic Approach to Multi-Agent Reinforcement Learning''}
-\textit{NeurIPS 2017. arXiv:1711.00832. (PSRO.)}
+\subsection*{5. Lanctot et al.\ --- \emph{A Unified Game-Theoretic Approach to Multiagent Reinforcement Learning} (NeurIPS 2017, arXiv:1711.00832)}
 
-\paragraph{Summary.}
-PSRO frames MARL as iterative best-response: maintain a population of policies, at each iteration solve a meta-game (uniform or Nash) over the current population, train a best-response against the meta-strategy, add it to the population. Generalises double-oracle and fictitious play.
+PSRO. The framework that unifies self-play, fictitious play, double-oracle,
+and replicator dynamics into a single iterated-best-response algorithm.
 
-\paragraph{Why it matters this week.}
-For mixed-motive or large-action games where single-pair self-play diverges, PSRO and its descendants (\emph{$\alpha$-PSRO}, ``Joint Policy Space Response Oracles'', AlphaStar's league) are the practical answer. The PSRO loop is also the cleanest framework for thinking about ``train a robust agent'' --- robustness is what falls out of best-response against a diverse population.
+\textbf{Why it matters.} PSRO is what you should use for general-sum
+MARL (or for cyclic-dynamics zero-sum games like Rock-Paper-Scissors
+generalisations). The meta-game is solved by classical game theory; the
+inner ``best response'' step is single-agent RL. The decoupling is the
+algorithmic insight.
 
-\paragraph{Key passage.}
 \begin{quote}
-``The Policy-Space Response Oracle (PSRO) framework generalises classic game-theoretic solution concepts to large or continuous strategy spaces. [\ldots] PSRO can recover fictitious play, independent learning, and the double-oracle algorithm as special cases.''
+``We propose Policy-Space Response Oracles (PSRO), an extension of
+double-oracle algorithms to multi-agent RL settings. PSRO unifies
+fictitious play (with uniform meta-game solver), self-play (with
+deterministic meta-game solver), and double-oracle (with Nash meta-game
+solver) into a single algorithmic framework.''
 \end{quote}
 
-\emph{Commentary.} The unification is the point. Once you see fictitious play, independent learning, and double-oracle as the three faces of one operator, you can reason about which population-update rule matters for your problem (uniform for robustness, Nash for exploitability minimisation, $\alpha$-rank for evolutionary stability).
+\emph{Commentary.} The 2019 AlphaStar work uses a PSRO-derived ``league
+training'' approach: the meta-game solver is the league-prioritised
+sampling distribution. PSRO is the right framework for any
+non-transitive-game RL deployment.
 
-\section*{Reading exercises}
-\begin{enumerate}
-  \item Read Yu 2022 §4 and identify which of the five MAPPO design choices most affects performance on the SMAC benchmark.
-  \item Sketch the policy-improvement / policy-evaluation analogy between AlphaZero and the policy-iteration algorithm of Week 2. Where does MCTS sit in the diagram?
-  \item Re-read the Wang 2023 abstract and design a stress test you would add to AlphaZero training on Tic-Tac-Toe to surface the same pathology. (Hint: train a ``parasite'' policy in parallel.)
-  \item PSRO: write down the meta-game payoff matrix for a 2-pure-policy population in zero-sum, and pick a meta-solver (uniform vs Nash) for each of: robustness, exploitability minimisation, exploration.
-\end{enumerate}
+\section*{Bonus paper: Vinyals et al.\ --- \emph{Grandmaster level in StarCraft II using multi-agent reinforcement learning} (Nature 2019)}
 
-\section*{Forward connections}
-Multi-agent thinking returns repeatedly in the rest of the curriculum.
-\begin{itemize}
-  \item Week 17 (exploration + meta-RL) revisits PSRO in the context of population-based exploration.
-  \item Week 19 (DPO zoo) is implicitly multi-agent: the language model is one player, the human evaluator a second, the reward model an imperfect referee.
-  \item Week 24 (capstone) returns to the two-sided matching market with formal CMDP constraints.
+AlphaStar. The most ambitious public MARL system to date. League training
+with main agents, main exploiters, league exploiters; supervised
+pre-training from human games; large-scale distributed self-play.
+
+\textbf{Why it matters.} Pulls together everything in this week: CTDE
+(actors take local observations, critics take the global state), self-play
+(at the league level), and best-response training (per main agent).
+The Nature paper has the cleanest published account of league training.
+
+\begin{quote}
+``Without the additional exploiters in the league, the main agents
+collapse onto rock-paper-scissors strategies. The diversity of the
+league is the key to robust play.''
+\end{quote}
+
+\emph{Commentary.} The collapse-onto-RPS-cycles finding is the
+canonical example of why naive self-play fails in non-transitive games.
+The fix --- explicit exploiters --- is structural, not algorithmic.
+Any production multi-agent RL system on real-world economic games will
+need a similar structural fix.
+
+\section*{Bonus paper: Schrittwieser et al.\ --- \emph{Mastering Atari, Go, chess and shogi by planning with a learned model} (Nature 2020)}
+
+MuZero. Extends AlphaZero to environments where the dynamics are
+unknown: the agent learns a latent dynamics model alongside the policy
+and value, and does MCTS in the latent space.
+
+\textbf{Why it matters.} It is the single algorithm that handles both
+board games (perfect-info, known transitions) and Atari (pixel inputs,
+unknown transitions). MuZero set a new SOTA on Atari while matching
+AlphaZero on the board games.
+
+\begin{quote}
+``MuZero matches the performance of AlphaZero in Go, chess and shogi,
+and improves upon the state of the art in Atari without any
+prior knowledge of the game rules.''
+\end{quote}
+
+\emph{Commentary.} The latent-dynamics model is trained end-to-end
+with policy and value losses. EfficientZero (Ye et al.\ 2021) shows
+that a self-supervised consistency loss between predicted and actual
+latents accelerates this further; the data efficiency improvements
+are dramatic ($\sim 100\times$ less data for comparable Atari scores).
+
+\section*{Glossary}
+
+\begin{description}\setlength\itemsep{1pt}
+  \item[CTDE.] Centralised Training, Decentralised Execution. Critic
+  sees all; actor sees local observation only.
+  \item[PUCT.] Predictor + UCB applied to Trees; the AlphaZero
+  selection rule.
+  \item[Dirichlet noise.] Exploration noise added to the prior at the
+  MCTS root only. Essential to prevent policy collapse.
+  \item[Symmetry augmentation.] For games with board symmetries, each
+  training tuple is augmented with its 8 (or 4, or 2) symmetric
+  versions.
+  \item[Self-play.] Both agents in a 2-player game share the same
+  policy network; the network plays itself.
+  \item[Fictitious play.] Each agent best-responds to the empirical
+  distribution of historical opponent actions.
+  \item[PSRO.] Policy-Space Response Oracles; meta-game over a policy
+  population.
+  \item[League training.] AlphaStar's PSRO variant with main agents
+  and explicit exploiter populations.
+  \item[QMIX monotonicity.] The aggregator from per-agent $Q$s to joint
+  $Q$ is monotone, which makes decentralised greedy consistent with
+  joint argmax.
+  \item[MuZero.] AlphaZero with a learned latent dynamics model.
+\end{description}
+
+\section*{Historical context: how we got here}
+
+The thread from Samuel's checkers program (1959) to AlphaZero is a
+60-year story of intelligent search getting steadily better priors.
+The milestones:
+
+\textbf{1959 --- Samuel's checkers.} Self-play with hand-crafted
+features; the first ML system to demonstrate genuine improvement
+through play. Samuel's machine learned its evaluation function via TD-like
+updates on tens of thousands of self-play games.
+
+\textbf{1992 --- TD-Gammon (Tesauro).} TD($\lambda$) on a neural-net
+backgammon evaluator. World-class play on a single workstation; first
+demonstration that neural nets + TD + self-play could match expert
+human play in a complex domain.
+
+\textbf{1997 --- Deep Blue beats Kasparov.} Hand-crafted features +
+massive alpha-beta search. The end of the ``classical'' chess era.
+
+\textbf{2007 --- MCTS (UCT).} Kocsis \& Szepesv\'ari; the algorithm
+that gave bandit-style exploration to game tree search. Powered the
+first super-human computer Go programs (CrazyStone, Zen).
+
+\textbf{2013 --- DQN (Mnih et al.).} Deep RL on Atari. Proved that
+neural nets + replay buffer + target network could learn pixel-to-action
+mappings.
+
+\textbf{2016 --- AlphaGo.} MCTS + policy network trained on human games
++ value network. Beat Lee Sedol 4-1.
+
+\textbf{2017 --- AlphaGo Zero.} Removed the human-game bootstrap; pure
+self-play. The algorithm of this week's mini-project.
+
+\textbf{2018 --- AlphaZero.} Generalised AGZ to chess, shogi, and Go
+with a single algorithm. The proof that the recipe is domain-agnostic.
+
+\textbf{2019 --- AlphaStar.} League training for non-transitive games.
+StarCraft II at grandmaster level.
+
+\textbf{2020 --- MuZero.} Latent dynamics model; AlphaZero without
+knowing the rules. Atari-level play with the same algorithm that masters
+Go.
+
+\textbf{2022 --- MAPPO surprise.} The simplest CTDE PPO matches or
+beats every more-sophisticated MARL algorithm on the standard
+benchmarks. Lesson: implementation engineering matters more than
+algorithmic sophistication.
+
+\section*{Annotated reading order}
+
+\textbf{Weekend 1 (foundations).} Silver et al.\ Nature 2017 (AlphaGo
+Zero) end-to-end, then Silver et al.\ Science 2018 (AlphaZero). Both
+papers are short; the supplementary materials are where the
+implementation details live --- read those.
+
+\textbf{Weekend 2 (cooperative MARL).} Yu et al.\ NeurIPS 2022 (MAPPO);
+Rashid et al.\ ICML 2018 (QMIX); Lowe et al.\ NeurIPS 2017 (MADDPG).
+Together these give you the three flavours of CTDE: PPO-style on-policy,
+DQN-style value-decomposition, DDPG-style off-policy.
+
+\textbf{Weekend 3 (competitive / general-sum).} Lanctot et al.\ NeurIPS
+2017 (PSRO); Vinyals et al.\ Nature 2019 (AlphaStar); Brown \& Sandholm
+Science 2017 (Libratus, poker CFR). The full picture of how to handle
+non-transitive games at scale.
+
+\textbf{Weekend 4 (model-based extensions).} Schrittwieser et al.\
+Nature 2020 (MuZero); Ye et al.\ NeurIPS 2021 (EfficientZero); Antonoglou
+et al.\ ICLR 2022 (Stochastic MuZero).
+
+\section*{Codebase tour}
+
+If you want to read more code than you write, three open-source
+AlphaZero / MuZero implementations are worth knowing:
+
+\begin{itemize}\setlength\itemsep{1pt}
+  \item \textbf{KataGo} (\url{https://github.com/lightvector/KataGo}):
+    The strongest open-source Go engine; descended from AlphaGo Zero.
+    The training-data pipeline is particularly well-engineered.
+  \item \textbf{OpenSpiel} (\url{https://github.com/deepmind/open\_spiel}):
+    DeepMind's game-RL library; has clean implementations of CFR, PSRO,
+    AlphaZero, and dozens of games.
+  \item \textbf{MuZero-General} (\url{https://github.com/werner-duvaud/muzero-general}):
+    A clean MuZero reproduction with a tiny code footprint; recommended
+    starting point for understanding the MuZero codebase.
 \end{itemize}
 
-\noindent\emph{Sourced from} \texttt{research/deeprl\_core\_sota.md} (\S Multi-agent) and \texttt{research/safety\_rl\_sota.md} (\S Self-play overfit + adversarial policies).
+\section*{Open problems}
+
+\begin{itemize}\setlength\itemsep{1pt}
+  \item \emph{Continuous-action AlphaZero}: MCTS with infinite action
+    spaces. Progressive widening (Couetoux et al.\ 2011), neural MCTS
+    over latent action distributions; still an open area.
+  \item \emph{Partial-information AlphaZero}: poker-style hidden
+    information; CFR + neural nets is the state of the art (DeepStack,
+    Libratus, Pluribus), but unifying with the AlphaZero recipe is
+    still an active research direction.
+  \item \emph{Cooperative MARL with strategic agents}: most MARL
+    benchmarks assume cooperative or zero-sum. Mixed-incentive cases
+    (synthetic insurance brokers vs.\ platform; ATS recruiters vs.\ candidates) need
+    mechanism-design awareness layered on top.
+\end{itemize}
+
+\emph{Sourced from} \texttt{research/deeprl\_core\_sota.md} sections
+covering MARL, AlphaZero, and modern self-play.
+
 \end{document}

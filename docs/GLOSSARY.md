@@ -130,8 +130,8 @@ the meaning, range, and conditioning to the local derivation.
 | DPO | LLM RL | Direct preference optimisation (Rafailov 2023) |
 | IPO, KTO, ORPO, SimPO | LLM RL | Distinct preference/post-training objectives; not interchangeable DPO flags |
 | SFT | LLM training | Supervised fine-tuning on demonstrated responses; the lab masks prompt and padding targets |
-| LoRA | LLM training | Freeze a base weight and learn a low-rank correction `W = W0 + (alpha/r) BA`; [worked derivation](llm-lab/lessons/02-real-lora-training.md) |
-| QLoRA | LLM training | Train floating-point LoRA adapters through a frozen quantised base; [quantisation lesson](llm-lab/lessons/03-quantisation-and-qlora.md) |
+| LoRA | LLM training | Freeze a base weight and learn a low-rank correction `W = W0 + (alpha/r) BA`; [worked derivation](../llm-lab/lessons/02-real-lora-training.md) |
+| QLoRA | LLM training | Train floating-point LoRA adapters through a frozen quantised base; [quantisation lesson](../llm-lab/lessons/03-quantisation-and-qlora.md) |
 | NF4 | Quantisation | A nonuniform 4-bit codebook motivated by normally distributed weights; differs from uniform signed int4 |
 | BF16 | Numerical precision | A 16-bit floating-point format with fewer significand bits than FP32 but the same exponent width; the lab uses it on supported CUDA hardware |
 | GRPO | LLM RL | Group-relative PO (critic-free, DeepSeekMath 2024) |
@@ -198,7 +198,7 @@ For identification assumptions, see [Hernán and Robins, *Causal Inference:
 What If*](https://miguelhernan.org/whatifbook). For the multi-environment
 discovery method, see [Li, Jaber, and Bareinboim (NeurIPS
 2023)](https://proceedings.neurips.cc/paper_files/paper/2023/hash/368cba57d00902c752eaa9e4770bbbbe-Abstract-Conference.html).
-The [Week 26 guide](week-26-causal-discovery-biological-data/teaching_guide.md)
+The [Week 26 guide](../week-26-causal-discovery-biological-data/teaching_guide.md)
 explains which assumptions and methods its toy project actually implements.
 
 ## Acronyms

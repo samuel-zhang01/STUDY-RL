@@ -1,0 +1,211 @@
+\documentclass[12pt]{scrartcl}
+\usepackage[a4paper,margin=3.0cm]{geometry}
+\usepackage{../common/rlstudy}
+\linespread{1.15}\selectfont
+
+\title{Extended reading --- Week 01: MDPs and Bandits}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section*{How to use this list}
+Read in the order given. The first paper establishes the modern statistical
+framing of the bandit problem; the second is the algorithm you will implement;
+the third is the modern Bayesian counterpoint; the fourth is the contextual
+generalisation that powers production matching systems; the fifth is the
+unifying analysis that makes all of the above feel like one theory.
+
+\section{Robbins (1952) --- Some aspects of the sequential design of
+experiments}
+\textit{Bull.\ Amer.\ Math.\ Soc.\ 58 (1952), 527--535.}
+
+\paragraph{Summary.} Robbins frames the two-armed bandit as a problem of
+\emph{minimising expected loss relative to an oracle}. He proves that a simple
+``play the winner'' strategy is asymptotically consistent and outlines the
+trade-off between exploration and exploitation that has structured the entire
+field since. The paper predates Lai \& Robbins by 33 years and is short enough
+to read in a sitting.
+
+\paragraph{Why it matters for this week.} Robbins is the historical anchor for
+the regret framework you proved on UCB1. Reading it makes the modern
+$O(\log T)$ guarantees feel less like notation games and more like a slow
+accumulation of the right definitions.
+
+\begin{quote}\itshape
+``We consider the question of how, on the basis of accumulating experience, to
+choose between two methods of treatment so as to maximize the expected number
+of `successes' or, equivalently, to minimize the expected loss\ldots\ The
+problem so formulated is statistical in character because the underlying
+parameters are unknown.''
+\end{quote}
+The two-line setup is striking: ``maximise successes'' immediately becomes
+``minimise loss vs.\ the unknown best'', i.e.\ regret. The entire 1952 paper
+is built on this dual.
+
+\section{Auer, Cesa-Bianchi \& Fischer (2002) --- Finite-time analysis of the
+multi-armed bandit problem}
+\textit{Machine Learning 47, 235--256.}
+
+\paragraph{Summary.} Introduces UCB1, UCB1-Tuned, and UCB2, and proves
+\emph{finite-time} regret bounds of the form $O((K \log T)/\Delta)$. Before
+this paper most bandit guarantees were asymptotic; the finite-time bound made
+bandits a practical tool. The proof is a careful Hoeffding + union-bound
+argument that you reproduced in the notes.
+
+\paragraph{Why it matters for this week.} This is the paper whose bound you
+plotted in Figure 3.2 of the notes. The proof technique --- decompose regret
+into expected suboptimal pulls, bound the deviation events, sum the geometric
+series --- recurs across every UCB-style algorithm in this curriculum.
+
+\begin{quote}\itshape
+``We show that, when the rewards are bounded, simple confidence-bound based
+policies achieve, uniformly over time, logarithmic regret. \ldots The constants
+are explicit and small enough that the algorithms can be considered for
+practical purposes.''
+\end{quote}
+``Explicit and small enough'' is the contribution. The asymptotic theory of
+Lai--Robbins was 17 years old; turning it into deployable code required the
+finite-time bound to be tight in the gap $\Delta_a$.
+
+\section{Agrawal \& Goyal (2012) --- Analysis of Thompson sampling for the
+multi-armed bandit problem}
+\textit{COLT 2012, arXiv:1111.1797.}
+
+\paragraph{Summary.} First proof that Thompson sampling achieves
+$O((K\log T)/\Delta)$ frequentist regret on Bernoulli bandits, matching UCB1
+up to constants. The technique --- bounding the probability that a sub-optimal
+arm's posterior sample exceeds the optimal sample --- is the template for
+every subsequent Thompson analysis. Russo \& Van Roy (2014, NeurIPS) later
+sharpened the constants via the information ratio.
+
+\paragraph{Why it matters for this week.} Thompson sampling is the algorithm
+you should reach for in production matching, and now you have a regret bound
+that justifies the recommendation. The paper also empirically demonstrates
+TS's superiority on the Yahoo!\ click-log dataset --- the same data Li et al.\
+(2010) used for LinUCB.
+
+\begin{quote}\itshape
+``The conceptual simplicity of Thompson Sampling, along with its strong
+empirical performance, makes it an attractive alternative\ldots\ However,
+despite being proposed in 1933, theoretical understanding of this algorithm
+has remained elusive.''
+\end{quote}
+``Theoretical understanding remained elusive'' for 79 years. The lesson:
+empirical performance can survive without proofs for a long time, but proofs
+are what enable derivative work (variance-reduction tricks, off-policy
+correction, fairness constraints).
+
+\section{Li, Chu, Langford \& Schapire (2010) --- A contextual-bandit approach
+to personalized news article recommendation}
+\textit{WWW 2010.}
+
+\paragraph{Summary.} Introduces LinUCB and the offline replay evaluation
+technique (now a precursor to modern OPE). Deployed at Yahoo!\ Front Page;
+the replayer compares any new policy against logged behaviour without an A/B
+test. The paper is the genealogical root of every production contextual-bandit
+system today.
+
+\paragraph{Why it matters for this week.} The synthetic insurance / ATS matchers you will
+build in later weeks are direct descendants of this paper's architecture.
+Read it for the engineering more than the maths: offline replay, hybrid
+linear models, regularisation, online updating with Sherman--Morrison.
+
+\begin{quote}\itshape
+``Using only six weeks of randomly displayed events, our \texttt{LinUCB}
+algorithm doubled the click rate over the editorial control. This rate
+remained stable for 18 months in continuous A/B test\ldots''
+\end{quote}
+The bandit improvement was \emph{stable for 18 months}. That is the single
+most important sentence in applied bandits: a properly-explored linear policy
+does not need re-training as the world drifts because the per-step posterior
+update is already an online learner.
+
+\section{Russo \& Van Roy (2014) --- Learning to optimize via information
+directed sampling}
+\textit{NeurIPS 2014, arXiv:1403.5556.}
+
+\paragraph{Summary.} Introduces the \emph{information ratio}
+$\Psi_t = (\E_t[\Delta_t])^2 / I_t(A^\star; (A_t, R_t))$ --- expected
+instantaneous regret squared, divided by mutual information about the optimal
+action gained by the next pull. Bayesian regret is bounded by
+$\sqrt{\bar\Psi \cdot H(A^\star) \cdot T}$ where $H(A^\star)$ is the prior
+entropy of the optimum. The argument unifies UCB and TS proofs and motivates
+\emph{information-directed sampling} (IDS) as an explicit information-gain
+maximiser.
+
+\paragraph{Why it matters for this week.} If you only learn one piece of
+theory from Week 1, learn the information ratio. It makes precise the
+intuition that ``a good exploration strategy explores in proportion to
+information gain''. It also explains why TS works: TS implicitly bounds its
+information ratio, so its Bayesian regret is automatically near-optimal.
+
+\begin{quote}\itshape
+``We propose a new approach to balancing exploration with exploitation: at each
+period, sample an action so that the squared expected regret is small relative
+to the information acquired about the optimal action.''
+\end{quote}
+The information-theoretic re-framing turns ``how much to explore?'' into a
+\emph{quantity you can compute}. Subsequent work (Kirschner \& Krause 2018;
+Hao, Lattimore \& Szepesv\'ari 2022) builds linear and Gaussian-process
+information-ratio bounds.
+
+\section*{Reading exercises}
+After working through the five papers above, attempt the following.
+\begin{enumerate}\setlength\itemsep{4pt}
+  \item \textbf{Robbins, sequel.} Read Lai \& Robbins (1985, \emph{Adv.\ Appl.\
+        Math.}) and reproduce the change-of-measure step that delivers the
+        $1/\KL$ lower bound. Where in the proof does the assumption of
+        \emph{consistency} of the algorithm enter? Could the bound be tightened
+        for a restricted family of algorithms (say, only UCB-type)?
+
+  \item \textbf{Auer et al., gap dependence.} Derive the regret bound for
+        UCB1 when the gaps satisfy $\Delta_a = \Delta$ for all sub-optimal
+        $a$. The bound becomes $O((K-1)\log T / \Delta)$; verify this against
+        your empirical regret curve in the workbook. What is the implicit
+        worst case as $\Delta \to 0$? (Hint: minimax-style $O(\sqrt{KT})$
+        regret of MOSS.)
+
+  \item \textbf{Agrawal--Goyal, beyond Bernoulli.} Extend Thompson sampling to
+        Gaussian rewards with a Normal-Gamma prior. Write out the conjugate
+        update and code it. Compare its regret with UCB1 on a 5-arm Gaussian
+        bandit with unit-variance rewards and means in $\{0, 0.1, \dots, 0.4\}$.
+
+  \item \textbf{Li et al., hybrid LinUCB.} Read \S 3.2 of the paper. Hybrid
+        LinUCB shares a global coefficient $\beta$ across arms and a
+        per-arm $\theta_a$. Write down the joint Bayesian linear-regression
+        update for $(\beta, \{\theta_a\})$. Why does hybrid LinUCB dominate
+        disjoint LinUCB when arms have few observations each?
+
+  \item \textbf{Russo--Van Roy, information ratio for two-arm Bernoulli.}
+        Compute the information ratio $\Psi$ of Thompson sampling on a
+        two-arm Bernoulli bandit with prior Beta$(1,1)$ at $t=1$. Verify the
+        bound $\Psi \le K/2 = 1$ that Russo--Van Roy prove for general
+        $K$-armed bandits.
+\end{enumerate}
+
+\section*{Connections to later weeks}
+The exact same machinery powers the following later weeks:
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \emph{Week 11 (contextual bandits + OPE)} extends LinUCB to neural
+        bandits and integrates the off-policy estimators from
+        \texttt{research/bandits\_matching\_sota.md} \S 3.
+  \item \emph{Week 12 (RL for ranking)} treats the slate-bandit problem as a
+        contextual bandit over actions of size $k$, with position-bias
+        correction.
+  \item \emph{Week 17 (exploration / meta)} brings the information ratio back
+        in the form of information-directed sampling and Bayesian deep
+        exploration.
+  \item \emph{Week 22 (CMDPs)} adds safety constraints to the OFU principle
+        you learned this week, producing the Constrained Policy Optimisation
+        / Lagrangian recipe.
+\end{itemize}
+The thread of ``optimism in the face of uncertainty'' (OFU) runs through
+the curriculum from Week 1 to Week 24. Memorising the bandit version makes
+the deep version readable.
+
+\section*{Sourced from}
+\verb|research/bandits_matching_sota.md| sections 1--3. For the broader
+historical context, see Lattimore \& Szepesv\'ari, \emph{Bandit Algorithms}
+(Cambridge UP, 2020), Chapters 7--19, and Sutton \& Barto, Chapter 2.
+
+\end{document}

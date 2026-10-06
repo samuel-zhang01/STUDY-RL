@@ -1,9 +1,8 @@
 # Week 25 teaching guide: make an audit claim that the evidence can support
 
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
-This directory contains a synthetic ATS demonstration. External production architecture and
-file-line claims in the notes need verification against an identified source revision.
-The calculations below are constructed examples, not validation of that external system.
+This directory contains a synthetic ATS demonstration and a hypothetical architecture.
+All data and calculations are constructed examples. They do not validate an external system.
 
 ## What this capstone brings together
 

@@ -1,93 +1,251 @@
 # STUDY-RL
 
-A 24-week core curriculum, plus an applied audit in week 25 and **causal discovery for biological data in week 26**, in **Deep Reinforcement Learning**, with deep dives into **LLM RL** (RLHF, DPO, GRPO, RLVR, PRMs), **safety-critical RL** (CMDP, shielding, scalable oversight), and an applied thread on **matching/ranking** (insurance leads, recruitment candidates).
+A self-paced reinforcement-learning course with a 24-week core, a synthetic
+recruitment-system audit in week 25, and a causal-biology extension in week 26.
+Each week includes a teaching guide, lecture PDF and TeX source, a Jupyter
+workbook, extended reading, a small Python project, and tests. An optional
+five-lesson lab trains real pretrained language models with LoRA and DPO.
 
-> Strong applied-math depth · Tufte-flavored LaTeX notes · Jupyter workbooks with graded exercises · Curated extended reading · Mini-projects with tests.
+**Start here:** [study guide](docs/STUDY_GUIDE.md) ·
+[all weeks and artifacts](docs/INDEX.md) ·
+[syllabus PDF](syllabus/syllabus.pdf) ·
+[glossary](docs/GLOSSARY.md) · [progress checklist](docs/PROGRESS.md).
 
-**Start with [the study guide](STUDY_GUIDE.md):** a prerequisite check, one small
-problem connecting Bellman equations to policy gradients, and links to all 26
-weekly teaching guides. Each weekly guide adds worked calculations, an analogy
-with its limits, a derivation, code connections, and hidden-answer self-checks.
-The [teaching review](TEACHING_REVIEW.md) records corrections and remaining limitations.
+This course is for readers comfortable with Python, probability, linear
+algebra, calculus, and basic neural networks. The study guide includes a
+prerequisite check and worked calculations. Begin with week 1 if RL is new to
+you; follow the track table below if you already know the foundations.
 
-**Causal biology:** [Week 26](week-26-causal-discovery-biological-data/teaching_guide.md)
-provides a one-week plan on confounding, causal identification and discovery,
-learning across biological environments, and task-aware enhancement of noisy,
-sparse data. It builds on weeks 11 and 14, with synthetic patient experiments
-and a [primary-source research dossier](research/causal_biology.md) inspired by
-Synlico's scientific discussion.
+## Read without installing anything
 
-**Practical LLM training:** the [five-lesson post-training lab](llm-lab/README.md)
-adds actual pretrained-model LoRA SFT and DPO, a quantisation workbook, saved
-adapter evaluation, and [RTX 5090 / NVIDIA QLoRA setup](llm-lab/NVIDIA.md).
+Open a week's `teaching_guide.md`, then `notes.pdf`, and preview its
+`workbook.ipynb` on GitHub. PDFs are committed so reading does not require
+Python, a GPU, or a LaTeX installation. The source notebooks contain exercises
+and reference-solution paths; attempting the exercises yourself is separate
+from executing the reference notebook.
 
-## Layout
+## Install the course environment
 
-```
-STUDY-RL/
-├── syllabus/              # syllabus.tex → syllabus.pdf
-├── common/                # shared LaTeX style, RL utilities
-├── research/              # SOTA dossiers (input to syllabus)
-├── llm-lab/               # practical LoRA, QLoRA, DPO, quantisation, evaluation
-├── week-NN-topic/
-│   ├── notes.tex          # lecture notes
-│   ├── notes.pdf
-│   ├── teaching_guide.md  # intuition, derivation, worked examples, self-checks
-│   ├── workbook.ipynb     # graded exercises with hints
-│   ├── extended_reading.tex
-│   ├── project/           # mini-project code
-│   └── tests/             # pytest unit + smoke tests
-└── scripts/               # QA, plotting, helpers
-```
-
-## Build
+Python **3.12** is recommended. Run these commands from a terminal on macOS or
+Linux. On Windows, use PowerShell for activation (`.venv\Scripts\Activate.ps1`);
+the Makefile and shell scripts can be run through WSL.
 
 ```bash
-pip install -r requirements.txt
-make syllabus        # build the top-level syllabus PDF
-make weeks           # compile all weekly lecture PDFs
-make notebooks       # execute every workbook end-to-end via papermill
-make tests           # run all pytest suites
-make qa              # full QA sweep + report
+git clone https://github.com/samuel-zhang01/STUDY-RL.git
+cd STUDY-RL
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m ipykernel install --user --name study-rl --display-name "STUDY-RL"
 ```
 
-`make tests` runs each weekly suite in its own Python process, then the shared
-tooling and optional lab tests. Bare `python -m pytest` checks shared tooling and
-the lab. Use `python -m pytest week-NN-topic/tests` for one week; collecting
-several weeks together is rejected because their local `project` and `tests`
-package names can collide.
+`requirements.txt` installs the scientific stack, CPU-capable PyTorch,
+classic-control Gymnasium environments, notebook tools, and test tools for the
+bundled projects. It does not install every optional paper benchmark or the
+pretrained LLM lab. If you need an NVIDIA-specific PyTorch build, install the
+wheel for your hardware first, following [the NVIDIA guide](llm-lab/NVIDIA.md).
 
-Requires: TeX Live (with `minted`, so compile with `-shell-escape`) for PDF
-builds, and Python with the dependencies needed by the selected project. The
-small numerical examples and many toy projects run on CPU; CUDA is useful for
-larger deep-RL experiments. The full requirements file includes optional heavy
-environment and LLM dependencies and may need platform-specific installation.
+Verify the installation with a small first-week check:
 
-## Curriculum at a glance
+```bash
+python -m pytest common/tests -q
+python -m pytest week-01-mdps-bandits/tests -q
+```
 
-The full week-by-week breakdown lives in [`syllabus/syllabus.pdf`](syllabus/syllabus.pdf). Tracks:
+Dependencies have bounded version ranges, rather than a platform-independent
+lockfile. The [release review](docs/RELEASE_REVIEW.md) records the environment
+actually checked. The optional benchmark collection is in
+`requirements-extras.txt`; install it only for an experiment that needs it.
+Some environments require additional system libraries and separately obtained
+assets. The repository does not bundle Atari ROMs or accept their terms for you.
 
-| Track | Weeks | Highlights |
+## Work through your first week
+
+1. Read [week 1's teaching guide](week-01-mdps-bandits/teaching_guide.md).
+   Predict the worked-example answers before revealing them.
+2. Read [the lecture](week-01-mdps-bandits/notes.pdf) and use the
+   [glossary](docs/GLOSSARY.md) when notation is unfamiliar.
+3. Open the workbook from its weekly directory:
+
+   ```bash
+   cd week-01-mdps-bandits
+   python -m jupyterlab workbook.ipynb
+   ```
+
+   Select the **STUDY-RL** kernel. Start with a fresh kernel and keep the
+   notebook's working directory inside that week; the imports assume this.
+   Save a separate local copy for your own attempts. The distributed notebook
+   can execute using reference solutions in `project/solutions.py`.
+4. Inspect and run the small bandit experiment from the same weekly directory:
+
+   ```bash
+   python -m project.train
+   python -m pytest tests -q
+   cd ..
+   ```
+
+5. Record what you can explain, derive, and reproduce in your own copy of the
+   [progress checklist](docs/PROGRESS.md). Continue with week 2.
+
+For a noninteractive reference execution from the repository root:
+
+```bash
+python -m papermill --kernel study-rl --cwd week-01-mdps-bandits \
+  week-01-mdps-bandits/workbook.ipynb \
+  week-01-mdps-bandits/workbook.executed.ipynb
+```
+
+The output file is ignored by Git. Other weekly projects follow the same
+directory pattern, though their command-line options differ; inspect the
+module docstring or `--help` where provided. Larger optional training runs are
+not required to read the course or run the local reference exercises.
+
+## Choose a track
+
+| Track | Weeks | Main topics |
 |---|---|---|
-| Foundations | 1–4 | MDPs, Bellman, DP, MC, TD/SARSA/Q-learning |
-| Function approximation | 5–6 | Deep Q-Networks, Rainbow, BBF |
-| Policy methods | 7–10 | REINFORCE, A2C, GAE, PPO, TRPO, SAC, TD3 |
-| Bandits & matching | 11–12 | LinUCB, Thompson, OPE, counterfactual LTR |
-| Multi-agent | 13 | MADDPG, MAPPO, self-play |
-| Offline RL | 14–15 | CQL, IQL, AWR, Decision Transformer, diffusion policies |
-| Model-based RL | 16 | Dreamer v3, MuZero, TD-MPC2 |
-| Exploration & meta | 17 | RND, ICM, MAML, in-context RL |
-| LLM RL | 18–21 | RLHF/PPO, DPO/IPO/KTO/ORPO/SimPO, GRPO/RLOO/RLVR, PRMs |
-| Practical LLM lab | Alongside 18–21 | Real LoRA SFT/DPO, quantisation/QLoRA, Mac + RTX 5090 workflows |
-| Safety-critical RL | 22–24 | CMDPs, CPO, shielding, scalable oversight, reward hacking |
-| Applied audit | 25 | Synthetic ATS experiments and an RL enhancement audit |
-| Causal biology | 26 | DAGs, confounding, multi-environment discovery, noisy data, enhancement evaluation |
+| Foundations | 1–4 | MDPs, bandits, Bellman equations, DP, Monte Carlo, TD, SARSA, Q-learning |
+| Deep value learning | 5–6 | DQN, replay, target networks, Rainbow components, BBF readings |
+| Policy methods | 7–10 | REINFORCE, A2C, GAE, TRPO, PPO, SAC, TD3 |
+| Bandits and matching | 11–12 | LinUCB/Thompson sampling, off-policy evaluation, ranking, matching |
+| Multi-agent | 13 | Coordination, policy learning, self-play, AlphaZero-style search |
+| Offline RL | 14–15 | CQL, IQL, sequence models, Decision Transformer, diffusion readings |
+| Model-based RL | 16 | Learned dynamics, imagination, planning |
+| Exploration and meta-learning | 17 | Intrinsic rewards, RND, meta-bandit experiments |
+| LLM RL | 18–21 | RLHF/PPO, preference objectives, GRPO/RLOO/RLVR, reward hacking, oversight |
+| Safety and capstone | 22–24 | CMDPs, Lagrangian methods, shielding, safe matching |
+| Applied audit | 25 | Synthetic ATS policies, propensities, OPE, constraints, audit design |
+| Causal biology | 26 | Confounding, causal identification, environment shifts, noisy data |
+| Practical LLM lab | Alongside 18–21 | Real LoRA SFT/DPO, quantisation, adapter evaluation, QLoRA setup |
 
-## Reading order
+The [curriculum index](docs/INDEX.md) links every weekly artifact. Paper names
+in the notes describe reading topics; the bundled teaching projects are small
+implementations and do not reproduce every named paper or benchmark.
 
-Follow the core weeks in order: later derivations reuse earlier results. Read
-the weekly teaching guide before the longer lecture, attempt the workbook, then
-run the mini-project. Each lecture has a **Safety angle** callout and (where
-natural) a **Matching application** connecting the lesson to insurance lead or
-recruitment candidate matching. Track both understanding and execution in
-[PROGRESS.md](PROGRESS.md); running a reference solution alone does not demonstrate mastery.
+## Optional practical LLM lab
+
+Use a separate environment to keep its tested model-library versions apart
+from optional RL benchmark dependencies:
+
+```bash
+python3.12 -m venv .venv-llm
+source .venv-llm/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r llm-lab/requirements.txt
+make llm-tests PY=python
+make llm-notebook PY=python
+cd llm-lab
+python -m llm_lab.doctor
+```
+
+The numerical workbook and tests use local tensors and random tiny models;
+they do not download pretrained weights. The optional training exercises
+download `HuggingFaceTB/SmolLM2-135M-Instruct` from Hugging Face and train
+locally. CPU and Apple Silicon support ordinary LoRA; NF4 QLoRA targets NVIDIA
+CUDA. No paid API is required. Follow [the full lab walkthrough](llm-lab/README.md)
+for data generation, SFT, DPO, saved-adapter inference, and held-out evaluation.
+See [recorded lab validation](llm-lab/VALIDATION.md) for measured results and
+[the NVIDIA guide](llm-lab/NVIDIA.md) for CUDA installation and hardware checks.
+
+## Test, execute, and rebuild
+
+Run Make targets from the repository root with the intended environment active:
+
+| Command | What it does |
+|---|---|
+| `make help` | List common tasks |
+| `make course-tests PY=python` | Shared utilities, every weekly suite in its own process, maintenance scripts |
+| `make llm-tests PY=python` | Optional lab tests; requires lab dependencies |
+| `make tests PY=python` | Both course and lab tests |
+| `make release-check PY=python` | File hygiene, Python/notebook structure, local documentation links |
+| `make secrets` | Redacted Gitleaks scan of all reachable Git refs; install Gitleaks separately |
+| `make syllabus` | Rebuild `syllabus/syllabus.pdf` |
+| `make weeks` | Rebuild all weekly lecture and extended-reading PDFs |
+| `make notebooks` | Execute all weekly reference notebooks using the `python3` kernel |
+| `make llm-notebook PY=python` | Execute the optional lab's numerical workbook |
+| `make qa PY=python` | Build PDFs, execute weekly notebooks, run all tests, then inventory artifacts |
+| `make clean PY=python` | Remove ignored build caches and executed notebooks; preserve shipped PDFs and environments |
+
+For `make notebooks`, ensure the `python3` kernel uses the active course
+environment: `python -m ipykernel install --user --name python3`.
+Bare `python -m pytest` covers shared tools and the optional lab. Weekly bundles
+reuse `project` and `tests` package names, so run one week per Python process;
+combined collection of multiple weeks is intentionally rejected.
+
+PDF rebuilding requires TeX Live or MacTeX, `latexmk`, and the packages used by
+`common/rlstudy.sty`, including `minted` and its configured Python syntax
+highlighter. The build enables shell escape. To rebuild one week:
+
+```bash
+cd week-01-mdps-bandits
+latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error notes.tex
+latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error extended_reading.tex
+cd ..
+```
+
+To inspect all rebuilt PDFs for layout problems:
+
+```bash
+python scripts/pdf_margin_sweep.py --render
+```
+
+This requires Poppler (`pdftoppm`, `pdfinfo`) and Pillow. Fresh TSV reports are
+written under ignored `reports/`; earlier records are in
+[the validation archive](docs/archive/README.md).
+
+## Repository layout
+
+```text
+STUDY-RL/
+├── README.md, LICENSE, CONTRIBUTING.md, SECURITY.md
+├── docs/                 # study guide, index, glossary, progress, authoring spec
+│   └── archive/          # dated teaching reviews and earlier validation records
+├── syllabus/             # syllabus.tex and the canonical syllabus.pdf
+├── common/               # shared Python utilities, tests, and LaTeX style
+├── research/             # dated source dossiers and reading notes
+├── llm-lab/              # optional LoRA/DPO lab, lessons, synthetic fixtures
+├── week-NN-topic/
+│   ├── teaching_guide.md
+│   ├── notes.tex, notes.pdf
+│   ├── workbook.ipynb
+│   ├── extended_reading.tex, extended_reading.pdf
+│   ├── project/          # teaching implementation and reference solutions
+│   ├── tests/
+│   └── figs/             # figures used by the notes
+├── scripts/              # scaffolding, validation, and cleanup tools
+└── .github/workflows/    # CPU tests, repository checks, and history secret scan
+```
+
+## Troubleshooting
+
+- **`No module named common` or the wrong `project` imports:** run a workbook
+  or `python -m project.train` inside its weekly directory. Run a selected test
+  suite from the repository root or use the Make targets. Restart the kernel
+  when switching weeks.
+- **Notebook cannot find its kernel:** activate the environment and register
+  it with `python -m ipykernel install`; select that kernel in JupyterLab.
+- **Missing environment or CUDA package:** the core install supports bundled
+  teaching projects. Use the optional extras only when required and follow
+  the hardware-specific guide for the PyTorch build.
+- **PDF build reports `minted`/highlighter errors:** check TeX Live and the
+  highlighter used by its `minted` version. Read the committed PDFs while
+  fixing the local build setup.
+- **A trainer refuses an existing output directory:** use a new `runs/`
+  subdirectory; lab commands protect previous adapters from being overwritten.
+
+## Scope, contributions, and license
+
+Experiments use synthetic teaching fixtures. The recruitment examples are
+hypothetical, and the biology extension contains no real patient records.
+Toy outcomes do not establish production safety, clinical effectiveness, or
+general model quality. Bibliographies and research dossiers are dated reading
+material, not a claim to cover the latest literature.
+
+See [the release review](docs/RELEASE_REVIEW.md) for checked paths and remaining
+limits, [contribution instructions](CONTRIBUTING.md) for changes, and
+[security reporting](SECURITY.md) for sensitive findings.
+
+Original contributions are distributed under the [MIT license](LICENSE).
+Cited papers, external dependencies, downloaded models, and trademarks retain
+their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md).

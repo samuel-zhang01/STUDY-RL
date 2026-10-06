@@ -1,15 +1,192 @@
-\documentclass[11pt]{scrartcl}
-\usepackage[a4paper,margin=2.6cm]{geometry}
+\documentclass[12pt]{scrartcl}
+\usepackage[a4paper,margin=3.0cm]{geometry}
 \usepackage{../common/rlstudy}
+\linespread{1.15}\selectfont
 
-\title{Extended reading — Week 03: Monte Carlo Methods}
+\title{Extended reading --- Week 03: Monte Carlo Methods}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
-\begin{itemize}
-  \item TODO
+\section*{How to use this list}
+The first paper is the source of every stochastic-approximation
+guarantee in RL. The second is the resolution of the first-visit vs
+every-visit MC question. The third is the canonical reference for
+per-decision IS (the variance-reduction trick that makes off-policy RL
+tractable). The fourth is the modern reference for off-policy evaluation
+with high-confidence bounds, which you should read \emph{before} deploying
+any new policy. The fifth is the bridge from off-policy MC to deep learning.
+
+\section{Robbins \& Monro (1951) --- A stochastic approximation method}
+\textit{Ann.\ Math.\ Stat.\ 22, 400--407.}
+
+\paragraph{Summary.} Introduces the stochastic-approximation iteration
+$\theta_{n+1} = \theta_n + \alpha_n (Y_n - f(\theta_n))$ for finding the root
+of an unknown regression function. Proves convergence in mean-square if
+$\sum \alpha_n = \infty$ and $\sum \alpha_n^2 < \infty$ --- the celebrated
+``RM conditions''.
+
+\paragraph{Why it matters for this week.} The incremental sample-average
+$Q_{n+1} = Q_n + \tfrac{1}{n}(R_n - Q_n)$ is exactly the Robbins--Monro
+algorithm with $\alpha_n = 1/n$. The convergence proofs of every
+``learning rate goes to zero'' RL algorithm (SARSA, Q-learning, TD($\lambda$)
+on-policy) hinge on Robbins--Monro.
+
+\begin{quote}\itshape
+``Convergence in mean-square is established under conditions that include
+$\sum \alpha_n = \infty$, ensuring the iteration moves forever, and
+$\sum \alpha_n^2 < \infty$, ensuring the noise averages out.''
+\end{quote}
+``Move forever, but slow down quickly enough that noise averages out'' is the
+single most important piece of intuition for learning-rate selection.
+
+\section{Singh \& Sutton (1996) --- Reinforcement learning with replacing
+eligibility traces}
+\textit{Machine Learning 22, 123--158.}
+
+\paragraph{Summary.} Compares first-visit and every-visit MC and shows the
+bias of every-visit is $O(1/N)$. Introduces \emph{replacing} eligibility
+traces (overwrite, not accumulate) and proves they correspond to first-visit
+MC in the $\lambda=1$ limit. Sets up the unification of MC and TD via
+$\lambda$ that Week 4 builds on.
+
+\paragraph{Why it matters for this week.} It is the reason ``first-visit''
+shows up as the default in MC reference implementations. Read \S 3 of the
+paper for the cleanest treatment of the bias issue. The same paper also
+explains the otherwise mysterious choice ``replacing'' vs ``accumulating''
+traces in classical TD($\lambda$).
+
+\begin{quote}\itshape
+``First-visit MC produces independent samples of the return per state per
+episode; every-visit MC produces dependent samples but does not waste data.
+The bias of every-visit vanishes as $1/N$ in the number of episodes.''
+\end{quote}
+The ``does not waste data'' is the practical case for every-visit; the
+``independent samples'' is the theoretical case for first-visit. In most
+deep-RL implementations the distinction is academic --- the variance is
+dominated by other factors.
+
+\section{Precup, Sutton \& Singh (2000) --- Eligibility traces for off-policy
+policy evaluation}
+\textit{ICML 2000.}
+
+\paragraph{Summary.} Defines per-decision importance sampling for MC and TD
+methods. Proves that the per-decision estimator has the same expectation as
+the trajectory-level OIS but lower variance whenever the immediate rewards
+depend on the action at time $t$ but not on later actions. Generalises to
+TD($\lambda$) with off-policy targets.
+
+\paragraph{Why it matters for this week.} If you remember one off-policy
+trick, remember per-decision IS. The trajectory-level estimator is unbiased
+but exponentially noisy in the horizon $T$; per-decision IS keeps the
+unbiasedness but only multiplies by the importance ratio \emph{up to} time
+$t$ for each reward $R_{t+1}$. The variance reduction is dramatic in any
+long-horizon setting.
+
+\begin{quote}\itshape
+``Per-decision importance sampling reduces variance without introducing bias
+by noticing that the reward at time $t$ is independent of the actions taken
+after time $t$ given the policy.''
+\end{quote}
+That single observation underpins every modern off-policy estimator. It is
+also what makes truncated trust-region methods possible (PPO, GRPO).
+
+\section{Thomas \& Brunskill (2016) --- Data-efficient off-policy policy
+evaluation for reinforcement learning}
+\textit{ICML 2016.}
+
+\paragraph{Summary.} Introduces the \emph{doubly-robust} estimator for RL:
+combine importance sampling with a learned reward / value model so the
+estimate is consistent if \emph{either} the model or the propensity is
+correct. Provides finite-sample concentration bounds and high-confidence
+off-policy evaluation: a $(1-\delta)$ lower bound on $V^\Policy$ that can be
+inspected before deployment.
+
+\paragraph{Why it matters for this week.} Read this before deploying any
+candidate policy to production. The DR estimator is the right default in any
+applied setting with both logs and a reasonable reward model. The
+high-confidence lower bound (Section 4.3) is the deployment gate: only ship
+a policy whose lower bound exceeds the production policy's upper bound.
+
+\begin{quote}\itshape
+``A safe policy improvement scheme: never deploy a policy whose 95\% lower
+bound on value is below the current policy's empirical value. Doubly-robust
+estimation provides the bound that makes this protocol tight.''
+\end{quote}
+``Never deploy unless the lower bound dominates'' is the cleanest production
+rule in RL. It is also the rule that, if synthetic insurance / ATS had it on day one,
+would have prevented several historical regressions.
+
+\section{Joachims, Swaminathan \& de Rijke (2018) --- Deep learning with
+logged bandit feedback}
+\textit{ICLR 2018.}
+
+\paragraph{Summary.} Trains a deep neural-net policy on logged bandit
+feedback using the SNIPS estimator as a counterfactual risk objective.
+Adds \emph{propensity overfitting} controls (self-normalisation, weight
+clipping) to keep deep counterfactual training stable. Bridges classical
+off-policy MC to modern offline-RL methods like CQL.
+
+\paragraph{Why it matters for this week.} It is the deep-learning analogue of
+your week-3 workbook exercise: estimate the value of a target policy from
+logs and \emph{optimise} the policy against that estimate. The propensity-
+overfitting analysis is exactly the safety concern of the lecture.
+
+\begin{quote}\itshape
+``Self-normalisation defeats propensity overfitting --- the failure mode where
+the policy learns to put mass on rare-but-high-weight logged examples. We
+demonstrate this failure empirically and show that SNIPS-based training
+avoids it.''
+\end{quote}
+``Propensity overfitting'' is the deep-learning name for the OIS variance
+explosion. Knowing both names lets you talk to both communities.
+
+\section*{Reading exercises}
+\begin{enumerate}\setlength\itemsep{4pt}
+  \item \textbf{Robbins--Monro, optimal $\alpha_n$.} Robbins--Monro prove
+        convergence under any $\alpha_n$ satisfying the two summability
+        conditions. The optimal rate $\alpha_n = c/n$ achieves $1/\sqrt{n}$
+        mean-square error. Read Polyak \& Juditsky (1992, \emph{SIAM J.\
+        Control}) on iterate averaging --- show that averaging the iterates
+        of a slower-than-optimal step size recovers $1/\sqrt{n}$ asymptotic
+        variance.
+  \item \textbf{Singh--Sutton, finite-sample comparison.} Run first-visit and
+        every-visit MC on a chain MDP with $N\in\{10, 100, 1000\}$ episodes.
+        Plot the bias and variance of each as a function of $N$. Verify the
+        $1/N$ bias claim for every-visit.
+  \item \textbf{Precup--Sutton--Singh, per-decision IS on chains.} Implement
+        per-decision IS on a 5-state chain. Compare its variance with
+        trajectory-level OIS at $T=20$. Verify that the variance ratio scales
+        like $T \cdot \E[\rho^2]$ vs $\E[\rho_\tau^2]$.
+  \item \textbf{Thomas--Brunskill, doubly-robust on Mountain Car.} Train a
+        small reward model on logs of a sub-optimal policy and use it in the
+        DR estimator. Compare the high-confidence lower bound of DR with
+        WIS on a Mountain-Car-like environment.
+  \item \textbf{Joachims et al., BanditNet on synthetic clicks.} Reproduce
+        Algorithm 1 from the paper on the synthetic click dataset in their
+        Section 5. Compare with a naive cross-entropy classifier; how much
+        does propensity overfitting cost the naive approach?
+\end{enumerate}
+
+\section*{Connections to later weeks}
+\begin{itemize}\setlength\itemsep{2pt}
+  \item \emph{Week 4 (TD)} replaces the MC return by a bootstrap target;
+        IS still applies but per-decision.
+  \item \emph{Week 11 (contextual bandits + OPE)} unifies SNIPS, DR, SWITCH,
+        and MIPS in a single contextual-bandit benchmark.
+  \item \emph{Week 14 (offline RL)} extends doubly-robust to full RL
+        (Jiang \& Li 2016) and is the foundation for conservative offline
+        Q-learning.
+  \item \emph{Week 19 (DPO and friends)} uses an importance-weighted
+        contrastive loss directly on preferences --- a direct descendant
+        of the off-policy MC ideas of this week.
 \end{itemize}
+Monte Carlo is conceptually simple but its lessons (coverage, importance
+weights, doubly-robust safety) recur in every off-policy method that follows.
+
+\section*{Sourced from}
+\verb|research/bandits_matching_sota.md| \S 3 and Sutton \& Barto Chapter 5.
+For a deeper dive into OPE see Voloshin, Le, Jiang, Yue \emph{Empirical
+Study of Off-Policy Policy Evaluation for RL} (NeurIPS 2021 benchmarks).
 
 \end{document}

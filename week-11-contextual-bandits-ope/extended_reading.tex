@@ -2,14 +2,292 @@
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week 11: Contextual Bandits and Off-Policy Evaluation}
+\title{Extended reading --- Week 11: Contextual Bandits and Off-Policy Evaluation}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
+\section*{Five papers to read this week}
+
+The five papers below cover the spine of the bandit + OPE literature you
+will lean on for synthetic insurance / ATS work: the original UCB1 analysis, the LinUCB
+news-recommendation paper that founded contextual bandits as a deployable
+technique, the LinTS analysis that turned posterior sampling into a
+defensible default, the Doubly Robust estimator (the only OPE tool you
+should reach for first), and BanditNet (counterfactual risk minimisation
+at deep-net scale).
+
+\subsection*{1. Auer, Cesa-Bianchi, Fischer --- \emph{Finite-time Analysis of the Multiarmed Bandit Problem} (Machine Learning, 2002)}
+
+The paper that turned the 30-year-old Lai--Robbins asymptotic into a
+finite-time, instance-dependent regret bound. UCB1 is presented in two
+pages; the rest is a careful Hoeffding-based proof and an extension to
+the variance-aware UCB1-tuned.
+
+\textbf{Why it matters this week.} Every bandit paper since cites this one.
+The proof technique --- ``either a bad concentration event happened, or
+$N_a \geq 8 \log T / \Delta_a^2$'' --- is the canonical bandit proof
+template. You will see it repeated for LinUCB, KL-UCB, and MOSS.
+
+\begin{quote}
+``At each play, UCB1 maintains a confidence bound for the mean reward of
+each arm. The policy chooses the arm with the largest upper confidence
+bound. We show that the expected regret of this policy after any number
+$n$ of plays is at most $O(\log n)$.''
+\end{quote}
+
+\emph{Commentary.} The single sentence above is the entire premise of OFU
+(optimism in the face of uncertainty). The $O(\log n)$ rate is tight up to
+constants; the instance-dependent $1/\Delta_a$ scaling is the bit you must
+keep in mind when reasoning about \emph{when} bandit algorithms are slow ---
+small $\Delta_a$ means hard problem, and no algorithm can escape this.
+
+\subsection*{2. Li, Chu, Langford, Schapire --- \emph{A Contextual-Bandit Approach to Personalized News Article Recommendation} (WWW 2010, arXiv:1003.0146)}
+
+The paper that put contextual bandits on the industry map. Two algorithms
+(LinUCB-disjoint, LinUCB-hybrid), deployed on Yahoo!\ Today Module,
+evaluated by a clever \emph{replay} estimator that turns logged uniform
+exposures into unbiased offline evaluations.
+
+\textbf{Why it matters this week.} The disjoint-arms LinUCB you implement
+in \texttt{project/agents.py} is the LinUCB from this paper, with the
+tightened confidence radius from Abbasi-Yadkori et al.\ 2011. The hybrid
+variant (a shared feature across arms) is what you would deploy in synthetic insurance
+when most brokers have few observations.
+
+\begin{quote}
+``If we constrain the design of the experiment so that articles are chosen
+uniformly at random in the recorded events, then replay yields an unbiased
+offline evaluation.''
+\end{quote}
+
+\emph{Commentary.} This is the simplest OPE estimator possible --- IPS
+with a uniform behaviour policy collapses to ``keep matches, drop misses''.
+It works because uniform exposure gives perfect overlap. Production loggers
+are almost never uniform; you need the IPS / DR machinery from this week.
+
+\subsection*{3. Agrawal \& Goyal --- \emph{Thompson Sampling for Contextual Bandits with Linear Payoffs} (ICML 2013, arXiv:1209.3352)}
+
+The frequentist regret analysis of LinTS. Earlier work (Chapelle \& Li
+2011) had shown empirically that TS dominates UCB on industrial datasets;
+this paper gives the theoretical scaffolding.
+
+\textbf{Why it matters this week.} The proof structure --- bound the
+probability that a sub-optimal arm's posterior dominates the optimal arm's
+posterior --- generalises directly to Beta-TS (Agrawal \& Goyal 2012),
+NeuralTS, and meta-Thompson. The frequentist bound $\tilde O(d^{3/2} \sqrt{T})$
+is loose by a factor of $\sqrt{d}$ compared to LinUCB; Russo \& Van Roy 2014
+recovered the $d \sqrt T$ rate via an information-theoretic argument.
+
+\begin{quote}
+``Despite its potential and empirical success, theoretical understanding
+of Thompson Sampling has been quite limited. \dots\ We prove a high
+probability regret bound for Thompson Sampling for contextual bandits
+with linear payoff functions of $\tilde O(d^{3/2} \sqrt{T})$.''
+\end{quote}
+
+\emph{Commentary.} The empirical-vs-theoretical gap is a recurring theme.
+Take the message: TS works, the theory is conservative, the production
+default is ``LinTS with $v$ tuned by replay on a held-out log''.
+
+\subsection*{4. Dud\'ik, Langford, Li --- \emph{Doubly Robust Policy Evaluation and Learning} (ICML 2011, arXiv:1103.4601)}
+
+The DR estimator's modern home. Combines the IPS-style importance-weighted
+correction with a Direct-Method baseline, in exactly the form we derived
+in chapter 2.
+
+\textbf{Why it matters this week.} DR is the OPE tool you should default
+to. Lower variance than IPS, lower bias than the Direct Method, and the
+formal double-robustness guarantee makes it the safest choice when you
+are unsure whether the propensities or the reward model are correct ---
+and in practice you are always unsure.
+
+\begin{quote}
+``The estimator is doubly robust: the estimator is consistent when either
+the reward model or the propensity model is correct. The doubly robust
+estimator typically improves upon the direct method and the IPS estimator
+since it uses both reward and propensity information.''
+\end{quote}
+
+\emph{Commentary.} The same DR construction underlies the modern
+``self-normalised DR'' (Thomas \& Brunskill 2016), ``MAGIC'' for sequential
+RL (Thomas \& Brunskill 2016), and the SWITCH-DR thresholding (Wang,
+Agarwal, Dud\'ik 2017). One technique, three decades of papers.
+
+\subsection*{5. Joachims, Swaminathan, de Rijke --- \emph{Deep Learning with Logged Bandit Feedback} (ICLR 2018; BanditNet, arXiv:1707.07724)}
+
+Turns the counterfactual risk minimisation (CRM) principle of Swaminathan
+\& Joachims 2015 into a deep-net training loss. The key trick is the
+\emph{equivariant} SNIPS objective with a Lagrangian rewrite that makes
+SGD stable on logged bandit data.
+
+\textbf{Why it matters this week.} CRM + BanditNet is the only published
+recipe that makes ``train a deep policy directly against logged data''
+work without falling into propensity overfitting. You will use the same
+loss in Week 12 to train the ATS re-ranker against logged shortlists.
+
+\begin{quote}
+``[\dots] direct application of standard supervised learning techniques
+to logged bandit feedback is hindered by the bias inherent in propensity
+weighting and by the high variance of the IPS estimator. We address these
+issues by introducing a counterfactual risk minimisation principle and
+deriving a deep-network training objective.''
+\end{quote}
+
+\emph{Commentary.} The Lagrangian rewrite to handle the self-normalisation
+divisor is non-obvious; read the appendix carefully. The same numerical
+recipe works for ranking (CLTR), recommendation, and ad allocation.
+
+\section*{Bonus paper: Saito \& Joachims --- \emph{Off-Policy Evaluation for Large Action Spaces via Embeddings} (ICML 2022, arXiv:2202.06317)}
+
+The most important applied OPE advance of the last five years. Standard
+IPS variance scales with the number of arms $K$; when actions admit a
+natural embedding $e(a) \in \Real^{d_e}$ with $d_e \ll K$, the
+Marginalised IPS (MIPS) estimator replaces per-action propensities by
+marginal embedding propensities and cuts variance from $O(K/n)$ to
+$O(d_e / n)$.
+
+\textbf{Why it matters.} synthetic insurance may have 6 brokers today but 600 next
+year; ATS has 10\,000+ active requisitions at any time. Without MIPS, OPE
+on these scales is statistically void.
+
+\begin{quote}
+``We show that the variance of the proposed estimator depends on the
+number of effective action embeddings, rather than the number of actions
+$|\mathcal{A}|$.''
+\end{quote}
+
+\emph{Commentary.} The required assumption --- conditional independence
+of the reward from $a$ given $(x, e)$ --- is the embedding-sufficiency
+assumption. For broker matching, a good embedding is the broker's
+historical conversion profile by lead category; for jobs, the requisition
+skill vector. Practical: pick the most expressive embedding that still
+satisfies sufficiency by audit (residual check on a holdout).
+
+\section*{Bonus paper: Bottou et al.\ --- \emph{Counterfactual Reasoning and Learning Systems} (JMLR 2013)}
+
+The Microsoft adCenter paper. 81 pages. Reads like a textbook on how to
+turn a real ad-auction system into a counterfactual-evaluation laboratory.
+Co-authored by Leon Bottou (SGD), John Langford (vowpal wabbit, contextual
+bandits at Microsoft), and the adCenter ML team.
+
+\textbf{Why it matters.} This is the most honest published account of
+running OPE in production. It covers: how to randomise enough to log
+propensities without burning revenue; how to detect propensity overlap
+failures; how to compose multiple counterfactual estimators; how to write
+the dashboard a non-ML stakeholder will actually trust.
+
+\begin{quote}
+``Causal inference is no harder than predictive analytics when the proper
+counterfactual data has been collected. Designing the data collection is
+the hard part.''
+\end{quote}
+
+\emph{Commentary.} The line above should be tattooed on every applied
+ML engineer's wrist. The data collection (logging propensities, version
+hashes, sensitive attributes, delay outcomes) is 80\% of the project; the
+estimator is 20\%. Read this paper twice before touching a synthetic insurance /
+ATS production logger.
+
+\section*{Bonus paper: Bietti, Agarwal, Langford --- \emph{A Contextual Bandit Bake-off} (JMLR 2021, arXiv:1802.04064)}
+
+A 47-page systematic empirical comparison of 21 contextual-bandit
+algorithms across 500+ datasets. The most useful paper if you actually
+have to pick an algorithm for production.
+
+\textbf{Why it matters.} It collapses three decades of bandit research
+into a small number of practical recommendations. Spoiler: ``cover with
+softmax exploration on top of boosted trees, with an offline DR-corrected
+loss'' wins on the median problem; LinUCB / LinTS are competitive on
+linear-friendly datasets but dominated when reward is non-linear in the
+features.
+
+\begin{quote}
+``We find that an algorithm that runs cover-greedy with an online softmax
+exploration policy, combined with a doubly-robust loss for offline
+optimisation, outperforms more sophisticated algorithms across the suite
+of datasets we consider.''
+\end{quote}
+
+\emph{Commentary.} The lesson is not ``cover always wins''. The lesson is
+that the algorithm you pick matters less than (i) whether your features
+are good, (ii) whether you log propensities cleanly, and (iii) whether
+your offline evaluator is doubly robust. Defaults beat sophistication.
+
+\section*{Glossary of terms used in this week's papers}
+
+\begin{description}\setlength\itemsep{2pt}
+  \item[Behaviour / logging policy ($\pi_b$).] The policy that generated
+  the offline log. You evaluate counterfactuals against $\pi_b$.
+  \item[Target policy ($\pi$).] The policy whose value $V(\pi)$ you want
+  to estimate without deploying it.
+  \item[Positivity / overlap.] $\pi_b(a \mid x) > 0$ wherever
+  $\pi(a \mid x) > 0$. Required for IPS / DR unbiasedness.
+  \item[Importance ratio ($w_i$).] $\pi(a_i \mid x_i) / \pi_b(a_i \mid x_i)$.
+  Large weights cause variance; capping is the standard variance-control trick.
+  \item[ESS.] Effective sample size,
+  $(\sum w_i)^2 / \sum w_i^2$. The size of the equivalent i.i.d.\ sample.
+  \item[CRM.] Counterfactual risk minimisation (Swaminathan \& Joachims
+  2015): train a policy by minimising a self-normalised IPS objective with
+  variance regularisation.
+  \item[DR.] Doubly robust: combine IPS-weighted residual correction with
+  a direct-method baseline; unbiased if either component is correct.
+  \item[MIPS.] Marginalised IPS (Saito \& Joachims 2022); use embedding
+  propensities instead of action propensities.
+  \item[Propensity overfitting.] Re-fitting $\pi_b$ from logs leaks reward
+  into the propensity; biases IPS. Log $\pi_b$ at decision time.
+  \item[Delayed feedback.] Reward arrives after a stochastic delay.
+  Biases recent-policy evaluation downward. Mitigate by censoring or
+  survival modelling (Chapelle 2014; Vernade et al.\ 2017).
+\end{description}
+
+\section*{Where to go next}
+
 \begin{itemize}
-  \item TODO
+  \item \textbf{Textbook}: Lattimore \& Szepesv\'ari, \emph{Bandit
+  Algorithms} (Cambridge UP, 2020) --- chapters 7--10 cover UCB, KL-UCB,
+  MOSS; 19--22 cover LinUCB and LinTS; 28--32 cover OPE and CRM.
+  \item \textbf{Empirical state of the art}: Bietti, Agarwal, Langford,
+  \emph{A Contextual Bandit Bake-off} (JMLR 2021) --- the right reference
+  for which algorithm to use on real logs (spoiler: bag-of-trees with
+  bootstrap-TS and an offline doubly-robust correction).
+  \item \textbf{Large action spaces}: Saito \& Joachims, \emph{Off-Policy
+  Evaluation for Large Action Spaces via Embeddings} (ICML 2022; MIPS).
+  The variance-from-$K$-to-$d_e$ trick is the most important practical
+  advance of the past five years for matching applications.
+  \item \textbf{Production}: Bottou et al., \emph{Counterfactual Reasoning
+  and Learning Systems} (JMLR 2013) --- the Microsoft adCenter paper that
+  spells out the full propensity-logging, OPE, and counterfactual-training
+  pipeline. Mandatory reading before any production deployment.
+\end{itemize}
+
+\emph{Sourced from} \texttt{research/bandits\_matching\_sota.md} sections
+1--3 (stochastic, contextual, and OPE) and section 12 (production case
+studies).
+
+\section*{Annotated reading order}
+
+If you have only one weekend, read in this order:
+\begin{enumerate}
+  \item Bottou et al.\ 2013 (the production map). Skim sections 1--3, deep-read 4--6.
+  \item Auer, Cesa-Bianchi, Fischer 2002 (UCB1). Two pages of algorithm, 12 of proof.
+  \item Li et al.\ 2010 (LinUCB). Algorithm, replay evaluation, production results.
+  \item Dud\'ik, Langford, Li 2011 (DR). Three pages of derivation.
+  \item Bietti, Agarwal, Langford 2021 (Bake-off). Skim the result tables, read sections 2 and 5.
+\end{enumerate}
+
+If you have one focused day after the weekend, add:
+\begin{enumerate}\setcounter{enumi}{5}
+  \item Agrawal \& Goyal 2013 (LinTS). The frequentist analysis, focus on Lemma 1.
+  \item Joachims, Swaminathan, de Rijke 2018 (BanditNet). The CRM Lagrangian.
+  \item Saito \& Joachims 2022 (MIPS). The embedding-sufficiency assumption.
+\end{enumerate}
+
+If you are about to deploy this in production, also read:
+\begin{itemize}
+  \item Wu, Srikant et al.\ 2016 (Conservative Bandits).
+  \item Chapelle 2014 (Delayed Feedback).
+  \item Lattimore \& Szepesv\'ari 2020, chapter 32 (off-policy evaluation chapter).
 \end{itemize}
 
 \end{document}

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Inventory existing artifacts and run each week's tests in a fresh process.
 # This script does not compile PDFs or execute notebooks; use make all for those.
-# Writes a TSV report to qa_report.tsv. Exits 0 if all green.
+# Writes a TSV report to reports/qa_report.tsv. Exits 0 if all green.
 set -u
 shopt -s nullglob
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
-REPORT="qa_report.tsv"
+REPORT="reports/qa_report.tsv"
+mkdir -p reports
 echo -e "week\tnotes.pdf\textended_reading.pdf\tworkbook.ipynb\tworkbook.executed\ttests\tnotes_pages" > "$REPORT"
 
 pass=0; fail=0

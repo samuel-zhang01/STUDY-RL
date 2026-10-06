@@ -116,7 +116,7 @@ WORKBOOK_TEMPLATE = {
 PROJECT_INIT = '"""Mini-project for week %(n)s — %(title)s."""\n'
 GUIDE_TEMPLATE = """# Week %(n)s — %(title)s: teaching guide
 
-Read [the course study guide](../STUDY_GUIDE.md) and [notation](../GLOSSARY.md).
+Read [the course study guide](../docs/STUDY_GUIDE.md) and [notation](../docs/GLOSSARY.md).
 This is an authoring scaffold; complete and verify it before teaching from it.
 
 ## Prerequisites and the question

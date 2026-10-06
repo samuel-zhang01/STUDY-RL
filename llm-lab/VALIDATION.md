@@ -30,10 +30,9 @@ make llm-notebook PY=python
 
 ## Earlier short adapter checks
 
-Before the request to focus on the guide, two short LoRA checks had already
-completed on SmolLM2-135M-Instruct: 30 SFT optimizer updates and 20 DPO updates.
+Two short LoRA checks completed on SmolLM2-135M-Instruct: 30 SFT optimizer updates and 20 DPO updates.
 They updated **2,442,240 adapter parameters**, with the starting transformer
-weights frozen. No further model-training runs were started after that request.
+weights frozen. These recorded runs preceded later input-validation refinements.
 
 The base revision was `12fd25f77366fa6b3b4b768ec3050bf629380bac`.
 These are illustrative single-seed checks on synthetic addition, not a model
@@ -73,5 +72,5 @@ CUDA LoRA, NF4 QLoRA, BF16 selection, and gradient checkpointing are implemented
 The [RTX 5090 guide](NVIDIA.md) includes installation, actual kernel checks,
 two-step smoke commands, and cautious larger-model starting settings.
 This machine has no NVIDIA GPU, so RTX 5090 execution, CUDA peak memory, and
-the 1.7B/7B examples remain unmeasured here. Run those optional commands on your
-NVIDIA machine when you choose to start training.
+the 1.7B/7B examples remain unmeasured here. Run those optional commands on an
+NVIDIA machine when ready to start training.

@@ -8,7 +8,7 @@ Two heuristics:
       and flag pages where non-white pixels touch within `EDGE_PX` of the
       page edge — i.e. content is hugging or exceeding the trim.
 
-Writes a TSV report to pdf_margin_report.tsv. Exit 1 if any PDF fails.
+Writes a TSV report to reports/pdf_margin_report.tsv. Exit 1 if any PDF fails.
 
 Usage: python scripts/pdf_margin_sweep.py [--render]
 """
@@ -138,7 +138,8 @@ def main(argv: list[str]) -> int:
             fail += 1
         rows.append(("syllabus", "syllabus", st))
 
-    out_path = ROOT / "pdf_margin_report.tsv"
+    out_path = ROOT / "reports" / "pdf_margin_report.tsv"
+    out_path.parent.mkdir(exist_ok=True)
     with out_path.open("w") as f:
         f.write("week\tdoc\tstatus\n")
         for r in rows:

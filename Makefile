@@ -4,12 +4,22 @@ LATEXMK := latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error
 WEEKS := $(sort $(wildcard week-*))
 PY := python3
 
-.PHONY: all syllabus weeks notebooks tests llm-tests llm-notebook qa clean cleanall
+.PHONY: help all syllabus weeks notebooks tests course-tests llm-tests llm-notebook qa release-check secrets clean cleanall
+
+help:
+	@echo "Install: python -m pip install -r requirements.txt"
+	@echo "course-tests: shared tools and every weekly suite (CPU)"
+	@echo "tests: course-tests plus optional LLM lab tests"
+	@echo "release-check: repository hygiene, notebook structure, local links"
+	@echo "secrets: Gitleaks scan of every Git ref (requires gitleaks)"
+	@echo "syllabus / weeks: rebuild PDFs (requires TeX Live)"
+	@echo "notebooks / llm-notebook: execute reference workbooks"
+	@echo "clean: remove generated caches while retaining shipped PDFs"
 
 all: syllabus weeks notebooks tests
 
 syllabus:
-	cd syllabus && $(LATEXMK) syllabus.tex && cp syllabus.pdf ../syllabus.pdf
+	cd syllabus && $(LATEXMK) syllabus.tex
 
 weeks:
 	@for w in $(WEEKS); do \
@@ -25,11 +35,12 @@ notebooks:
 	  fi; \
 	done
 
-tests:
+tests: course-tests llm-tests
+
+course-tests:
 	@for w in common $(WEEKS) scripts; do \
 	  OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=. $(PY) -m pytest "$$w/tests" -q --maxfail=3 || exit 1; \
 	done
-	$(MAKE) llm-tests
 
 qa: all
 	$(PY) scripts/qa_report.py
@@ -41,9 +52,13 @@ llm-tests:
 llm-notebook:
 	PYTHONPATH=llm-lab $(PY) -m llm_lab.execute_workbook
 
+release-check:
+	$(PY) scripts/check_release.py
+
+secrets:
+	gitleaks git --redact --log-opts="--all --full-history" .
+
 clean:
-	@for w in $(WEEKS); do (cd $$w && latexmk -C) ; done
-	cd syllabus && latexmk -C
+	$(PY) scripts/clean_generated.py
 
 cleanall: clean
-	rm -rf $(foreach w,$(WEEKS),$(w)/_minted-*) syllabus/_minted-*

@@ -54,6 +54,22 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+.claude/
+.codex/
+.env
+.env.*
+!.env.example
+*.local.json
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+reports/
+*.bundle
+*.safetensors
+*.bin
 
 # Keep PDFs (they are the build artifact we ship)
 !**/notes.pdf

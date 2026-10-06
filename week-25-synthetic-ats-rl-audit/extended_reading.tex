@@ -1,0 +1,175 @@
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{../common/rlstudy}
+
+\title{Extended reading --- Week 25: synthetic ATS RL Enhancement Audit}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section*{Six papers to read this week}
+
+The six papers below are the spine of the audit's argument: counterfactual
+learning to rank, fair re-ranking in talent search, the LinTS analysis
+that justifies our Phase-1 algorithm choice, DPO for the LLM components,
+PPO-Lagrangian for the constrained variant, and the EU AI Act
+high-risk-system obligations as they bear on recruitment platforms.
+
+\subsection*{1. Joachims, Swaminathan, de Rijke --- \emph{Deep Learning with Logged Bandit Feedback} (ICLR 2018, arXiv:1707.07875)}
+
+Introduces \textbf{BanditNet}, a counterfactual-risk-minimisation
+estimator that lets neural networks be trained directly from logged
+bandit feedback without an interaction loop. The key insight is the
+self-normalised IPS objective with a variance-regularisation term.
+
+\textbf{Why it matters this week.} The Phase-1 reranker is exactly this
+setting --- we have logged ranking decisions and propensities, we want
+to train a model offline without re-running the recruiter loop. The
+SNIPS variant we use in \texttt{project/ope.py} is the same estimator
+BanditNet builds its loss around.
+
+\begin{quote}
+``We propose Counterfactual Risk Minimization (CRM) for training deep
+networks using batch logged bandit feedback. Our experiments show that
+the proposed CRM objective with the self-normalised estimator and a
+variance regulariser significantly outperforms approaches that maximise
+predictive likelihood or use the naive IPS estimator.''
+\end{quote}
+
+\emph{Commentary.} The variance regularisation is the practical bit.
+A pure SNIPS objective will happily converge to a deterministic policy
+even on tiny data, with absurd importance weights. The CRM regulariser
+penalises high-variance solutions and is the reason BanditNet works
+out-of-the-box on real logs. Carry this into any production OPE work.
+
+\subsection*{2. Geyik, Ambler, Kenthapadi --- \emph{Fairness-Aware Ranking in Search \& Recommendation Systems with Application to LinkedIn Talent Search} (KDD 2019, arXiv:1905.01989)}
+
+LinkedIn's deployed post-processing reranker that enforces a target
+demographic distribution on the top-$k$. Three algorithms (DetGreedy,
+DetCons, DetRelaxed) trading utility against constraint tightness; the
+authors deployed DetGreedy at scale.
+
+\textbf{Why it matters this week.} This is the closest published
+production reference for what we propose at D1 + the CMDP constraint.
+The audit borrows two of their tricks verbatim: (i) measure parity at
+the top-$k$ slate, not at the full ranking; (ii) treat the
+fairness-utility trade-off as a frontier, not a single point.
+
+\begin{quote}
+``We propose a measurement framework for assessing fairness of ranked
+results, [...] and a re-ranking framework that ensures fairness while
+having no significant impact on business metrics.''
+\end{quote}
+
+\emph{Commentary.} The ``no significant impact on business metrics''
+clause is the policy-deployment language we need for the Phase-2 go/no-go
+gate. Without an explicit business-metric guarantee, fairness work
+loses internal champions fast. Bake the dual evaluation into the
+roadmap.
+
+\subsection*{3. Agrawal \& Goyal --- \emph{Thompson Sampling for Contextual Bandits with Linear Payoffs} (ICML 2013, arXiv:1209.3352)}
+
+Frequentist regret analysis of LinTS. Bounds the probability that a
+sub-optimal arm's posterior dominates the optimal arm's, and yields
+$\tilde O(d^{3/2} \sqrt{T})$ regret.
+
+\textbf{Why it matters this week.} The Phase-1 algorithm. The
+$d^{3/2}$ scaling matters because the candidate-job feature vector is
+$d = 16$ in our demo and would be $d \approx 60{-}100$ in production
+(skill embeddings + agent scores + confidence). LinTS scales gracefully;
+LinUCB needs more care with the confidence ellipsoid radius at large
+$d$.
+
+\begin{quote}
+``At each time step, the algorithm picks an action by drawing a sample
+from the current posterior distribution over the parameter and choosing
+the action that maximises the expected reward given that sample.''
+\end{quote}
+
+\emph{Commentary.} The deceptively simple sample-then-greedy mechanism
+has two industrial virtues that drove its adoption at Yahoo!\ and
+Microsoft: (a) it parallelises trivially (every shard samples its own
+$\tilde\theta$); (b) it remains well-calibrated even when the posterior
+is approximate (e.g.\ Laplace approximation), unlike UCB whose
+confidence ellipsoid degrades sharply.
+
+\subsection*{4. Rafailov, Sharma, Mitchell, Manning, Ermon, Finn --- \emph{Direct Preference Optimization: Your Language Model is Secretly a Reward Model} (NeurIPS 2023, arXiv:2305.18290)}
+
+DPO. The paper that replaced RLHF's two-step (reward model $\to$ PPO)
+with a single closed-form preference loss. Eliminates the reward-model
+overfitting failure mode and is far cheaper to train.
+
+\textbf{Why it matters this week.} D5 (outreach copy) and D11 (JD
+polishing) are exactly the regime DPO was designed for: we have logged
+recruiter preferences over pairs of LLM drafts, we want to update the
+draft model to align with those preferences, and we cannot afford a
+full RLHF stack. DPO is the Phase-4 recipe.
+
+\begin{quote}
+``Our experiments show that DPO is at least as good or better than
+existing methods, including PPO-based RLHF, while being substantially
+simpler to implement and train.''
+\end{quote}
+
+\emph{Commentary.} The under-discussed risk with DPO is length bias
+(week 19, week 21): the closed-form solution can drift to longer
+responses regardless of preference content. The mitigation
+(length-controlled DPO; Park et al.\ 2024, arXiv:2403.19159) is the
+single must-cite extension when arguing the production case.
+
+\subsection*{5. Stooke, Achiam, Abbeel --- \emph{Responsive Safety in Reinforcement Learning by PID Lagrangian Methods} (ICML 2020, arXiv:2007.03964)}
+
+PID-controlled Lagrange multiplier for CMDPs --- the practical recipe
+that makes PPO-Lagrangian actually work. Plain Lagrangian methods
+oscillate; PID damping converges.
+
+\textbf{Why it matters this week.} The Phase-3 constrained learner is a
+PPO-Lagrangian. The cost in our case is a fairness metric; the PID
+machinery is what keeps the multiplier from oscillating around the
+constraint boundary as the applicant pool drifts.
+
+\begin{quote}
+``We treat the Lagrange multiplier update as a control problem and
+apply PID control to it, achieving improved stability and final
+performance over standard Lagrangian methods.''
+\end{quote}
+
+\emph{Commentary.} The PID gains are the new hyperparameters you have
+to tune. Stooke et al.\ provide a small grid; we recommend starting
+with their reported values for the Safety Gym suite and re-tuning
+against the simulated parity drift in our \texttt{constrained.py} demo.
+
+\subsection*{6. Future of Life Institute (eds.) --- \emph{The EU AI Act: A Practical Guide for Recruitment AI} (FLI policy brief, 2024--2025)}
+
+Walks through Annex III point 4 (recruitment), Articles 9 (risk
+management), 13--15 (transparency / accuracy / oversight), and 26
+(deployer obligations) as they apply concretely to ATS platforms.
+Recommends operating models, audit cadences, and documentation
+templates.
+
+\textbf{Why it matters this week.} Chapter 7 of the notes leans on the
+Act. The brief is the most concise compliance-grade reference for
+defending the audit's roadmap to a legal review board.
+
+\begin{quote}
+``Providers of high-risk AI systems used for recruitment or selection
+of natural persons must implement a quality management system,
+maintain technical documentation, log decision events with sufficient
+detail to support audits, and ensure that affected persons can request
+human review.''
+\end{quote}
+
+\emph{Commentary.} The Act does not prescribe an algorithm. It
+prescribes a process. The audit's Phase 0 (instrument logging,
+introduce $\varepsilon$-soft exploration) is the cheapest, fastest
+route to Act compliance --- without it, no later phase can be
+defensibly deployed in the EU. Even teams outside the EU should treat
+this as the de-facto standard; UK and US regulators (ICO, EEOC) are
+converging on similar requirements.
+
+\bigskip
+\emph{Sourced from} \texttt{research/bandits\_matching\_sota.md},
+\texttt{research/safety\_rl\_sota.md}, and
+\texttt{research/llm\_rl\_sota.md} in this repository.
+
+\end{document}

@@ -24,7 +24,7 @@ general reasoning ability.
 | [5. Running a training project](lessons/05-running-a-training-project.md) | Design splits, compare checkpoints, diagnose failures, and report results with evidence |
 
 Work through the [numerical workbook](workbook.ipynb) before a longer training run.
-For your **RTX 5090**, use the [NVIDIA setup and training guide](NVIDIA.md).
+For an **RTX 5090**, use the [NVIDIA setup and training guide](NVIDIA.md).
 
 ## Start learning without training a model
 

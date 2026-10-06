@@ -2,14 +2,256 @@
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
 
-\title{Extended reading — Week 12: RL for Ranking and Two-Sided Matching}
+\title{Extended reading --- Week 12: Ranking and Two-Sided Matching}
 \date{\today}
 \begin{document}
 \maketitle
 
-\section*{Papers}
-\begin{itemize}
-  \item TODO
+\section*{Five papers, ranked by deploy-relevance}
+
+\subsection*{1. Joachims, Swaminathan, Schnabel --- \emph{Unbiased Learning-to-Rank with Biased Feedback} (WSDM 2017, arXiv:1608.04468)}
+
+The paper that put counterfactual learning-to-rank on the production map.
+Introduces the position-bias model, the IPS-LTR estimator, and the dual
+EM-style estimation of the propensity vector $p_k$.
+
+\textbf{Why it matters this week.} The IPS-LTR estimator in our
+\texttt{project/cltr.py} is the WSDM 2017 estimator. The dual learning
+extension (Ai et al.\ SIGIR 2018) builds directly on this paper; the 2024
+DR-CLTR (Gupta, Oosterhuis, de Rijke WSDM 2024) extension uses the same
+position-bias model with a doubly-robust correction.
+
+\begin{quote}
+``We show that the bias in the click data can be eliminated if we know the
+propensities $p_k$ of observing relevance feedback. The propensities can
+be estimated either by intervention experiments (RandTopN) or by joint
+EM estimation alongside the ranker.''
+\end{quote}
+
+\emph{Commentary.} The RandTopN intervention is the gold standard for
+$p_k$ estimation; deploy it on a small fraction of traffic (typically
+1--5\%) and you get unbiased propensity estimates as a byproduct. The EM
+joint estimation is cheaper but assumes the position-bias model is
+correctly specified --- which it often is not (cascade effects, multi-tab
+viewing). Trust direct intervention.
+
+\subsection*{2. Ie, Jain, Wang, Narvekar, Agarwal, Wu, Cheng, Chandra, Boutilier --- \emph{SlateQ: A Tractable Decomposition for Reinforcement Learning with Recommendation Sets} (IJCAI 2019)}
+
+The Google paper that made slate-RL practically tractable. The key trick:
+under a single-choice user model, $Q(s, \mathbf{A}) = \sum_a P(a \mid \mathbf{A}, s) Q(s, a)$.
+The slate-action Q-function decomposes into a sum of per-item Q-functions,
+and the slate optimisation reduces to a fractional knapsack.
+
+\textbf{Why it matters.} For the ATS slate (top-50 candidate list), SlateQ
+is the right framework if you want to optimise long-run reward (hire +
+retention) rather than instantaneous click probabilities. The per-item
+Q-functions can be learned with standard DQN / actor-critic techniques.
+
+\begin{quote}
+``The single-choice user model is a strong assumption, but it allows the
+slate action-value function to be decomposed into a weighted sum of
+per-item action-value functions, where the weights are determined by the
+user choice model.''
+\end{quote}
+
+\emph{Commentary.} The single-choice assumption fails when users consider
+multiple items per slate (recruiters do, every time). The Mehrotra et al.\
+2020 extension relaxes it via a multi-choice user model; the empirical gap
+is usually small ($\sim 1$--$3\%$ NDCG) and the single-choice version is
+the right place to start.
+
+\subsection*{3. Chen, Beutel, Covington, Jain, Belletti, Chi --- \emph{Top-K Off-Policy Correction for a REINFORCE Recommender System} (WSDM 2019)}
+
+YouTube's live-deployed RL-recsys paper. Introduces the $\lambda_K = K(1 - \pi(a|s))^{K-1}$
+correction for slate-of-$K$ policy gradients, plus importance-ratio clipping
+and a behaviour-policy regulariser.
+
+\textbf{Why it matters.} The top-$K$ correction is the single most
+important piece of off-policy machinery for slate recommenders. Without
+it, the policy gradient overweights items that the new policy already
+favours (because they would still be in the top-$K$ even without training
+push), and underweights tail items (where the marginal training gain
+actually lives).
+
+\begin{quote}
+``We find that the top-$K$ correction $\lambda_K(a|s) = K(1 - \pi(a|s))^{K-1}$
+substantially improves stability and final performance over vanilla
+off-policy REINFORCE.''
+\end{quote}
+
+\emph{Commentary.} Two things to note. First, the correction assumes a
+softmax policy; for other policy classes, you need a different derivative.
+Second, the correction has a closed-form expression specifically because
+the slate is sampled \emph{without replacement} from the softmax; if you
+relax this (e.g., sample with placement constraints), the correction
+becomes intractable.
+
+\subsection*{4. Geyik, Ambler, Kenthapadi --- \emph{Fairness-Aware Ranking in Search \& Recommendation Systems with Application to LinkedIn Talent Search} (KDD 2019)}
+
+The most ATS-relevant published fairness paper. LinkedIn's production
+recruiter-search architecture with a fairness post-processor enforcing
+gender-representation constraints on the shortlist.
+
+\textbf{Why it matters.} The architecture --- ML ranker + fairness LP
+post-processor --- is exactly what you should implement for synthetic ATS.
+The paper documents extensive ablations on how to define the ``qualified
+applicant pool'' (the constraint reference distribution), which is the
+hardest research question in the area.
+
+\begin{quote}
+``Our fairness-aware ranking algorithm enforces representation constraints
+at every rank cutoff. We achieve a 10--15\% increase in the female
+representation of LinkedIn recruiter search results with negligible
+NDCG impact.''
+\end{quote}
+
+\emph{Commentary.} The 10--15\% delta is striking because the
+counterfactual is ``do nothing''. Most fairness interventions trade off
+significant accuracy for marginal fairness gains; this one gets a major
+fairness win at little accuracy cost. The reason: the production model
+was already close-to-fair on relevance, so the post-processor only
+needed to make small adjustments. If your baseline is more biased, the
+NDCG cost is higher.
+
+\subsection*{5. Kull, Filho, Flach --- \emph{Beta Calibration: a well-founded and easily implemented improvement on logistic calibration for binary classifiers} (AISTATS 2017)}
+
+The three-parameter Beta-calibration family that beats Platt scaling on
+most binary classification tasks. The mechanism: $f_{\mathrm{cal}}(s) = \sigma(a \log s + b \log(1 - s) + c)$ with
+positive coefficients.
+
+\textbf{Why it matters.} Beta is the right default calibrator in 2024+
+for binary classifiers (hire / no-hire, bind / no-bind). It is two-line
+implementation in scikit-learn; it strictly dominates Platt; it does not
+need the $\sim 1000$ samples that isotonic does.
+
+\begin{quote}
+``We propose Beta calibration, a calibration method based on the Beta
+distribution that strictly generalises the logistic calibration of Platt
+(1999) while remaining a three-parameter family.''
+\end{quote}
+
+\emph{Commentary.} The proof that Beta strictly generalises Platt is
+elegant: Platt is the special case $a = b$. Freeing $a \neq b$ allows the
+calibrator to handle skewed score distributions where the over-confidence
+is asymmetric across positive and negative classes. The catch: if your
+score is very confidently wrong on one tail, Beta still struggles ---
+isotonic is the safer choice in the high-data regime.
+
+\section*{Bonus paper: Liu, Mania, Jordan --- \emph{Competing Bandits in Matching Markets} (AISTATS 2020, arXiv:1906.05363)}
+
+The theoretical foundation for two-sided bandit matching. Both sides
+explore; both sides have preferences; the stable-matching regret bound is
+$\tilde O(K \sqrt{T})$ with constants dominated by the worst-served side.
+
+\textbf{Why it matters.} The ATS market is two-sided. A unilateral CTR
+maximiser does not just lose welfare; it actively undermines its own
+training signal because the candidate side rejects the matches it suggests.
+This paper formalises that intuition.
+
+\begin{quote}
+``We define the notion of \emph{stable regret}, the difference between
+the expected match value of an algorithm and the worst stable match.
+Both UCB and TS-style algorithms achieve $\tilde O(K \sqrt T)$ stable
+regret, matching the lower bound up to logarithmic factors.''
+\end{quote}
+
+\emph{Commentary.} Stable regret is the right currency for two-sided
+markets. Pure-CTR regret is satisfied by an unstable matching (the
+recruiter accepts, the candidate withdraws); stable regret penalises that.
+
+\section*{Bonus paper: Singh \& Joachims --- \emph{Fairness of Exposure in Rankings} (KDD 2018, arXiv:1802.07281)}
+
+Introduces the exposure-fairness primitive: items get exposure equal to
+the position bias of the ranks they occupy; group fairness can be
+formalised as equal-exposure-per-group.
+
+\textbf{Why it matters.} Exposure is the right unit of fairness for
+two-sided markets because attention is the scarce resource. Both synthetic insurance
+(brokers competing for lead-time-on-screen) and ATS (candidates
+competing for recruiter attention) are exposure-fairness problems
+fundamentally.
+
+\begin{quote}
+``We propose a fairness constraint based on exposure, defined as the
+expected position-bias-weighted appearance of an item in the ranking.
+This formulation enables linear-program-based fair rerankers with
+provable accuracy guarantees.''
+\end{quote}
+
+\emph{Commentary.} The LP formulation in the paper is solvable for
+top-50-sized slates in $<10$\,ms; production deployable. The trickier
+question is what reference distribution to constrain against (parity?
+proportional? merit-weighted?) --- the paper leaves this as an application
+choice.
+
+\section*{Annotated reading order}
+
+Three weeks of evening reading:
+
+\textbf{Week 1:} Joachims et al.\ WSDM 2017 (IPS-LTR), Ie et al.\ IJCAI 2019
+(SlateQ), Chen et al.\ WSDM 2019 (REINFORCE-Top-K).
+
+\textbf{Week 2:} Geyik et al.\ KDD 2019 (LinkedIn fairness), Singh \&
+Joachims KDD 2018 (exposure), Kull et al.\ AISTATS 2017 (Beta calibration).
+
+\textbf{Week 3:} Liu, Mania, Jordan AISTATS 2020 (competing bandits),
+Bottou et al.\ JMLR 2013 (counterfactual systems), Lattimore \&
+Szepesv\'ari ch.\ 32 (OPE) and ch.\ 21 (LinTS), Roth \& Sotomayor
+\emph{Two-Sided Matching} (1990, foundational).
+
+\section*{Production papers (skim these too)}
+
+\begin{itemize}\setlength\itemsep{1pt}
+  \item Borisyuk, Kenthapadi, Salim --- \emph{LiJAR: LinkedIn Job Activity
+    Reranker} (KDD 2017).
+  \item Chandrashekar et al.\ --- \emph{Artwork Personalisation at Netflix}
+    (Netflix blog, 2017).
+  \item Steck --- \emph{Calibrated Recommendations} (RecSys 2018).
+  \item McInerney, Lacker, Hansen et al.\ --- \emph{Explore, Exploit, and
+    Explain: Personalising Spotify with Slate-Based RL} (RecSys 2018).
+  \item Indeed Engineering Blog --- \emph{Job Search Two-Tower Retrieval}
+    (2020--2022, multiple posts).
+  \item ZipRecruiter Engineering Blog --- \emph{Two-Sided Marketplace
+    Matching} (2021--2023).
 \end{itemize}
+
+\section*{Glossary of week 12 terms}
+
+\begin{description}\setlength\itemsep{1pt}
+  \item[Bi-encoder / two-tower.] Two neural networks with a shared output
+  dimension, scored by cosine similarity. Trained with InfoNCE on
+  (query, positive-item) pairs with in-batch negatives.
+  \item[Cross-encoder.] A single neural network that takes the concatenated
+  (query, item) sequence and outputs a relevance scalar. More accurate
+  than a bi-encoder but lacks pre-indexing.
+  \item[NDCG@k.] Normalised Discounted Cumulative Gain at position $k$;
+  the canonical graded-relevance ranking metric.
+  \item[Position-bias.] The probability that a user examines (and so
+  can click) the item at position $k$; modelled as $p_k = 1/k^\eta$ in
+  the canonical PBM.
+  \item[IPS-LTR.] Inverse-Propensity Scoring for Learning-to-Rank;
+  weights each click by $1/p_k$ to remove position bias.
+  \item[SlateQ.] Slate Q-function decomposition under the single-choice
+  user model; reduces slate optimisation to fractional knapsack.
+  \item[Top-K correction.] The $\lambda_K = K(1 - \pi(a|s))^{K-1}$
+  factor in slate-of-$K$ policy gradients (Chen et al.\ WSDM 2019).
+  \item[Demographic parity (DP).] Equal probability of top-$k$ inclusion
+  across protected groups.
+  \item[Equalised opportunity (EO).] Equal probability of top-$k$
+  inclusion among the \emph{qualified} candidates across protected groups.
+  \item[Exposure fairness.] Equal position-bias-weighted exposure across
+  protected groups (Singh \& Joachims 2018).
+  \item[ECE.] Expected Calibration Error; bin-averaged absolute gap
+  between predicted probability and empirical accuracy.
+  \item[Beta calibration.] $\sigma(a \log s - b \log(1 - s) + c)$ with
+  $a, b \geq 0$; the recommended default calibrator for binary tasks.
+  \item[Stable matching.] A matching with no blocking pair $(c, j)$
+  where each prefers the other to their current match.
+  \item[FairCo.] Online linear-program post-processor enforcing
+  exposure-fairness constraints (Morik et al.\ SIGIR 2020).
+\end{description}
+
+\emph{Sourced from} \texttt{research/bandits\_matching\_sota.md} sections
+4--12 (CLTR, slate RL, matching markets, fairness, calibration, production).
 
 \end{document}

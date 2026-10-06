@@ -1,0 +1,27 @@
+week	teaching_guide	worked_example_sections	self_checks	notebook	notebook_schema	tests	notes_pdf	notes_pages	overfull_above_5pt	edge_cutoff_pages
+week-01-mdps-bandits	PRESENT	3	3	EXECUTED	VALID	11 passed in 1.16s	BUILT	17	0	none
+week-02-bellman-dp	PRESENT	2	3	EXECUTED	VALID	13 passed in 0.80s	BUILT	14	0	none
+week-03-monte-carlo	PRESENT	3	3	EXECUTED	VALID	11 passed in 1.24s	BUILT	14	0	none
+week-04-td-sarsa-q	PRESENT	2	3	EXECUTED	VALID	18 passed in 0.99s	BUILT	14	0	none
+week-05-dqn	PRESENT	3	3	EXECUTED	VALID	14 passed, 3 warnings in 6.81s	BUILT	14	0	none
+week-06-rainbow-bbf	PRESENT	3	3	EXECUTED	VALID	19 passed, 3 warnings in 8.54s	BUILT	15	0	none
+week-07-policy-gradients	PRESENT	3	3	EXECUTED	VALID	11 passed in 1.77s	BUILT	16	0	none
+week-08-a2c-gae-trpo	PRESENT	3	3	EXECUTED	VALID	8 passed, 3 warnings in 1.63s	BUILT	17	0	none
+week-09-ppo	PRESENT	3	3	EXECUTED	VALID	10 passed, 3 warnings in 1.85s	BUILT	16	0	none
+week-10-sac-td3	PRESENT	3	3	EXECUTED	VALID	9 passed in 3.82s	BUILT	14	0	none
+week-11-contextual-bandits-ope	PRESENT	3	3	EXECUTED	VALID	12 passed in 1.26s	BUILT	24	0	none
+week-12-rl-ranking-matching	PRESENT	3	3	EXECUTED	VALID	13 passed in 4.52s	BUILT	36	0	none
+week-13-multi-agent-alphazero	PRESENT	3	3	EXECUTED	VALID	17 passed in 8.06s	BUILT	25	0	none
+week-14-offline-rl-1	PRESENT	3	3	EXECUTED	VALID	12 passed in 1.57s	BUILT	13	0	none
+week-15-decision-transformer-diffusion	PRESENT	3	3	EXECUTED	VALID	7 passed in 2.22s	BUILT	12	0	none
+week-16-model-based	PRESENT	3	3	EXECUTED	VALID	7 passed, 1 warning in 2.00s	BUILT	12	0	none
+week-17-exploration-meta	PRESENT	2	3	EXECUTED	VALID	7 passed, 1 warning in 2.76s	BUILT	12	0	none
+week-18-rlhf-ppo-llm	PRESENT	2	3	EXECUTED	VALID	15 passed in 1.87s	BUILT	26	0	none
+week-19-dpo-zoo	PRESENT	2	3	EXECUTED	VALID	18 passed in 1.67s	BUILT	25	0	none
+week-20-grpo-rloo-rlvr	PRESENT	2	3	EXECUTED	VALID	13 passed in 4.45s	BUILT	20	0	none
+week-21-reward-hacking-oversight	PRESENT	2	3	EXECUTED	VALID	14 passed in 3.47s	BUILT	16	0	none
+week-22-cmdp-cpo-lagrangian	PRESENT	2	3	EXECUTED	VALID	10 passed in 9.11s	BUILT	17	0	none
+week-23-safe-exploration-shielding-robust	PRESENT	2	3	EXECUTED	VALID	13 passed in 2.36s	BUILT	15	0	none
+week-24-capstone-safe-matching	PRESENT	2	3	EXECUTED	VALID	15 passed in 6.21s	BUILT	16	0	none
+week-25-synthetic-ats-rl-audit	PRESENT	2	3	EXECUTED	VALID	20 passed in 3.55s	BUILT	30	0	none
+week-26-causal-discovery-biological-data	PRESENT	3	5	EXECUTED	VALID	12 passed in 1.00s	BUILT	26	0	none
