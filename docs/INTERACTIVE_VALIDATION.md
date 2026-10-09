@@ -16,7 +16,7 @@ not results from a human learning study.
 | New Python projects | 21 standard-library tests pass; terminal/cutoff semantics, shielding, logged support, deterministic fixtures and CLI error behavior are checked |
 | Browser numerical models | 12 Node tests pass; independent hand targets, signed PPO terms, GAE endpoints, OPE support/weights, causal reversal, invalid inputs and multi-seed learning are checked |
 | Adversarial learner | Independently ran Python/engine checks, a 30-seed courier probe and actual interactions in all ten Chromium chapters |
-| Browser workflows | Chromium and WebKit each pass 329 assertions across all ten screens at 320, 390, 768 and 1280 pixels |
+| Browser workflows | Chromium and WebKit pass locally; fresh Linux Chromium, Firefox and WebKit each pass 330 assertions across all ten screens at 320, 390, 768 and 1280 pixels |
 | Interaction boundaries | Invalid seeds preserve observations; reset clears them; pause/navigation stop animations; reduced motion advances one step; keyboard sliders change displayed results |
 | Logs and navigation | Exported JSON matches the visible seed/probabilities/200-row dataset; all chapter/footer course links return HTTP 200; no third-party requests or page exceptions |
 | Visual inspection | Desktop courier game and narrow PPO/GAE layout inspected; probability axes remain within 0–1, PPO uses its actual objective range, optional GAE stays hidden initially |
@@ -26,7 +26,7 @@ not results from a human learning study.
 
 There are **462 numerical/code checks** in the complete local test command
 (429 pytest + 21 unittest + 12 Node). Browser assertions are reported separately
-because they exercise the same workflows at multiple sizes; they are not 329
+because they exercise the same workflows at multiple sizes; they are not 330
 independent educational claims. Tests establish these observations, not proof
 that all possible behavior is flawless.
 
@@ -35,8 +35,8 @@ that all possible behavior is flawless.
 Local checks used macOS 27.0.1 on Apple Silicon, Python 3.12.15, Node 20.19.6,
 and the locked Playwright 1.64.0 development dependency. The Firefox test binary
 could not launch its temporary profile on this Mac. Chromium and WebKit did
-launch and passed. CI installs and runs Chromium, Firefox and WebKit on Ubuntu;
-its result is recorded below once completed. Browser tooling is only used for
+launch and passed. The fresh Ubuntu run passes all three browsers, including Firefox: **330
+assertions per browser, 990 total**. Its CPU job also passes all 462 code checks. Browser tooling is only used for
 development; the lab itself has no external runtime packages or requests.
 
 The grid is deliberately small and deterministic. A six-move learned route on
@@ -47,6 +47,15 @@ weekly code and readings remain necessary for full Rainbow, continuous-control,
 self-play, diffusion, world-model and language-model methods. A perfect toy
 shield and observational standardization do not establish deployment safety
 or causal identification.
+
+## Fresh Linux CI
+
+At code revision `2459771`, [course and browser checks](https://github.com/samuel-zhang01/STUDY-RL/actions/runs/37979911086)
+pass in a fresh Ubuntu environment, and the [history secret scan](https://github.com/samuel-zhang01/STUDY-RL/actions/runs/37979911129)
+passes. The first Linux browser run exposed a WebKit tablet-width control
+wrap that the Mac checks missed. Labels now wrap consistently across fonts,
+and the final three-browser run passes all viewport checks. Changing a
+control also pauses animation and reports the actual paused state.
 
 ## Reproduce
 

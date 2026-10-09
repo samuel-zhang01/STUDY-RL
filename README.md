@@ -53,7 +53,7 @@ The second command intentionally reports `PENDING` until you implement
 ranking and LLM project ideas appear in the walkthrough. These toy experiments
 teach mechanisms; the existing weekly projects and readings develop the full
 algorithms. See the [adversarial learner review](docs/LEARNER_REVIEW.md) for the
-review rubric and [lab development checks](interactive/README.md) for browser tests.
+review rubric, [recorded validation](docs/INTERACTIVE_VALIDATION.md), and [lab development checks](interactive/README.md) for browser tests.
 
 ## Read without installing anything
 
