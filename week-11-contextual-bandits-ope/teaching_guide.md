@@ -2,6 +2,22 @@
 
 Use this guide before exercises 5–9. The estimator is only as meaningful as its sampling assumptions.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve week 1’s chosen-action-only feedback and week 3’s probability-ratio correction.
+- **Add one difficulty:** Add context to the delivery route or study activity, then record the probability with which the logger chose each observed action. Future-state learning is absent in this one-step problem.
+- **Try after the worked example:** Run [the synthetic study bandit](../learning_projects/study_bandit.py), then [the OPE experiment](../interactive/index.html#ope). Predict whether B-only logs can evaluate a target that always chooses C; implement `ips` in [the coding exercises](../learning_projects/exercises.py).
+
+<details><summary>Check your prediction</summary>
+
+They cannot: two worlds with different C rewards produce the same B-only logs. More B rows, clipping or a denominator floor do not supply C outcomes.
+
+</details>
+
+**Carry it onward:** [Ranking and matching](../week-12-rl-ranking-matching/teaching_guide.md) add exposure and examination mechanisms to this selection problem.
+
 ## Connect to what you know
 
 A contextual bandit observes a context, chooses one action, and observes its reward.

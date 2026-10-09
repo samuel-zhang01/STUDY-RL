@@ -3,6 +3,22 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The objective is to explain every term in a Bellman backup before running it.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve the week 1 distinction between an immediate reward and an average outcome.
+- **Add one difficulty:** Now a delivery action changes where you go. A known map lets you calculate the value of the next state before sampling trips.
+- **Try after the worked example:** Open [the two-step delivery](../interactive/index.html#bellman) and change gamma from 0.9 to 0.4. Predict whether stop for 2 or continue for 4 one step later wins; then implement `discounted_return` in [the coding exercises](../learning_projects/exercises.py).
+
+<details><summary>Check your prediction</summary>
+
+Stop wins: continue is worth 0+0.4×4=1.6. The delivery reward stayed 4; the objective’s weight on delay changed.
+
+</details>
+
+**Carry it onward:** [Monte Carlo](../week-03-monte-carlo/teaching_guide.md) will keep the same return but replace known model averages with completed trips.
+
 ## Before you start
 
 From Week 01, recall $G_t=R_{t+1}+\gamma G_{t+1}$.
@@ -122,8 +138,9 @@ Risk-neutral expected return does not distinguish equal-mean reward distribution
   terminal transitions when constructing the continuation matrix.
 - [common/tabular.py](../common/tabular.py) provides VI and PI used by exercises 2–3.
   Different tie-breaking policies can have the same optimal value vector.
-- `exercise_7_gpi` stops when its policy is stable. With truncated evaluation,
-  that alone is not a certificate of value accuracy: also inspect $\|T_*V-V\|$.
+- `exercise_7_gpi` stops successfully only when its policy is stable **and** the
+  optimal Bellman residual is below `tol`. If it reaches `max_outer`, the returned
+  values are the current approximation, rather than a convergence certificate.
 - Modified policy iteration must check the Bellman residual as well as policy
   stability: a stable action choice after one evaluation sweep can still have
   inaccurate values. In a one-state, reward-1 loop with gamma 0.5, the policy

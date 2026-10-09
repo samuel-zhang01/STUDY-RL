@@ -7,6 +7,22 @@ The examples use supplied sequence log probabilities; they are not measured mode
 trains DPO on a real pretrained model, starting from a saved SFT adapter and caching
 the complete initial policy as its fixed reference.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 18’s](../week-18-rlhf-ppo-llm/teaching_guide.md) fixed reference and complete-response log probabilities.
+- **Add one difficulty:** Subtract the chosen and rejected changes in log probability relative to the reference. This pair margin is different from rewarding a generated rollout online.
+- **Try after the worked example:** Use [the preference margin experiment](../interactive/index.html#preferences). If the policy exactly equals its reference, predict the margin and Bradley–Terry pair probability before changing either response’s log probability. Then follow [the real DPO lab](../llm-lab/README.md).
+
+<details><summary>Check your prediction</summary>
+
+The relative margin is 0, so the pair probability is sigmoid(0)=0.5. A supplied chosen label does not mean the current policy already assigns it a positive relative margin.
+
+</details>
+
+**Carry it onward:** [Group-baseline methods](../week-20-grpo-rloo-rlvr/teaching_guide.md) return to sampled responses and an online reward or verifier.
+
 ## What you need from week 18
 
 Know the KL-regularised optimum `p_star(y|x) ∝ q(y|x) exp(r(x,y)/beta)`.

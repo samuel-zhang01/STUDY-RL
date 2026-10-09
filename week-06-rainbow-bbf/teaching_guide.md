@@ -3,6 +3,22 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 For each Rainbow component, identify the mathematical object it changes.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 5’s](../week-05-dqn/teaching_guide.md) online network, target network and replay rows.
+- **Add one difficulty:** Ask which object an improvement changes: action selection, replay weights, value representation or parameter resets. Keep every other component fixed for an ablation.
+- **Try after the worked example:** In [the Double-DQN exercise](project/solutions.py), let online next values be (2,4) and target next values be (5,3), with reward 0 and gamma 0.9. Predict the label. The browser courier is a target analogy; the weekly agent is scalar Rainbow-lite, not a complete BBF reproduction.
+
+<details><summary>Check your prediction</summary>
+
+The online network selects the second action, then the target network evaluates it: 0+0.9×3=2.7. Standard DQN’s target here would be 4.5.
+
+</details>
+
+**Carry it onward:** [Policy gradients](../week-07-policy-gradients/teaching_guide.md) will change the learned object from action values to action probabilities.
+
 ## Before you start
 
 You need Week 05's batched DQN target, stopped gradient, and replay buffer.

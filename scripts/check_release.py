@@ -10,6 +10,7 @@ import ast
 import json
 import re
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -22,6 +23,18 @@ FORBIDDEN_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".pt", ".pth",
 PERSONAL_EMAIL = re.compile(
     r"\b[A-Za-z0-9._%+\-]+@(?:gmail|hotmail|icloud|outlook|yahoo)\.com\b", re.I)
 LOCAL_PATH = re.compile(r"/(?:Users|home)/[^\s\"'<>]+")
+
+
+class AssetLinks(HTMLParser):
+    """Collect local document links and assets without executing page scripts."""
+    def __init__(self):
+        super().__init__()
+        self.links = []
+
+    def handle_starttag(self, tag, attrs):
+        for key, value in attrs:
+            if value and key in {"href", "src"}:
+                self.links.append(value)
 
 
 def source_paths(root: Path) -> list[Path]:
@@ -58,7 +71,7 @@ def check_path(path: Path, root: Path) -> list[str]:
         errors.append(f"{relative}: local/private artifact included in release")
     if path.is_symlink() and not path.resolve().is_relative_to(root.resolve()):
         errors.append(f"{relative}: symlink points outside the repository")
-    if path.suffix not in {".py", ".md", ".ipynb", ".tex", ".json", ".jsonl", ".sh", ".tsv"}:
+    if path.suffix not in {".py", ".md", ".ipynb", ".tex", ".json", ".jsonl", ".sh", ".tsv", ".js", ".html", ".css", ".yml", ".toml"}:
         return errors
     text = path.read_text(encoding="utf-8")
     if PERSONAL_EMAIL.search(text) or LOCAL_PATH.search(text):
@@ -70,6 +83,10 @@ def check_path(path: Path, root: Path) -> list[str]:
             errors.append(f"{relative}:{exc.lineno}: {exc.msg}")
     elif path.suffix == ".md":
         errors.extend(check_links(text, path, root))
+    elif path.suffix == ".html":
+        parser = AssetLinks()
+        parser.feed(text)
+        errors.extend(check_links("\n".join(f"[asset]({target})" for target in parser.links), path, root))
     elif path.suffix == ".ipynb":
         import nbformat
         try:

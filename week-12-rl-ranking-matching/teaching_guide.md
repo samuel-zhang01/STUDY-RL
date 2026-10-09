@@ -2,6 +2,22 @@
 
 Use this guide alongside exercises 4 and 6–9, then apply the distinctions in the recommendation memo.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 11’s](../week-11-contextual-bandits-ope/teaching_guide.md) separation of selection probability and outcome.
+- **Add one difficulty:** An item must be displayed and examined before its click can be observed. A ranking’s position changes this evidence; matching also introduces capacity on both sides.
+- **Try after the worked example:** Use [the position-bias exercise](project/solutions.py). Under the simple model click probability = examination × relevance, predict relevance for click probability 0.08 at examination 0.2 versus 0.8. Use the browser OPE experiment only to recall selection weighting.
+
+<details><summary>Check your prediction</summary>
+
+The relevance probabilities are 0.4 and 0.1. Identical observed click rates need not mean identical relevance when exposure differs. The calculation relies on the stated examination model.
+
+</details>
+
+**Carry it onward:** [Multi-agent learning](../week-13-multi-agent-alphazero/teaching_guide.md) adds other decision-makers whose choices affect your outcomes.
+
 ## Connect to what you know
 
 Week 11 evaluated a chosen action using its logging propensity.

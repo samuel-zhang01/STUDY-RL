@@ -3,6 +3,22 @@
 Read this before workbook exercises 1–3; return to the code bridge before training.
 The goal is to predict the direction of an update before trusting its loss curve.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 7’s](../week-07-policy-gradients/teaching_guide.md) signed advantage and [week 8’s](../week-08-a2c-gae-trpo/teaching_guide.md) distinction between direction and update size.
+- **Add one difficulty:** Compare each sampled action’s new and old probability. Clipping changes the objective; it does not put the whole policy inside a hard probability box.
+- **Try after the worked example:** On paper and in [the weekly clipped-loss exercise](project/solutions.py), use ratio 1.5, clip radius 0.2 and advantage +2; predict the surrogate, then repeat with advantage −2. Next enable **Show PPO fixed-batch surrogate** in [the browser policy experiment](../interactive/index.html#policy) and inspect its per-action table. It aggregates its own fixed advantages (+1.2 and −0.4), using different numbers from this single-sample check.
+
+<details><summary>Check your prediction</summary>
+
+For +2, the minimum is min(3,2.4)=2.4. For −2, it is min(−3,−2.4)=−3; the harmful increase remains penalized.
+
+</details>
+
+**Carry it onward:** [SAC and TD3](../week-10-sac-td3/teaching_guide.md) return to replay and add continuous actions; SAC also changes the objective with entropy.
+
 ## Connect to what you know
 
 From weeks 7–8, recall the score-function gradient and an advantage baseline.

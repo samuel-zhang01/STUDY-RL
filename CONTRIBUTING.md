@@ -21,6 +21,13 @@ For changes to the optional lab, install `llm-lab/requirements.txt` in a separat
 environment and run `make llm-tests PY=python`. Lab tests use random local models
 and synthetic fixtures; they do not require pretrained-model downloads.
 
+For the dependency-free learning projects, run `make learning-tests PY=python`.
+For visual-lab changes, run `make lab-tests` with Node.js installed, then install
+the development dependencies and exercise all three browsers using the
+[browser-test instructions](interactive/README.md). Keep chart axes, numerical
+readouts and export data consistent; test controls at narrow widths and with
+keyboard/reduced-motion preferences. The browser lab has no runtime packages.
+
 ## Make a focused change
 
 1. Create a branch and keep the change scoped to one problem.

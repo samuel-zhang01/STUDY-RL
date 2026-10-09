@@ -4,6 +4,22 @@ Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 This directory contains a synthetic ATS demonstration and a hypothetical architecture.
 All data and calculations are constructed examples. They do not validate an external system.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 24’s](../week-24-capstone-safe-matching/teaching_guide.md) separate learning/evaluation/constraint claims and week 12’s action-definition discipline.
+- **Add one difficulty:** Audit the actual logged action: choosing one candidate from a fixed shortlist is different from ranking every candidate. Synthetic evidence supports the stated simulator first.
+- **Try after the worked example:** Read [the audit implementation](project/audit.py), then write a one-paragraph claim with action, population, data-generating mechanism, support, evaluation split and limits. If your simulator’s new policy scores higher, does that establish a real hiring improvement?
+
+<details><summary>Check your prediction</summary>
+
+No. It supports a result under this synthetic reward function and shortlist process; real-world outcomes, consent, causal validity and transport were not measured by that run.
+
+</details>
+
+**Carry it onward:** [Causal biology](../week-26-causal-discovery-biological-data/teaching_guide.md) carries over overlap and audit discipline, then asks what observational evidence identifies about an intervention.
+
 ## What this capstone brings together
 
 The key prerequisites are contextual bandits, off-policy evaluation, and constrained optimisation.

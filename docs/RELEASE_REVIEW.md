@@ -5,6 +5,13 @@ sanitized Git history. The sanitized history has been pushed to GitHub and
 verified in a fresh mirror clone. The repository remains private because
 GitHub still serves original content through cached commit-SHA views.
 
+The **9 October interactive teaching revision** adds a staged visual lab,
+standard-library games, genuine learner exercises, and bridges across all
+26 weeks. Its [validation record](INTERACTIVE_VALIDATION.md) reports 462 code
+checks, browser workflows and independent student scores. The original PDF
+and history audit below remains the 6 October record; unchanged PDFs were not
+rebuilt for the later Markdown/browser revision.
+
 ## Audit scope and findings
 
 The initial audit inspected all 30 commits reachable from the fetched branch,

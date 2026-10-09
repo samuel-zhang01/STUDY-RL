@@ -3,6 +3,22 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Track reward timing and visit timing separately throughout this week.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve the reward timing and discounted return from [week 2](../week-02-bellman-dp/teaching_guide.md).
+- **Add one difficulty:** Hide the map’s reward average. Estimate a route’s value using only completed trips; one lucky trip is still one sample.
+- **Try after the worked example:** In [MC versus TD](../interactive/index.html#targets), compare the evidence each target needs. On paper, average two continuing trips whose last rewards are 4 and 0, with gamma 0.9. Reproduce this using [two-step delivery](../learning_projects/two_step.py).
+
+<details><summary>Check your prediction</summary>
+
+The returns are 3.6 and 0, so their average is 1.8. This estimate uses both finished trips; it does not reveal the true reward law from only two observations.
+
+</details>
+
+**Carry it onward:** [TD](../week-04-td-sarsa-q/teaching_guide.md) will update before the trip ends by inserting a next-state estimate.
+
 ## Before you start
 
 Week 02 averaged outcomes using a known model. Monte Carlo (MC) averages actual

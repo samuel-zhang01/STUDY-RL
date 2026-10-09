@@ -2,6 +2,22 @@
 
 Use this guide before expectile, AWR, and CQL exercises; inspect coverage before interpreting returns.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 11’s](../week-11-contextual-bandits-ope/teaching_guide.md) missing-support example and week 4’s maximization over next actions.
+- **Add one difficulty:** Freeze the logs: the learner cannot try a suspiciously high-valued action to correct its estimate. Policy improvement now depends on which actions the data support.
+- **Try after the worked example:** In [the support experiment](../interactive/index.html#ope), remove evidence for one action. Then inspect [the offline value exercises](project/solutions.py): if a logged action has Q=2 and an unlogged action is predicted Q=10, what does a naive maximum choose, and what evidence validates it?
+
+<details><summary>Check your prediction</summary>
+
+It chooses the unlogged action with predicted value 10. No logged outcome validates that prediction; conservative penalties or imitation restrictions express additional learning choices, not recovered evidence.
+
+</details>
+
+**Carry it onward:** [Sequence policies](../week-15-decision-transformer-diffusion/teaching_guide.md) learn from the same fixed-data limitation with a different training target.
+
 ## Connect to what you know
 
 Off-policy learning can reuse old experience while collecting more data.

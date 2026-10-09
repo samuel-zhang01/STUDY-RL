@@ -3,6 +3,22 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 For every update, say aloud which policy supplies the next-action value.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve the week 1 incremental update and the week 2 reward-plus-future decomposition.
+- **Add one difficulty:** Replace the unobserved remainder of a trip with a current estimate. Q-learning chooses the best estimated next action; SARSA uses the next action actually sampled.
+- **Try after the worked example:** Try [the courier game](../interactive/index.html#courier), then implement `q_target` in [the coding exercises](../learning_projects/exercises.py). For reward 0, gamma 0.9 and next-action values (2,3.6), predict a Q-learning target and a SARSA target if the sampled next action has value 2.
+
+<details><summary>Check your prediction</summary>
+
+Q-learning uses 0+0.9×3.6=3.24; SARSA uses 0+0.9×2=1.8. The difference comes from the next action, not different observed rewards.
+
+</details>
+
+**Carry it onward:** [DQN](../week-05-dqn/teaching_guide.md) keeps this target idea but replaces the table with shared neural-network parameters.
+
 ## Before you start
 
 Week 02 supplied exact Bellman expectations; Week 03 supplied full sampled returns.
@@ -119,8 +135,9 @@ With inaccurate learned values, variance and bias need not vary monotonically.
 - `exercise_2_nstep_return` infers early termination from a short reward list.
   For termination exactly at $n$, explicitly pass `V_terminal=0`.
 - [agents.py](project/agents.py) contains full SARSA/Q-learning loops and exploration
-  schedules. Its simplified loops collapse termination and truncation; do not transfer
-  that convention unchanged to continuing tasks with time limits.
+  schedules. These loops reset on termination or truncation, but only true
+  termination removes the target's bootstrap. `n_step_td_prediction` also retains
+  a final-state bootstrap at a collector cutoff or an environment time limit.
 - Double Q separates selection and evaluation across two estimates. They need not
   be statistically independent in an interacting learner, and bias need not vanish.
 

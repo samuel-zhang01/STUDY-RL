@@ -1,0 +1,13 @@
+{
+  "name": "study-rl-interactive-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Development tests only; the learning lab itself has no dependencies",
+  "scripts": {
+    "test": "node --test tests/engine.test.js",
+    "test:browser": "node tests/run-browser.js"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}

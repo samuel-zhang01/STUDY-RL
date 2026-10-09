@@ -3,6 +3,22 @@
 Use alongside [the notes](notes.tex) and [the workbook](workbook.ipynb).
 This is a synthetic educational matching problem, not a validated production hiring system.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 11’s](../week-11-contextual-bandits-ope/teaching_guide.md) support/evaluation conditions, [week 14’s](../week-14-offline-rl-1/teaching_guide.md) offline learning and [week 22’s](../week-22-cmdp-cpo-lagrangian/teaching_guide.md) cost units.
+- **Add one difficulty:** Write three separate statements: how the policy was learned, how it was evaluated and which constraint was measured. One successful test cannot validate all three.
+- **Try after the worked example:** Use [the synthetic capstone audit](project/audit.py). Draft a results table that includes reward estimate, support/ESS, cost estimate, budget units and held-out split; compare it with your [OPE experiment](../interactive/index.html#ope).
+
+<details><summary>Check your prediction</summary>
+
+A supported reward estimate still needs valid logging assumptions; measured average cost does not ensure zero individual violations; fitting and evaluating on the same rows can introduce selection bias. Each column answers its own question.
+
+</details>
+
+**Carry it onward:** [Week 25](../week-25-synthetic-ats-rl-audit/teaching_guide.md) turns this evidence table into a bounded application audit.
+
 ## The connections that matter
 
 Week 14's offline learning uses actions that already have observed outcomes.

@@ -3,6 +3,22 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Keep three ideas separate: the advantage estimate, the update direction, and its size.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 4’s](../week-04-td-sarsa-q/teaching_guide.md) TD residual and [week 7’s](../week-07-policy-gradients/teaching_guide.md) advantage-weighted actor direction.
+- **Add one difficulty:** Use a critic to combine several future TD surprises; separately decide how large a policy-distribution change is acceptable. These are two decisions.
+- **Try after the worked example:** In [the GAE exercise](project/solutions.py), combine residuals (1,2) with gamma 0.9 and lambda 0.5, stopping the trace after the second residual. Then compare lambda 0 and 1. In [the browser policy experiment](../interactive/index.html#policy), enable **Show GAE residual weights** to inspect the same rule using its separate three-residual fixture (1,−0.5,2). Neither toy is TRPO training.
+
+<details><summary>Check your prediction</summary>
+
+The first advantage is 1+(0.9×0.5)×2=1.9. Lambda 0 gives 1; lambda 1 gives 2.8 for these fixed residuals. This changes the estimator, not the observed rewards.
+
+</details>
+
+**Carry it onward:** [PPO](../week-09-ppo/teaching_guide.md) keeps an advantage estimate and changes the update objective’s incentives.
+
 ## Before you start
 
 Recall TD residuals from Week 04 and score-function actor updates from Week 07.

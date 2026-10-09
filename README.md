@@ -7,14 +7,53 @@ workbook, extended reading, a small Python project, and tests. An optional
 five-lesson lab trains real pretrained language models with LoRA and DPO.
 
 **Start here:** [study guide](docs/STUDY_GUIDE.md) ·
+[interactive learning path](docs/LEARNING_PATH.md) ·
 [all weeks and artifacts](docs/INDEX.md) ·
 [syllabus PDF](syllabus/syllabus.pdf) ·
 [glossary](docs/GLOSSARY.md) · [progress checklist](docs/PROGRESS.md).
 
-This course is for readers comfortable with Python, probability, linear
-algebra, calculus, and basic neural networks. The study guide includes a
-prerequisite check and worked calculations. Begin with week 1 if RL is new to
-you; follow the track table below if you already know the foundations.
+Begin with Python, averages and basic probability. Linear algebra, calculus and
+neural networks become useful later; the [learning path](docs/LEARNING_PATH.md)
+introduces prerequisites when each track needs them. Start with week 1 if RL is
+new to you; follow the track table below if you already know the foundations.
+
+## Learn by playing and changing a number
+
+The [courier learning lab](interactive/index.html) has ten staged experiments:
+route exploration, Bellman backups, MC/TD targets, a learning grid game, policy
+gradients/PPO/GAE, old-policy logs, cost budgets, model error, preferences, and
+confounding. Graphs and animations show actual simulated decisions or named
+exact formulas. Each experiment asks you to predict, inspect, and change one
+assumption. The browser lab needs no packages or internet connection.
+
+From the repository root:
+
+```bash
+python -m http.server 8000 --bind 127.0.0.1
+```
+
+Visit **http://localhost:8000/interactive/**. Serving the root keeps course links
+working. `make lab PY=python` does the same; Ctrl+C stops the server. You can also
+open `interactive/index.html` directly. Start with **1 · Try a route** and save
+later experiments for their weeks.
+
+The [coding walkthrough](docs/INTERACTIVE_LEARNING.md) gives hint ladders and
+small projects: play a courier game, train its policy, simulate a study-activity
+recommender, evaluate logs, and add a hazard shield. They use Python's standard
+library. Five learner exercises begin as real TODOs; their checker reports
+unfinished or incorrect work without substituting reference answers:
+
+```bash
+python -m learning_projects.courier --play
+python -m learning_projects.check_exercises --exercise 1
+```
+
+The second command intentionally reports `PENDING` until you implement
+`mean_update` in `learning_projects/exercises.py`. Broader game, planning,
+ranking and LLM project ideas appear in the walkthrough. These toy experiments
+teach mechanisms; the existing weekly projects and readings develop the full
+algorithms. See the [adversarial learner review](docs/LEARNER_REVIEW.md) for the
+review rubric and [lab development checks](interactive/README.md) for browser tests.
 
 ## Read without installing anything
 
@@ -164,7 +203,11 @@ Run Make targets from the repository root with the intended environment active:
 | `make help` | List common tasks |
 | `make course-tests PY=python` | Shared utilities, every weekly suite in its own process, maintenance scripts |
 | `make llm-tests PY=python` | Optional lab tests; requires lab dependencies |
-| `make tests PY=python` | Both course and lab tests |
+| `make tests PY=python` | Course, optional LLM lab, Python learning projects and Node simulation checks |
+| `make learning-tests PY=python` | Dependency-free courier, study-bandit and exercise checks |
+| `make lab-tests` | Numerical browser simulation checks; requires Node.js |
+| `make browser-tests PY=python` | Full learning-lab workflows in Chromium, Firefox and WebKit; see lab setup |
+| `make lab PY=python` | Serve the local visual lab and course guides |
 | `make release-check PY=python` | File hygiene, Python/notebook structure, local documentation links |
 | `make secrets` | Redacted Gitleaks scan of all reachable Git refs; install Gitleaks separately |
 | `make syllabus` | Rebuild `syllabus/syllabus.pdf` |
@@ -210,6 +253,8 @@ STUDY-RL/
 │   └── archive/          # dated teaching reviews and earlier validation records
 ├── syllabus/             # syllabus.tex and the canonical syllabus.pdf
 ├── common/               # shared Python utilities, tests, and LaTeX style
+├── interactive/          # offline visual learning lab; development browser tests
+├── learning_projects/    # standard-library games, learner TODOs, references
 ├── research/             # dated source dossiers and reading notes
 ├── llm-lab/              # optional LoRA/DPO lab, lessons, synthetic fixtures
 ├── week-NN-topic/

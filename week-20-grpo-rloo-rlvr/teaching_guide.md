@@ -7,6 +7,22 @@ All numerical cases below are finite examples whose expectations can be enumerat
 connects DPO to online rewards; its [strict answer verifier](../llm-lab/llm_lab/data.py)
 and [generation evaluation](../llm-lab/llm_lab/evaluate.py) expose format and cutoff failures.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve week 7’s baseline cancellation and [week 18’s](../week-18-rlhf-ppo-llm/teaching_guide.md) sampled response probabilities.
+- **Add one difficulty:** A group of attempts supplies a within-prompt reference. Verify the answer parser separately: correct algebra cannot repair an incorrect reward label.
+- **Try after the worked example:** Use [the finite group-baseline exercises](project/solutions.py). For two rewards (1,0), predict the leave-one-out advantages, then ask whether the positive one certifies genuine answer quality. The browser preference toy explains pair comparison, not GRPO/RLOO training.
+
+<details><summary>Check your prediction</summary>
+
+The advantages are (1,−1): each reward is compared with the other attempt. They certify only relative verifier reward; a flawed parser could reward the wrong answer.
+
+</details>
+
+**Carry it onward:** [Reward hacking](../week-21-reward-hacking-oversight/teaching_guide.md) tests whether optimizing that signal still improves the intended outcome.
+
 ## Before starting
 
 Recall the score-function gradient from week 7 and token/sequence probability from week 18.

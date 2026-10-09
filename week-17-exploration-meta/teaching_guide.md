@@ -3,6 +3,22 @@
 Read this beside [the notes](notes.tex), then attempt [the workbook](workbook.ipynb).
 The numerical examples below are constructed teaching cases, not training results.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve week 1’s exploration–exploitation choice and [week 16’s](../week-16-model-based/teaching_guide.md) model uncertainty.
+- **Add one difficulty:** Novelty can encourage visiting an unfamiliar place, while meta-learning adapts across related tasks. A novelty score and task success measure different things.
+- **Try after the worked example:** Use [the RND exercises](project/solutions.py). Compare a known room with extrinsic reward 1 and bonus 0 to a novel room with reward 0 and bonus 2, weighting bonus by 1. Which wins the training objective; which wins the original task? The browser bandit illustrates trying uncertain choices, not RND or MAML.
+
+<details><summary>Check your prediction</summary>
+
+The novel room wins the augmented objective, 2 versus 1. The known room wins the extrinsic task, 1 versus 0. Report both rather than calling novelty alone success.
+
+</details>
+
+**Carry it onward:** [RLHF](../week-18-rlhf-ppo-llm/teaching_guide.md) changes the action to a token and the reward source to a response-level judgement.
+
 ## What connects this week to earlier work?
 
 You need the Q-learning target from week 4, the score-function idea from week 7,
@@ -126,7 +142,7 @@ That is an instructive edge case: a zero meta-gradient need not mean broken auto
   fitting and adaptation. Exercise 7 combines them with a task distribution.
 
 Keep the grid comparison's seed, action-selection rule, and episode budget matched.
-The current `make_hard_grid` passes `pits=()`; despite older comments it has no pits.
+`make_hard_grid` creates an open 7×7 grid with `pits=()` and a distant positive-reward goal.
 Measure extrinsic goal hits separately from total curiosity-augmented reward.
 The MAML toy is an algebra demonstration with known task means, not a sample-efficiency benchmark.
 

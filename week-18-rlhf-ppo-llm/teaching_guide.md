@@ -6,6 +6,22 @@ These calculations are illustrative fixtures, not claims about a trained languag
 **Practical companion:** [LLM post-training lab, lessons 1–3](../llm-lab/README.md)
 adds real pretrained-model LoRA SFT, completion masks, save/reload, and NVIDIA QLoRA.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 9’s](../week-09-ppo/teaching_guide.md) old-policy ratio and week 7’s action probability; a prefix now acts as the state.
+- **Add one difficulty:** Keep the changing rollout policy separate from a usually fixed reference policy. A learned response reward and reference penalty are two different signals.
+- **Try after the worked example:** Use [the preference/reward experiment](../interactive/index.html#preferences) for the pair-probability intuition, then [the practical LLM lab](../llm-lab/README.md) for actual pretrained-model training. If policy and reference give one sampled action probabilities 0.5 and 0.25, calculate its log ratio; is this one sample the full KL?
+
+<details><summary>Check your prediction</summary>
+
+The sample log ratio is log(0.5/0.25)=log(2). KL is the policy expectation over all actions at that state, so this one log ratio is not itself the full KL.
+
+</details>
+
+**Carry it onward:** [DPO](../week-19-dpo-zoo/teaching_guide.md) uses chosen/rejected pairs to train relative odds directly.
+
 ## The connection to earlier weeks
 
 Week 7's action becomes a token; week 8's state becomes the prompt plus response prefix.

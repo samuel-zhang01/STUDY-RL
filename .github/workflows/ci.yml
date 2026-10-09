@@ -37,5 +37,33 @@ jobs:
           python -m pip check
       - name: Check release files and documentation
         run: make release-check PY=python
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: interactive/package-lock.json
       - name: Run isolated weekly suites and offline lab tests
         run: make tests PY=python
+
+  browser-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: interactive/package-lock.json
+      - name: Install browser-test dependencies
+        working-directory: interactive
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Exercise the learning lab in three browsers
+        run: make browser-tests PY=python

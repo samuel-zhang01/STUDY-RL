@@ -4,6 +4,8 @@ A 24-week core curriculum, an applied audit in week 25, and a causal-biology ext
 
 ## Quick links
 
+- **Visual experiments and coding games**: [courier lab](../interactive/index.html) · [activities and hint ladders](INTERACTIVE_LEARNING.md) · [26-week connections](LEARNING_PATH.md)
+- **Adversarial learner review**: [rubric, findings and revised scores](LEARNER_REVIEW.md)
 - **Start here**: [study guide and all 26 weekly teaching guides](STUDY_GUIDE.md)
 - **Current release checks**: [release preparation review](RELEASE_REVIEW.md)
 - **Causal biology**: [one-week lesson](../week-26-causal-discovery-biological-data/teaching_guide.md) · [research and source notes](../research/causal_biology.md)

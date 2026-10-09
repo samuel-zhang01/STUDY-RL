@@ -3,6 +3,22 @@
 Read with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples are small constrained optimisation problems, not safety certificates for trained agents.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 21’s](../week-21-reward-hacking-oversight/teaching_guide.md) distinct task metrics and week 9’s actor update.
+- **Add one difficulty:** Specify an expected cost budget with units and a time horizon. The multiplier raises the penalty when cost exceeds that budget; an expected limit is not a per-episode guarantee.
+- **Try after the worked example:** Use [the safety experiment](../interactive/index.html#safety) and [the courier’s hazard-cost extension](../learning_projects/courier.py). For lambda 0.5, step size 0.2, observed cost 3 and budget 1, predict the projected multiplier update.
+
+<details><summary>Check your prediction</summary>
+
+The update is max(0,0.5+0.2×(3−1))=0.9. Excess cost increases its price; this numerical step alone does not prove the resulting policy is feasible.
+
+</details>
+
+**Carry it onward:** [Shielding](../week-23-safe-exploration-shielding-robust/teaching_guide.md) limits executed actions using a safety model, addressing a different requirement.
+
 ## Connection and prerequisites
 
 Recall expected discounted return, policy gradients, and PPO from weeks 7–9.
@@ -122,14 +138,19 @@ The minimised QP dual has terms `+lambda delta−nu c`; reversing these signs ch
 - The implementation standardises reward advantages and divides the combination by
   `1+lambda`; its multiplier scale therefore differs from the raw derivation.
 - [project/train.py](project/train.py): `_collect` accumulates episode costs for
-  the multiplier; compare that aggregation with the discounted cost critic.
+  the multiplier with the same per-episode discount convention as the cost critic.
+  If a rollout completes no episodes, the multiplier is unchanged; the history's
+  cost value 0 is a placeholder for that missing estimate, not measured zero cost.
 - [project/solutions.py](project/solutions.py): exercise 1 isolates the projected update;
   exercise 4 uses `lam` for a KL temperature and `nu` for the cost multiplier.
 
 Name those quantities by role rather than assuming `lambda` always means the same thing.
-The exercise 5 “CVaR” helper averages `ceil(alpha N)` sorted returns; when `alpha N`
-is not an integer it approximates, rather than fractionally weights, the empirical tail.
-For costs use the **upper** tail; for undesirable low returns use the lower tail.
+The exercise 5 CVaR helper sorts returns and uses exactly `alpha N` observations'
+worth of probability mass, fractionally weighting the cutoff observation when
+needed. For returns `(-4,2,10)` and `alpha=0.5`, it averages all of `-4` and half
+of `2`: `(-4+0.5×2)/1.5=-2`, as checked in
+[the regression test](tests/test_regressions.py). For costs use the **upper**
+tail; for undesirable low returns use this lower tail.
 
 ## Retrieve and transfer
 

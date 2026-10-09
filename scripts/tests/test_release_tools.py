@@ -37,3 +37,14 @@ def test_links_must_exist_inside_release_tree(tmp_path):
     assert not check_release.check_links("[ok](valid.md#valid)", source, tmp_path)
     assert check_release.check_links("[missing](gone.md)", source, tmp_path)
     assert check_release.check_links("[outside](../outside.md)", source, tmp_path)
+
+
+def test_html_assets_and_browser_sources_receive_release_checks(tmp_path):
+    page = tmp_path / "index.html"
+    page.write_text('<script src="missing.js"></script><a href="https://example.com">External</a>')
+    assert check_release.check_path(page, tmp_path)
+    (tmp_path / "missing.js").write_text("const seed = 7;")
+    assert not check_release.check_path(page, tmp_path)
+    source = tmp_path / "app.js"
+    source.write_text('const local = "/' + 'Users' + '/private-person/project";')
+    assert check_release.check_path(source, tmp_path)

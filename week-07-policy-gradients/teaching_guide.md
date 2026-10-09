@@ -3,6 +3,22 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The key distinction is between a scalar loss and its parameter gradient.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve the delivery’s two action values: stop 2 and continue 3.6 at gamma 0.9.
+- **Add one difficulty:** Instead of choosing greedily from a value table, directly learn how often to choose each action. An advantage compares one action with the current policy’s average.
+- **Try after the worked example:** In [the policy experiment](../interactive/index.html#policy), set the continue probability to 0.25. Predict the policy’s average return and whether a positive reward of 2 must have positive advantage.
+
+<details><summary>Check your prediction</summary>
+
+The average is 0.75×2+0.25×3.6=2.4. Stop has advantage 2−2.4=−0.4: positive reward can still be below the policy average.
+
+</details>
+
+**Carry it onward:** [Actor–critic and GAE](../week-08-a2c-gae-trpo/teaching_guide.md) replace noisy completed returns with critic-based advantage estimates.
+
 ## Before you start
 
 Weeks 04–06 improved a value estimate and acted greedily from it.
@@ -129,7 +145,11 @@ Dropping the outer discount gives 0.25, twice the correct start-state gradient.
 - [agent.py](project/agent.py), `REINFORCEAgent.update`, detaches the value estimate
   from the actor loss and standardises advantages within an episode.
   This is a practical estimator variant, not exactly the unnormalised unbiased
-  formula above. One-step episodes also need special care with sample standard deviation.
+  formula above. It uses population standard deviation (`correction=0`), avoiding
+  an undefined sample standard deviation for one observation. Centering a
+  one-step episode still makes its only advantage zero, so this episode-normalised
+  update supplies no actor signal for that case. For a bandit, use the separate
+  `reinforce_loss` exercise or aggregate independent samples before standardising.
 - `estimator_variance` measures variance of `log_prob * advantage` loss terms.
   It does **not** compute variance of parameter gradients; interpret its plot accordingly.
 - `topk_offpolicy_multiplier` differentiates inclusion probability

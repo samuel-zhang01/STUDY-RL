@@ -3,6 +3,22 @@
 Use beside [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The main calculation is supervised regression with a deliberately frozen target.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 4’s](../week-04-td-sarsa-q/teaching_guide.md) Q-learning target and identify which part is treated as a fixed regression label.
+- **Add one difficulty:** A Q-network shares parameters across states: fitting one courier transition can change predictions elsewhere. Replay and a target network manage this moving learning problem.
+- **Try after the worked example:** Use [the existing DQN exercises](project/solutions.py) to build one batch target. If the target network predicts next values (5,3), reward is 0 and gamma is 0.9, predict the standard DQN target before running it. Use the browser courier only to recall the tabular target; it contains no neural network.
+
+<details><summary>Check your prediction</summary>
+
+Standard DQN takes the target-network maximum: 0+0.9×5=4.5. This is an estimated label, not a measured future return.
+
+</details>
+
+**Carry it onward:** [Week 6](../week-06-rainbow-bbf/teaching_guide.md) separates target selection from evaluation and changes replay sampling one component at a time.
+
 ## Before you start
 
 Recall Week 04's Q-learning target $r+\gamma\max_bQ(s',b)$.

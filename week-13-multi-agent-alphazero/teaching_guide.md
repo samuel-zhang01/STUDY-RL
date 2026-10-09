@@ -2,6 +2,22 @@
 
 Use this guide before exercises 1–4, then connect its second example to MAPPO.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 2’s](../week-02-bellman-dp/teaching_guide.md) future-value backup and [week 9’s](../week-09-ppo/teaching_guide.md) actor–critic ingredients.
+- **Add one difficulty:** Decide whose value is being propagated. Alternating zero-sum games reverse the player’s perspective; cooperative teams do not.
+- **Try after the worked example:** Use [the tic-tac-toe game](project/tictactoe.py) and [search exercises](project/solutions.py). If a child is a win worth +1 from the next player’s perspective, predict its backed-up value for the current player. The single-player browser courier does not implement AlphaZero or multi-agent training.
+
+<details><summary>Check your prediction</summary>
+
+It is −1 for the current player in the alternating zero-sum convention. A cooperative shared-reward task would retain +1 instead.
+
+</details>
+
+**Carry it onward:** [Offline RL](../week-14-offline-rl-1/teaching_guide.md) freezes the source of experience and asks which choices the existing evidence supports.
+
 ## Connect to what you know
 
 MCTS improves decisions by searching a game tree; the policy network learns from search visit counts.

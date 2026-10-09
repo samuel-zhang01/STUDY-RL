@@ -3,6 +3,22 @@
 Use alongside [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The numerical examples are deliberately simple models of selection and reward design.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve week 20’s separation of a verifier and its optimization rule, plus [week 11’s](../week-11-contextual-bandits-ope/teaching_guide.md) evaluation-data separation.
+- **Add one difficulty:** Write down the task outcome separately from the proxy being maximized. Look for a policy that improves the proxy while worsening that outcome.
+- **Try after the worked example:** Try [the preference/proxy experiment](../interactive/index.html#preferences), then [the proxy-hacking lab](project/hack_lab.py). If a route earns proxy 10 by a shortcut but delivers 0 useful packages, while a route earns proxy 4 and delivers 4, which does proxy maximization choose?
+
+<details><summary>Check your prediction</summary>
+
+It chooses proxy 10 despite delivering 0. This counterexample calls for a better specified objective or evaluation, not a larger optimization budget.
+
+</details>
+
+**Carry it onward:** [Constrained RL](../week-22-cmdp-cpo-lagrangian/teaching_guide.md) adds a separately defined cost budget rather than hoping one scalar proxy captures every requirement.
+
 ## The link to earlier weeks
 
 Weeks 18–20 described how to optimise a signal.
@@ -124,11 +140,20 @@ their empirical scaling fits are not universal laws for every proxy.
   ratio above. Exercise 7 models independent lie-detection opportunities as `1−(1−p)^n`;
   it is not a solution of a strategic debate game.
 
-The current revision helper can append a period after truncating to 40 characters,
-producing 41 characters; it can also miss uppercase banned words before lowercasing.
-Use those cases as concrete examples of why a proposed revision must be rechecked.
-The hand-written rank correlation in exercise 2 does not average tied ranks;
-when proxy scores tie, do not interpret it as standard tie-corrected Spearman correlation.
+Earlier regression cases exposed two rule interactions: adding punctuation after
+using all 40 characters, and failing to remove uppercase banned words. The
+current helper lowercases first, removes banned words with a case-insensitive
+whole-word regex, and reserves one character for the final period when truncating.
+[The regression tests](tests/test_regressions.py) check uppercase `HELL DAMN`
+with an overlong suffix and verify every rule on the revised result. Keep these
+counterexamples and re-run `critique` after any change; mechanical compliance
+does not establish that a response is useful or truthful.
+
+Exercise 2 now averages tied ranks before calculating rank correlation. If a
+score is constant, its rank variance is zero and mathematical Spearman
+correlation is undefined; this helper returns 0 by a numerical convention.
+Interpret that case as an uninformative ranking, rather than evidence of a
+measured zero relationship.
 
 ## Retrieve and transfer
 

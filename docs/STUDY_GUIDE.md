@@ -5,6 +5,12 @@ algorithm to reproduce it. This guide connects the 24 core weeks, the applied
 audit in week 25, and causal biology in week 26. Each week has a `teaching_guide.md` alongside its lecture
 notes, with worked calculations, an analogy, a derivation, and self-checks.
 
+For a first session, use the [connected learning path](LEARNING_PATH.md) and
+[interactive activities](INTERACTIVE_LEARNING.md). Begin with one route choice
+and one average; leave future-value calculations for week 2 and gradients for
+week 7. The [browser lab](../interactive/index.html#bandit) and standard-library
+projects make each step observable before adding a larger method.
+
 When you reach weeks 18–21, add the [practical LLM post-training lab](../llm-lab/README.md).
 Its five lessons take the token-policy maths into real LoRA SFT, DPO, quantisation,
 saved-adapter inference, and measured evaluation. Work locally on CPU/MPS or use
@@ -33,8 +39,9 @@ being able to explain and vary the example is a separate learning objective.
 
 ## Prerequisite check: five tools you will reuse
 
-Try these before week 1. If a step is unfamiliar, practise that tool before
-trying to memorise an RL derivation.
+For week 1, try the weighted-average and conditional-probability checks.
+Return to geometric series in week 2, vector shapes before week 5, and the
+chain rule before week 7. Practise a tool when its track needs it.
 
 | Tool | Tiny question | Where you will use it |
 |---|---|---|
@@ -81,6 +88,9 @@ discounted return of continuing is $0+0.9(4)=3.6$, so continue is better.
 The terminal state's value is zero because the reward has already been paid
 on the transition into it.
 
+<details>
+<summary>Week 2 reference: Bellman evaluation</summary>
+
 ### 1. Bellman evaluation: separate the next reward from the rest
 
 For an episode ending at time $T$, define
@@ -116,6 +126,11 @@ An episode returns either 2 or 3.6; **2.4 is an expectation**, not a third
 possible episode. Improving the policy to always continue changes the value
 to 3.6. Policy evaluation and policy improvement are different operations.
 
+</details>
+
+<details>
+<summary>Weeks 3–4 reference: Monte Carlo and TD</summary>
+
 ### 2. Monte Carlo and TD: same question, different evidence
 
 Suppose the learner currently estimates $\hat V(s_0)=1$,
@@ -136,6 +151,11 @@ collection scheme; neither individual update must equal $V^\pi(s_0)=2.4$.
 The true action value stays 3.6, but the continuing episode's return is now 0 or
 7.2. With an exact critic, the last-step TD error is still $-4$ or $+4$.
 Accurate expectations do not remove randomness from individual outcomes.
+
+</details>
+
+<details>
+<summary>Week 7 reference: advantages and policy gradients</summary>
 
 ### 3. Advantage and policy gradients: compare an action with the policy average
 
@@ -170,6 +190,11 @@ critic, GAE, and PPO. The score-function identity and action-independent
 baseline cancellation are derived in
 [Spinning Up's policy-gradient derivation](https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html).
 
+</details>
+
+<details>
+<summary>Week 4 onward: termination and collection cutoffs</summary>
+
 ### 4. Terminal and truncated trajectories: two meanings of “the data stopped”
 
 If the task ends after the reward 4, the final target is 4. If collection stops
@@ -179,6 +204,8 @@ boundary into an absorbing state. In a finite-horizon task whose time limit is
 part of the objective, reaching that horizon *is* termination, and remaining
 time belongs in the state when it affects decisions. See
 [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
+
+</details>
 
 ## How to read an unfamiliar algorithm
 

@@ -11,6 +11,22 @@ lists a virtual October 5, 2026 discussion on learning causal structure across e
 and task-aware enhancement. This bundle teaches public methods; it does not reproduce
 Synlico's proprietary platform or summarize an event recording.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 11’s](../week-11-contextual-bandits-ope/teaching_guide.md) overlap and [week 25’s](../week-25-synthetic-ats-rl-audit/teaching_guide.md) bounded-evidence claim. This is an adjacent causal-learning extension, not another RL algorithm.
+- **Add one difficulty:** A predictive association does not specify what happens when treatment is set. State the confounders, target population and identification assumptions before comparing outcomes.
+- **Try after the worked example:** Use [the confounding experiment](../interactive/index.html#causal) and the worked severity table below. Predict why a pooled difference of −0.2 can coexist with a +1 within-severity difference; then inspect [the standardization exercise](project/solutions.py).
+
+<details><summary>Check your prediction</summary>
+
+The treated group contains more severe cases with lower baseline outcomes. Applying the same severity weights to both arms gives +1; a causal interpretation still requires consistency, exchangeability and positivity.
+
+</details>
+
+**Carry it onward:** Return to [week 11](../week-11-contextual-bandits-ope/teaching_guide.md): explain which selection probabilities are known by randomized logging and which assumptions a biological observational dataset must supply instead.
+
 ## Where this fits
 
 Prerequisites: expectations, conditional probability, linear regression, train/validation/test

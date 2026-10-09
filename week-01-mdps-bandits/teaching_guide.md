@@ -3,6 +3,32 @@
 Use this beside [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Read each **Predict** prompt before uncovering the arithmetic.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** A reward is one observed outcome; its average estimates an action’s unknown mean.
+- **Add one difficulty:** Keep three delivery routes fixed and change only how often you try each route. Future-state consequences can wait until week 2.
+- **Try after the worked example:** Use the [bandit experiment](../interactive/index.html#bandit), then implement `mean_update` in [the coding exercises](../learning_projects/exercises.py). Start with an estimate of 0.5 from two pulls and observe reward 1.
+
+<details><summary>Check your prediction</summary>
+
+2/3: the new observation is the third pull of this action, so the update is 0.5+(1−0.5)/3. Other routes’ pulls do not change this count.
+
+</details>
+
+**Carry it onward:** The [next lesson](../week-02-bellman-dp/teaching_guide.md) keeps actions and rewards, then adds a next state and a delayed reward.
+
+## First pass: one action, one reward, one running average
+
+Read **Before you start**, the lunch-stall analogy, the average-update derivation
+and Example 1. Try epsilon-greedy in [the bandit experiment](../interactive/index.html#bandit),
+then implement the running mean. That is a complete first lesson.
+Treat the Beta-posterior example as an optional probability extension; the
+discounting example is your preview of week 2. Read the advanced stretch below
+after the basic loop feels familiar. You do not need LinUCB, OPE or a regret
+proof to update one arm correctly.
+
 ## Before you start
 
 You need expectations, sample averages, and probabilities that sum to one.
@@ -48,6 +74,11 @@ For independent stationary rewards with mean $\mu_a$, this estimates $\mu_a$.
 With changing means, a constant step size forgets old data but is no longer
 exactly the all-history sample average.
 
+## Optional bookkeeping: expected regret
+
+You can first implement the mean update and return here to interpret the
+playground’s regret graph. The simulator knows the reward means; the agent does not.
+
 Now let $\mu^*=\max_a\mu_a$ and $\Delta_a=\mu^*-\mu_a$.
 Conditional on the chosen arm, $\mathbb E[R_t\mid A_t]=\mu_{A_t}$.
 Therefore expected regret after $T$ rounds is
@@ -79,7 +110,7 @@ A deployed learner sees only the chosen reward and cannot directly observe regre
 If observed rewards on the full path are $(1,0,0,1)$, their sum is 2;
 $4(0.8)-2=1.2$ happens to agree here, but generally it will not.
 
-## Example 2: uncertainty is different from disappointment
+## Optional probability extension: uncertainty is different from disappointment
 
 **Predict:** after a failed pull, must posterior variance increase?
 
@@ -97,7 +128,7 @@ by variance, less uncertain. Posterior mean and posterior uncertainty are differ
 Thompson sampling draws a value from the posterior; it does not always select
 the arm with the highest posterior mean.
 
-## Example 3: discounting changes the question
+## Week 2 preview: discounting changes the question
 
 **Predict:** which is better, reward 2 now or reward 3 one step later?
 
@@ -117,12 +148,24 @@ which action is optimal. It also affects mathematical conditioning.
   to the mean, Beta update, and discounted-return calculations above.
 - [env.py](project/env.py): `regret` and `instantaneous_regret` use known simulator
   means; these are evaluation oracles, not information available to the agent.
+
+### Optional stretch: return after week 11
+
+The following contextual-bandit and evaluation code is available in this bundle,
+but it is not a week 1 prerequisite. First learn the running mean above; use
+[week 11](../week-11-contextual-bandits-ope/teaching_guide.md) when you want to learn
+from context or evaluate a different policy from logged actions.
+
 - `SyntheticLeadBrokerBandit.expected_reward` uses a sigmoid. Linear LinUCB is
   therefore a modelling approximation here, not an exact instance of its linear theorem.
 - `exercise_8_snips` normalises importance weights. A numerical denominator floor
   cannot recover outcomes for actions absent from the logging policy's support.
 
-## What the regret result does and does not say
+## Optional theory: what the regret result does and does not say
+
+Read this after you can distinguish a realised reward from a mean gap. The bound
+is background for deeper study; deriving it is not required for your first
+bandit implementation.
 
 UCB1's pull bound scales as $\log(T)/\Delta_a^2$; multiplying by $\Delta_a$
 gives regret of order $\log(T)/\Delta_a$.
@@ -139,13 +182,13 @@ An arm pulled twice should average its two observations. Total rounds count
 other arms' data and would underweight this arm's new observation.
 </details>
 
-<details><summary>2. When is a lead-routing problem more than a contextual bandit?</summary>
+<details><summary>2. Optional week 11 transfer: when is lead routing more than a contextual bandit?</summary>
 
 When a routing choice changes future broker capacity, later opportunities, or
 other persistent state that affects reward. Those consequences need modelling.
 </details>
 
-<details><summary>3. An unobserved action has zero logging probability. Does clipping solve OPE?</summary>
+<details><summary>3. Optional week 11 transfer: can clipping repair an action with no logged support?</summary>
 
 No. Clipping prevents division errors but supplies no counterfactual evidence.
 Coverage is a property of data collection, not a denominator repair.

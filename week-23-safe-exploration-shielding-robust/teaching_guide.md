@@ -3,6 +3,22 @@
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples distinguish mathematical guarantees from finite empirical checks.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 22’s](../week-22-cmdp-cpo-lagrangian/teaching_guide.md) expected-cost versus individual-violation distinction and week 2’s transition model.
+- **Add one difficulty:** A shield filters proposed actions according to a stated safe set and dynamics. Check whether a permitted next state also has a safe continuation.
+- **Try after the worked example:** Try [the one-decision browser shield](../interactive/index.html#safety), then compare it with [the Python grid courier](../learning_projects/courier.py) and implement `shield` in [the coding exercises](../learning_projects/exercises.py). If action left enters a marked hazard and right reaches a safe state, predict the filtered action set. Then change the map to challenge the model.
+
+<details><summary>Check your prediction</summary>
+
+Only right remains under the stated one-step hazard model. A guarantee for all future steps additionally needs a controlled-invariant safe set and correct dynamics; a newly changed map can invalidate the old filter.
+
+</details>
+
+**Carry it onward:** [The matching capstone](../week-24-capstone-safe-matching/teaching_guide.md) combines learning, evaluation and a cost constraint while keeping their claims separate.
+
 ## What this adds to week 22
 
 An expected-cost budget can permit individual violations.

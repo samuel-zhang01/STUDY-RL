@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>STUDY-RL · the courier learning lab</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="engine.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#lesson">Skip to experiment</a>
+  <header><p class="eyebrow">STUDY-RL / learn by changing one thing</p><h1>The courier learning lab</h1>
+    <p>Try a decision, predict its consequence, then inspect the calculation. Start with experiment 1; return to later experiments as you reach their weeks.</p>
+    <p class="small">Runs locally, without packages, accounts, downloads, or telemetry. These are small teaching models; the weekly projects develop the full methods.</p>
+  </header>
+  <nav aria-label="Experiments" id="navigation"></nav>
+  <main id="lesson" tabindex="-1">
+    <div class="chapter"><p id="week" class="eyebrow"></p><h2 id="title"></h2><p id="intro"></p><p id="bridge" class="small"></p></div>
+    <section class="prediction"><h3>Predict first</h3><p id="question"></p><details><summary>Reveal the reasoning</summary><p id="answer"></p></details></section>
+    <section aria-label="Experiment controls"><div id="controls" class="controls"></div><div id="actions" class="actions"></div></section>
+    <p id="announcement" role="status" aria-live="polite"></p><p id="error" role="alert"></p>
+    <section id="experiment" aria-label="Experiment results"></section>
+    <section class="transfer"><h3>Make it yours</h3><p id="exercise"></p><p id="links"></p></section>
+    <div class="actions"><button type="button" id="previous">Previous experiment</button><button type="button" id="next">Next experiment</button></div>
+  </main>
+  <footer><p>One seed is one simulated story. Change the seed and compare conclusions. Rewards and costs here are synthetic.</p><p><a href="../docs/INTERACTIVE_LEARNING.md">Coding projects and hint ladders</a> · <a href="../docs/LEARNING_PATH.md">How all 26 weeks connect</a> · <a href="../README.md">Course README</a></p></footer>
+  <noscript>This lab needs JavaScript. The course guides and Python projects work without it.</noscript>
+</body>
+</html>

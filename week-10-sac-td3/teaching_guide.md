@@ -2,6 +2,22 @@
 
 Use this guide for exercises 1–5 before running a continuous-control experiment.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve Bellman bootstrapping, replay and target networks from weeks 4–5, plus policy gradients from week 7.
+- **Add one difficulty:** A continuous action has a density, not a discrete action probability. SAC rewards entropy; TD3 takes a different deterministic-policy route.
+- **Try after the worked example:** Use [the weekly density exercises](project/solutions.py). If an action is rescaled from a to 2a, predict how its density and differential entropy change. The browser policy toy is discrete and does not implement SAC or TD3.
+
+<details><summary>Check your prediction</summary>
+
+The new density at 2a is half the old density at a; differential entropy increases by log(2). Always include the change-of-variables term when comparing continuous action coordinates.
+
+</details>
+
+**Carry it onward:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md) deliberately returns to a one-step decision so you can study logged evidence without continuous-control complexity.
+
 ## Connect to what you know
 
 Recall Bellman bootstrapping, a target network, and the chain rule.

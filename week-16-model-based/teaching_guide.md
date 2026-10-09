@@ -2,6 +2,22 @@
 
 Use this guide before Gaussian KL, lambda-return, and the world-model exercises.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve week 2’s known model and week 4’s finite-horizon bootstrap; week 14 reminds you where logs lack coverage.
+- **Add one difficulty:** Replace the known map with a learned model and compare imagined returns with actual outcomes. Longer imagination can compound an incorrect reward or transition model.
+- **Try after the worked example:** Use [the model-error experiment](../interactive/index.html#model). Predict the discounted optimism over three steps if the model invents reward 1 each step but reality gives 0, with gamma 0.9. The toy is finite planning, not Dreamer or MuZero training.
+
+<details><summary>Check your prediction</summary>
+
+The gap is 1+0.9+0.9²=2.71. Even this simple per-step reward error compounds; transition errors can also change which future states are imagined.
+
+</details>
+
+**Carry it onward:** [Exploration and meta-learning](../week-17-exploration-meta/teaching_guide.md) ask which real experience to collect and how to adapt to a changed task.
+
 ## Connect to what you know
 
 Bellman targets bootstrap beyond observed rewards; a world model additionally predicts unobserved transitions.

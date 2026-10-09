@@ -3,7 +3,7 @@ minversion = "8.0"
 # Weeks reuse a local `project` package and package-qualified test names.
 # `make tests` runs every dynamically discovered week in an isolated process.
 # Default pytest covers the shared tools and optional lab without aliasing weeks.
-testpaths = ["common/tests", "scripts/tests", "llm-lab/tests"]
+testpaths = ["common/tests", "scripts/tests", "learning_projects/tests", "llm-lab/tests"]
 pythonpath = [".", "llm-lab"]
 addopts = "-ra --strict-markers --import-mode=importlib"
 markers = [

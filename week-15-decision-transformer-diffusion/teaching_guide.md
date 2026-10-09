@@ -2,6 +2,22 @@
 
 Use this guide for returns-to-go, causal masking, and the diffusion noising exercise.
 
+## Learning bridge
+
+Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
+
+- **Carry forward:** Retrieve [week 14’s](../week-14-offline-rl-1/teaching_guide.md) fixed-data support and supervised imitation.
+- **Add one difficulty:** Condition a predicted action on a history and desired return, rather than a Bellman target. A desired outcome token is a request, not an environmental guarantee.
+- **Try after the worked example:** Use [the return-to-go and masking exercises](project/solutions.py). If every logged episode returns at most 4, predict whether setting the desired-return token to 10 proves the generated policy will earn 10. The browser OPE toy explains coverage only; it trains no transformer or diffusion policy.
+
+<details><summary>Check your prediction</summary>
+
+It proves nothing about achieving 10. The conditional model must extrapolate beyond the logged return range, and luck in a high-return diary may not be reproducible by changing actions.
+
+</details>
+
+**Carry it onward:** [Model-based RL](../week-16-model-based/teaching_guide.md) explicitly learns predicted consequences and lets a planner question them.
+
 ## Connect to what you know
 
 Behavior cloning predicts an action from a state using supervised learning.
