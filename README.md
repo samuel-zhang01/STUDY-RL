@@ -196,7 +196,10 @@ See [recorded lab validation](llm-lab/VALIDATION.md) for measured results and
 
 ## Test, execute, and rebuild
 
-Run Make targets from the repository root with the intended environment active:
+Run Make targets from the repository root with the intended environment active.
+`make tests` includes Node.js simulation checks; `make course-tests` and
+`make learning-tests` only need Python. Browser checks additionally require
+the separate development setup in [the lab README](interactive/README.md):
 
 | Command | What it does |
 |---|---|

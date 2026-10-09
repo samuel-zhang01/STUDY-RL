@@ -7,9 +7,9 @@ PY := python3
 .PHONY: help all syllabus weeks notebooks tests course-tests learning-tests lab-tests browser-tests lab llm-tests llm-notebook qa release-check secrets clean cleanall
 
 help:
-	@echo "Install: python -m pip install -r requirements.txt"
+	@echo "Install: follow README.md (SWIG first, then requirements.txt)"
 	@echo "course-tests: shared tools and every weekly suite (CPU)"
-	@echo "tests: course-tests plus optional LLM lab tests"
+	@echo "tests: course, optional LLM lab, Python learning projects and Node simulations"
 	@echo "lab: open the local interactive learning lab at http://localhost:8000/interactive/"
 	@echo "learning-tests / lab-tests: dependency-free Python projects / Node simulation checks"
 	@echo "browser-tests: Chromium, Firefox and WebKit interactions (install interactive dev dependencies)"

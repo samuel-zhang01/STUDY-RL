@@ -68,7 +68,7 @@ module.exports = async function scenarios(page, baseURL, options = {}) {
     await page.setViewportSize({width,height:900});
     for(const id of ['bandit','bellman','targets','courier','policy','ope','safety','model','preferences','causal']){
       await go(id);
-      verify(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),id+' fits viewport'+width);
+      const layout=await page.evaluate(()=>({fits:document.documentElement.scrollWidth<=innerWidth,viewport:innerWidth,document:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('main,nav,header,section,label,svg')].filter(el=>el.getBoundingClientRect().right>innerWidth+1).map(el=>({tag:el.tagName,id:el.id,class:el.className.baseVal||el.className,width:el.getBoundingClientRect().width}))}));verify(layout.fits,id+' fits viewport'+width+' '+JSON.stringify(layout));
       verify(await page.locator('#question').innerText()!=='' && await page.locator('#exercise').innerText()!=='',id+' has prediction and transfer at'+width);
       for(const link of await page.locator('#links a, footer a').evaluateAll(xs=>xs.map(a=>a.href))){const response=await page.request.get(link);verify(response.status()===200,'course link resolves '+new URL(link).pathname);}
     }
