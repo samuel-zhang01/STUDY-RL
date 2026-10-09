@@ -30,6 +30,7 @@ module.exports = async function scenarios(page, baseURL, options = {}) {
   await page.waitForFunction(()=>[...document.querySelectorAll('#experiment tbody tr')].some(r=>Number(r.cells[1].textContent)>0));
   await page.getByRole('button',{name:'Animate 20 / pause',exact:true}).click();const paused=await counts();
   await page.waitForTimeout(400);verify(await counts()===paused,'pause stops simulation updates');
+  await page.getByRole('button',{name:'Animate 20 / pause',exact:true}).click();await page.waitForTimeout(200);await slider('Exploration probability',.4);const changed=await counts();await page.waitForTimeout(400);verify(await counts()===changed && (await page.locator('#announcement').innerText())==='Paused.','changing a control stops animation and reports its actual paused state');
   await page.getByRole('button',{name:'Animate 20 / pause',exact:true}).click();
   await page.getByRole('button',{name:'2 · Send value backward',exact:true}).click();
   await page.waitForTimeout(400);verify((await page.locator('#title').innerText()).startsWith('2'),'changing lessons cancels the previous animation');
