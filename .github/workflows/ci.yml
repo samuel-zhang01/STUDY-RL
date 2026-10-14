@@ -2,13 +2,17 @@ name: Course checks
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   cpu-checks:
+    # Public pull requests retain the original free-hosted checks.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -46,6 +50,8 @@ jobs:
         run: make tests PY=python
 
   browser-checks:
+    # Public pull requests retain the original free-hosted checks.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -67,3 +73,31 @@ jobs:
           npx playwright install --with-deps chromium firefox webkit
       - name: Exercise the learning lab in three browsers
         run: make browser-tests PY=python
+
+  local-cpu-checks:
+    if: github.repository == 'samuel-zhang01/STUDY-RL' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: [ci-study-rl]
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run original cpu checks offline
+        run: python3 -I -B ci/run_checks.py cpu
+      - name: Reconcile only this run and attempt
+        if: always()
+        run: python3 -I -B ci/run_checks.py cpu --cleanup
+
+  local-browser-checks:
+    if: github.repository == 'samuel-zhang01/STUDY-RL' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: [ci-study-rl]
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run original browser checks offline
+        run: python3 -I -B ci/run_checks.py browser
+      - name: Reconcile only this run and attempt
+        if: always()
+        run: python3 -I -B ci/run_checks.py browser --cleanup
