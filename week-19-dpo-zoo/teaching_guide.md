@@ -36,6 +36,33 @@ The relative margin is 0, so the pair probability is sigmoid(0)=0.5. A supplied 
 **Carry it onward:** [Group-baseline methods](../week-20-grpo-rloo-rlvr/teaching_guide.md) return to sampled responses and an online reward or verifier.
 
 
+## Choose your explanation depth
+
+Why a better preference margin can hide a worse chosen likelihood. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+DPO compares the chosen response with a rejected response, relative to a reference. The comparison can improve because the chosen response becomes more likely, because the rejected response becomes less likely, or both. Track the absolute likelihoods as well as the margin.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+If both policy log probabilities initially equal their reference values, the DPO logit is **0** and the loss is **log(2) ≈ 0.693147**. Now change chosen log probability by **−0.2** and rejected by **−1.2**. The relative margin improves by **1**, despite the chosen response becoming less likely. At β = 0.1 the loss falls to **0.644397**.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+Let $h=(\ell_w-\ell_{\mathrm{ref},w})-(\ell_l-\ell_{\mathrm{ref},l})$. DPO is $-\log\sigma(\beta h)$, with derivative $-\beta\sigma(-\beta h)$ with respect to $h$. Hence larger $h$ decreases the loss, regardless of which likelihood moved. Inputs must use the same token/sequence convention; apply $\beta$ exactly once. The derivation below explains the supported-reference assumptions behind the policy interpretation.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 2: `my_dpo`](workbook.ipynb#cell-11) and [Exercise 8: `my_margin`](workbook.ipynb#cell-35). Compare `exercise_2_dpo` and `exercise_8_margin` on the initial and shifted arrays. Expect losses **0.693147 → 0.644397** and implicit reward margin **0 → 0.1**. Save chosen and rejected log probabilities beside them. A common failure is reporting only a rising margin as evidence that chosen-response likelihood or response quality improved.
+
 ## Mechanism at a glance
 
 ```mermaid

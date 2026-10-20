@@ -27,15 +27,16 @@ By the end of this lecture you will be able to:
 \begin{enumerate}\setlength{\itemsep}{2pt}
   \item Derive the REINFORCE-Leave-One-Out (RLOO) estimator from
         first principles and prove it is unbiased.
-  \item Derive the GRPO group-relative advantage and explain why it is a
-        control-variate variance-reduction technique.
+  \item Derive the GRPO group-relative advantage and distinguish baseline
+        centring, standardisation and their effects on gradient estimation.
   \item State the two debiasing fixes in Dr.~GRPO and the four upgrades in DAPO.
   \item Describe RLVR --- reinforcement learning with verifiable rewards ---
         and design a verifier for math, code, and tool use.
   \item Contrast process-reward models (PRMs) with outcome-reward models
-        (ORMs), and cite the four leading PRM datasets.
+        (ORMs), and distinguish human-labelled datasets, automatic process
+        supervision methods and generative reward models.
   \item Implement a working GRPO loop on a verifiable-reward task from
-        scratch and show held-out accuracy climbing during training.
+        scratch and measure held-out accuracy, including runs that fail to improve.
   \item Articulate the central safety failure modes of RLVR (spec gaming
         the verifier, format hacking, distributional narrowing).
 \end{enumerate}
@@ -57,16 +58,20 @@ Two 2024 papers study updates without a learned critic:
 \textsc{Ahmadian et al., Back to Basics, arXiv:2402.14740} (RLOO) and
 \textsc{Shao et al., DeepSeekMath, arXiv:2402.03300} (GRPO). Both observed
 that completions in LLM RL are typically scored at the \emph{sequence} level
-(``did the final answer match?''), so the credit-assignment problem PPO's
-GAE was solving is largely a fiction. Replace the critic with a \emph{group
-baseline}: sample $G$ completions per prompt, use their mean as the variance
-reduction, and you keep almost all of PPO's stability at half the memory.
+(``did the final answer match?''), so one can compare a learned token-level baseline with a baseline estimated from multiple complete responses. Replace the critic with a \emph{group
+baseline}: sample $G$ completions per prompt and compare their rewards.
+This removes the separately learned value estimator, while adding sampling
+work. Total memory, runtime, gradient variance and stability depend on the
+model architecture, group size and reward distribution; none has a fixed
+improvement factor.
 
 \begin{intuition}
-Think of grading $G$ students on the same exam. Their mean score is a clean,
-biased-free estimate of ``how hard the exam was'', so subtracting it from each
+Think of grading $G$ students on the same exam. Their mean score is a
+sampled estimate of average performance, so subtracting it from each
 student's score isolates ``how well \emph{this} student did relative to the
-class''. That isolated signal is your gradient. No instructor needs to predict
+class''. This coefficient multiplies a policy log-probability gradient;
+it is not the gradient by itself. Including a student in their own baseline
+creates dependence; RLOO excludes that student. No instructor needs to predict
 a student's score in advance (the value head); the class itself provides the
 baseline.
 \end{intuition}
@@ -88,27 +93,13 @@ early 2025.
 % ===========================================================================
 \chapter{Mathematical formulation}
 
-\section{Why PPO became the wrong tool}
-
-PPO was designed for continuous-control RL with three properties that
-language modelling does \emph{not} share:
-
-\begin{enumerate}\setlength{\itemsep}{2pt}
-  \item \textbf{Dense per-step reward.} A walking robot earns a few units
-        of reward every control step; an LLM earns one reward at the end of
-        a 512-token generation. PPO's per-token advantage via GAE was
-        solving a problem (smooth credit-assignment over hundreds of
-        controls) that simply does not exist in the LLM setting.
-  \item \textbf{Stationary state distribution.} A continuous-control
-        environment hands you a stable state distribution to fit a value
-        function against; an LLM generates its own context, so the value
-        head is trying to fit a moving target every step.
-  \item \textbf{Cheap rollouts.} Mujoco simulates a robot in microseconds.
-        Generating a 512-token completion from a 7B model costs hundreds of
-        milliseconds; the rollout cost vastly dominates the gradient cost,
-        which inverts PPO's design trade-off between sample efficiency and
-        gradient accuracy.
-\end{enumerate}
+\section{Why compare learned and sampled baselines?}
+PPO can handle terminal rewards, and both robot policies and language
+policies change their state-visitation distributions during training.
+A terminal score still poses credit assignment: earlier tokens affect which
+later continuations become possible. Critic-free methods trade value fitting
+for additional sampled completions; whether this is cheaper or lower variance
+depends on architecture, rollout cost and reward structure.
 
 The critic-free family replaces a learned baseline with one estimated from
 other completions for the same prompt. With independent on-policy samples,
@@ -261,8 +252,7 @@ of GRPO:
 
 \begin{itemize}\setlength{\itemsep}{2pt}
   \item \emph{Clip-Higher}: asymmetric clip $\varepsilon_\text{low} \ne \varepsilon_\text{high}$,
-        usually $0.2$ versus $0.28$. Lets low-probability exploration tokens
-        get probability mass without being capped on the upside.
+        for example $0.2$ versus $0.28$. The upper cap is larger, not absent; this permits a wider favourable-ratio range.
   \item \emph{Dynamic Sampling}: discard prompts whose group accuracy is $0$
         or $1$ (they yield zero advantage and waste gradient capacity).
   \item \emph{Token-level loss}: aggregate over valid tokens across the batch. This differs from Dr.~GRPO\textquotesingle s fixed normalisation; both remove per-response length denominators.
@@ -307,8 +297,7 @@ Open-Reasoner-Zero):
         final answer. Watch out: this is the most common reward hack
         surface in RLVR.
   \item A \textbf{KL anchor} to the SFT initialisation, often with
-        $\beta = 0.01$--$0.04$, sometimes dropped entirely (Open-Reasoner-Zero
-        argues KL is unnecessary on verifiable tasks; R1-Zero agrees).
+        $\beta = 0.01$--$0.04$, sometimes omitted in particular recipes. This is an empirical design choice, not a property of verifiability.
   \item A critic-free policy gradient --- GRPO or RLOO --- with $G = 8$--$16$.
 \end{enumerate}
 
@@ -337,23 +326,17 @@ $r(x, y_{1:t})$ for every $t$. The trajectory reward is then aggregated ---
 typically as the minimum, the mean, or a product of step probabilities.
 \end{definition}
 
-Four PRM datasets dominate the literature:
-
-\begin{itemize}\setlength{\itemsep}{2pt}
-  \item \textsc{PRM800K} (\textsc{Lightman et al., 2023, arXiv:2305.20050})
-        --- 800K human step labels on MATH. First showed PRMs beat ORMs at
-        best-of-N re-ranking on MATH.
-  \item \textsc{Math-Shepherd} (\textsc{Wang et al., 2024, arXiv:2312.08935})
-        --- automatic step labels via Monte-Carlo rollouts; a step is
-        ``good'' iff continuing from it disproportionately reaches the
-        correct final answer.
-  \item \textsc{OmegaPRM} (\textsc{Luo et al., 2024, arXiv:2406.06592}) ---
-        MCTS-based automatic PRM data generation. Drove Gemini's math gains.
-  \item \textsc{GenRM} (\textsc{Zhang et al., 2024, arXiv:2410.12832}) ---
-        reward is the probability of the token ``yes'' under a judge LLM
-        prompted with a rubric. \textsc{Rubric-RM / OpenRubrics}
-        (\textsc{arXiv:2510.07743, 2025}) extends this with synthetic
-        rubrics.
+Related primary studies include:
+\begin{itemize}
+\item \href{https://arxiv.org/abs/2305.20050}{Lightman et al.\ (2023)}
+release PRM800K human step labels and compare process and outcome supervision.
+\item \href{https://arxiv.org/abs/2312.08935}{Wang et al.\ (2024), Math-Shepherd}
+construct automatic step supervision using sampled continuations.
+\item \href{https://arxiv.org/abs/2406.06592}{Luo et al.\ (2024), OmegaPRM}
+use a divide-and-conquer MCTS procedure to locate errors and collect labels.
+\item \href{https://arxiv.org/abs/2410.12832}{Mahan et al.\ (2024), Generative
+Reward Models} study generated reasoning and synthetic preference labels.
+This is a related reward-modelling approach, not another human PRM dataset.
 \end{itemize}
 
 \begin{intuition}
@@ -366,31 +349,15 @@ becomes a place to game).
 
 \section{The KL anchor: what it does and when to drop it}
 
-The KL-to-reference term $\beta \, \KL(\pi_\theta \,\|\, \pi_\text{ref})$
-serves three purposes that are worth distinguishing:
-
-\begin{enumerate}\setlength{\itemsep}{2pt}
-  \item \textbf{Trust region.} It prevents the policy from drifting so far
-        in one step that the importance ratio $\rho$ explodes and the
-        clipped surrogate degenerates. PPO's clip does some of this job
-        already; the KL term is the safety net.
-  \item \textbf{Prior preservation.} It anchors the policy near a known-good
-        reference (the SFT model). This is essential in preference-RLHF
-        where the reward model is itself fit only locally; if the policy
-        wanders into reward-model out-of-distribution territory, you have
-        no guarantee the reward signal is meaningful.
-  \item \textbf{Skill retention.} It implicitly fights catastrophic
-        forgetting of non-rewarded skills. The SFT model knew how to do
-        creative writing and dialogue; pure RLVR shrinks that distribution.
-\end{enumerate}
-
-For \emph{verifiable} tasks (purposes 1 and 3 only), \textsc{Open-Reasoner-Zero}
-and \textsc{R1-Zero} report that the KL term is essentially dispensable
-when the base model is strong enough: the reward signal is grounded in
-external truth, so there is no out-of-distribution risk on the reward
-side, and the clip alone provides the trust region. For
-\emph{preference} RLHF (purpose 2), removing the KL anchor reliably
-explodes the policy into reward-model artifacts within tens of steps.
+Reference KL penalises drift from a specified checkpoint. It differs from
+new-versus-old rollout-policy KL and cannot bound a single optimiser step or
+guarantee retention of every skill. A verifier can be brittle or incomplete,
+so verifiable rewards do not eliminate reward-side distribution shift.
+Some recipes omit reference KL, but this is not a universal RLVR rule:
+the \href{https://arxiv.org/html/2501.12948}{DeepSeek-R1 report}
+specifies a nonzero coefficient for R1-Zero. Compare the exact recipe,
+reference-refresh schedule and evaluation rather than treating clipping as
+a hard trust-region substitute.
 
 For samples from $p$ with common positive support for $p$ and $q$, define
 \[
@@ -435,7 +402,7 @@ reference policy $\pi_\text{ref}$, KL coefficient $\beta$, clip $\varepsilon$.\\
 \textbf{3.} Form group baseline $\bar r$ and (optionally) $\sigma_r$;
    compute $\hat A_i = (r_i - \bar r)/(\sigma_r + \varepsilon)$.\\
 \textbf{4.} For every token in every $y^{(i)}$, compute the importance ratio
-   $\rho_{i,t}$ and the unbiased KL estimate
+   $\rho_{i,t}$ and the sampled KL surrogate (unbiased as a scalar only under the sampling conditions stated above)
    $\hat k^3_{i,t} = e^{\log\pi_\text{ref} - \log\pi_\theta} - (\log\pi_\text{ref} - \log\pi_\theta) - 1$.\\
 \textbf{5.} Form the clipped surrogate~\eqref{eq:grpo}, take an Adam step,
    clip gradient norm.
@@ -542,8 +509,7 @@ def rloo_advantages(rewards):
 
 \section{The KL-to-reference penalty}
 
-We use Schulman's k3 unbiased estimator (lower variance than the naive
-$\log p - \log q$ form, always non-negative):
+The k3 form below is non-negative and scalar-unbiased under current-policy sampling with common support. Lower variance is not universal, and cached old-policy samples require the qualification above:
 \[
   \hat k^3 \;=\; \exp(\log q - \log p) - (\log q - \log p) - 1,
   \qquad \E_{x \sim p}[\hat k^3] = \KL(p \,\|\, q).
@@ -563,84 +529,26 @@ surr2 = torch.clamp(ratio, 1-eps, 1+eps) * adv.unsqueeze(-1)
 pg_loss_tok = -torch.min(surr1, surr2) * mask
 \end{minted}
 
-\section{Verifier design checklist}
+\section{Verifier design: inspect the actual accepted language}
+The local integer extractor is a deliberately permissive toy. Finding the last
+integer can accept a number in an explanation and mishandle a decimal or fraction.
+It is not a general GSM8K verifier. Before extending it, define a complete
+answer grammar, require an unambiguous final-answer field, preserve exact
+rational strings and bound parsing/execution resources. Test malformed,
+conflicting, decimal, fractional and no-answer cases explicitly.
 
-A robust verifier for a single math problem on GSM8K looks like:
+A parser returning successfully is not a mathematical-correctness proof.
+Unit tests cover only their tested inputs, and a fixed format marker does
+not guarantee that the preceding reasoning is correct.
 
-\begin{minted}[fontsize=\footnotesize]{python}
-import re, sympy as sp
+\section{Scaling up is a separate implementation task}
+The runnable reference here is \texttt{project/train.py}; it exposes the
+estimator and masking choices in a tiny model. The optional
+\href{../llm-lab/README.md}{pretrained-model lab} implements SFT/DPO,
+not a pretrained GRPO trainer. A real GRPO integration needs a reward callback
+matching the installed library API, a dataset schema, verified stopping/masking
+and measured memory. No unpinned copy-and-paste trainer is claimed here.
 
-GSM8K_FINAL_RE = re.compile(r"####\s*([-+]?\d+(?:\.\d+)?)")
-ANY_NUMBER_RE  = re.compile(r"[-+]?\d+(?:\.\d+)?")
-
-def gsm8k_verify(completion: str, target: float) -> float:
-    # 1. Preferred: the model emitted the canonical #### marker.
-    m = GSM8K_FINAL_RE.search(completion)
-    if m is None:
-        # 2. Fallback: the last number in the completion.
-        nums = ANY_NUMBER_RE.findall(completion)
-        if not nums:
-            return 0.0
-        pred_s = nums[-1]
-    else:
-        pred_s = m.group(1)
-    try:
-        pred = sp.Rational(pred_s)
-        return 1.0 if sp.simplify(pred - sp.Rational(target)) == 0 else 0.0
-    except Exception:
-        return 0.0
-\end{minted}
-
-The three safety considerations encoded above:
-
-\begin{itemize}\setlength{\itemsep}{2pt}
-  \item Prefer the canonical marker over the fallback regex --- the
-        marker is harder to game accidentally.
-  \item Use \texttt{sympy.Rational} for equivalence; string equality
-        fails on \texttt{``2.0''} vs \texttt{``2''} and on
-        \texttt{``1/2''} vs \texttt{``0.5''}.
-  \item Wrap the whole thing in \texttt{try / except} --- a verifier that
-        crashes on malformed input is a denial-of-service vector during
-        RL.
-\end{itemize}
-
-\begin{pitfall}
-A common verifier hack: when the regex matches and \texttt{sympy} fails,
-return $1$ for charity. This grants the policy free reward whenever it
-emits unparseable nonsense after the marker. Always return $0$ on
-verifier failure, never the benefit of the doubt.
-\end{pitfall}
-
-\section{TRL recipe for scaling up}
-
-The same loop on Qwen2.5-0.5B-Instruct + LoRA on a 24\,GB GPU:
-
-\begin{minted}[fontsize=\footnotesize]{python}
-from trl import GRPOTrainer, GRPOConfig
-from peft import LoraConfig
-
-cfg = GRPOConfig(
-    output_dir="runs/grpo-qwen",
-    num_generations=8,
-    max_completion_length=512,
-    temperature=0.9,
-    learning_rate=1e-6,
-    beta=0.04,              # KL coefficient
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=4,
-)
-peft = LoraConfig(r=32, lora_alpha=64, target_modules="all-linear")
-trainer = GRPOTrainer(
-    model="Qwen/Qwen2.5-0.5B-Instruct",
-    reward_funcs=[exact_match_reward],
-    args=cfg,
-    train_dataset=gsm8k_train,
-    peft_config=peft,
-)
-trainer.train()
-\end{minted}
-
-% ===========================================================================
 \chapter{Empirical results}
 
 \begin{figure}[t]
@@ -686,21 +594,15 @@ canonical fix.
         ``2024'' inside an explanation. Defence: parse the final line,
         not the whole completion; use \texttt{sympy} equivalence rather
         than string equality.
-  \item \emph{Distributional narrowing.} Pure RLVR shrinks the policy
-        onto the verifier-rewarded distribution and forgets unrelated
-        skills. \textsc{Tülu-3} mixes RLVR with a small DPO stream; many
-        recipes keep a $\beta \ge 0.01$ KL anchor to the SFT model.
-  \item \emph{Length bias.} The vanilla GRPO loss systematically favours
-        shorter completions because of its $1/|y|$ normaliser; Dr.~GRPO
-        and DAPO drop that divisor, and Kimi K1.5 adds an explicit length
-        penalty.
+  \item \emph{Distributional narrowing.} Optimising a narrow verifier can degrade unrelated skills. Tulu 3 uses distinct post-training stages, including preference optimisation and RLVR; it is not evidence for an arbitrary mixed DPO stream. Evaluate retained skills and record the actual reference-KL convention.
+  \item \emph{Length weighting.} Dividing each response by its length changes token weights; the resulting direction of length change depends on advantages and model gradients. Dr.~GRPO and DAPO modify the reduction, while explicit length rewards add a different incentive. Inspect the exact loss before predicting longer or shorter outputs.
 \end{enumerate}
-The safety analogue to \emph{Theorem~\ref{thm:rloo-unbiased}} is sobering:
-the baseline subtraction is correct in expectation, but the empirical
-average of LOO advantages over the policy's own samples can drift by
-many standard deviations when the verifier rate is low --- exactly the
-``rare-positive'' regime that triggers reward-hacking incentives. See
-week~21 for the Gao~2022 over-optimisation scaling laws.
+LOO advantages sum to zero within every complete group (up to roundoff).
+They cannot drift away from zero as a group mean. The score-weighted gradient
+can nevertheless be noisy, and uniformly incorrect groups have zero centred
+reward signal. Evaluate rare positives, gradient variance and verifier failures
+separately from this coefficient identity.
+
 \end{safetyangle}
 
 % ===========================================================================
@@ -719,7 +621,7 @@ The matching analogue of Math-Shepherd's automatic PRM is: bootstrap the
 step labels by Monte-Carlo from historical outcomes. ``This shortlist
 profile predicts $70\%$ hire-rate'' becomes the step reward, the way
 ``this proof step continues to a correct final proof in $70\%$ of
-rollouts'' becomes the step label in PRM800K.
+rollouts'' illustrates continuation-based automatic labels such as Math-Shepherd. PRM800K instead contains human step judgements.
 
 \textbf{Practical caveat.} PRMs expand the gameable surface --- a
 candidate-ranking policy can learn to satisfy the

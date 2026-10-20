@@ -170,6 +170,33 @@ The sign of a loss gradient differs from the direction of the gradient-descent s
 The twin minimum reduces one overestimation mechanism; it is not a calibrated lower confidence bound.
 Purely offline SAC can exploit unsupported actions even with twin critics; week 14 addresses that problem.
 
+## Choose your explanation depth: A bounded action needs a changed probability density
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+A Gaussian draw can be any real number, while a tanh-transformed action lies between −1 and 1. Squashing many nearby unbounded values into a narrow action interval changes density. SAC needs the probability density in the action coordinates for its entropy term.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+At pre-squash value u=0, tanh(u)=0 and the absolute Jacobian is 1, so its log correction is zero. At u=1, the action is about 0.7616 and the Jacobian about 0.4200. The action log density is therefore the Gaussian log density plus about 0.8676.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+For $a=\tanh u$, change of variables gives $\log\pi_A(a)=\log\pi_U(u)-\sum_j\log(1-\tanh^2u_j)$. For additional scale $c_j>0$, subtract $\sum_j\log c_j$ as well. Sum over action dimensions, not over batch rows. The transform is bijective on the open interval; exact endpoints arise only through numerical saturation, which motivates stable evaluation of the log-Jacobian. Differential entropy depends on these coordinates, so a target entropy must use the same convention.
+
+</details>
+
+**Try it in Jupyter:** jump to [`tanh_gaussian_log_prob` in the workbook](workbook.ipynb#cell-6), then run the setup cells above it. Check the correction at u=0 and u=1 before a training run. Passing an already squashed action as though it were the Gaussian sample changes the density calculation.
+
 ## Notebook investigation: track action density through a change of coordinates
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 3 and 5**.

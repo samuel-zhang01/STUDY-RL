@@ -40,6 +40,33 @@ The treated group contains more severe cases with lower baseline outcomes. Apply
 **Carry it onward:** Return to [week 11](../week-11-contextual-bandits-ope/teaching_guide.md): explain which selection probabilities are known by randomized logging and which assumptions a biological observational dataset must supply instead.
 
 
+## Choose your explanation depth
+
+How adjustment changes the question being averaged. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+Treatment and comparison groups can contain different mixes of severity. A pooled comparison then mixes treatment differences with baseline severity differences. Standardisation applies the same severity weights to both arms; a causal interpretation still needs scientific assumptions.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+For mild cases let untreated/treated means be **2 and 3**; for severe cases let them be **0 and 1**. If treated people are 20% mild and controls are 80% mild, pooled means are **1.4 and 1.6**, giving **−0.2**. With a common 50/50 severity distribution, adjusted means are **2 and 1**, giving **+1**.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+With consistency, conditional exchangeability $Y(a)\perp A\mid C$, and positivity, $E[Y(a)]=\sum_c E[Y\mid A=a,C=c]P(C=c)$. Subtract the two standardised means to identify the target-population average effect. The observed table alone does not verify exchangeability. Hidden confounding, mismeasurement or a changed target population can invalidate the interpretation while the arithmetic remains correct.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 2: `learner_adjusted_ate`](workbook.ipynb#cell-8), backed by `exercise_2_adjusted_ate`, and reconstruct the table above. Expect **−0.2 pooled** and **+1 adjusted** when the cells have the stated weights. In [Exercise 3](workbook.ipynb#cell-11), verify both Gaussian causal directions yield covariance `[[1, 0.8], [0.8, 1]]` while their interventions differ. A common failure is treating equal predictive fit or residual moments as evidence that the graph direction has been identified.
+
 ## Mechanism at a glance
 
 ```mermaid

@@ -32,6 +32,33 @@ The update is max(0,0.5+0.2×(3−1))=0.9. Excess cost increases its price; this
 **Carry it onward:** [Shielding](../week-23-safe-exploration-shielding-robust/teaching_guide.md) limits executed actions using a safety model, addressing a different requirement.
 
 
+## Choose your explanation depth
+
+Why the budget and discount must use the same units. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+The multiplier raises the price of cost when the policy overspends. To decide whether it overspends, you must compare like quantities: a discounted episode total is different from an average per-step cost.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+In a one-state continuing task, action 1 costs one and is chosen with probability p. At γ = 0.9, expected discounted cost is **10p**. A budget d = 0.5 therefore allows **p ≤ 0.05**. At p = 0.5 the cost is 5; starting λ = 0 with step size 0.1 gives **λ′ = 0.45**.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+The geometric series gives $J_c=\sum_{t\ge0}\gamma^tE[c_t]=p/(1-\gamma)$ for a stationary choice probability and $0\le\gamma<1$. For $L=J_r-\lambda(J_c-d)$, descent in $\lambda$ gives $[\lambda+\eta(J_c-d)]_+$. This sign check does not prove neural training converges. If scaling costs by $s$, scale the budget by $s$ and the equivalent multiplier by $s$ in the opposite coordinate convention: $c'=c/s,d'=d/s,\lambda'=s\lambda$.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 1](workbook.ipynb#cell-6), backed by `project.solutions.exercise_1`; call `(0, 0.1, 5, 0.5)` and expect **0.45**. Then open [Exercise 5](workbook.ipynb#cell-18): lower-tail CVaR of `[0, 10, 20]` at mass 0.5 is **10/3**, because the tail includes one full observation and half of the next. A common failure is averaging only the samples below a quantile and discarding the fractional boundary mass.
+
 ## Mechanism at a glance
 
 ```mermaid

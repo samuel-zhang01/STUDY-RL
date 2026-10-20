@@ -173,6 +173,33 @@ For the memo, report one concrete metric with its numerator, denominator, cutoff
 Replace “the model is fair” with the actual audited property and which groups/jobs the evidence covers.
 This is an interpretation exercise; the synthetic examples do not settle real deployment policy.
 
+## Choose your explanation depth: Calibration changes probabilities, not the definition of relevance
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+A ranking score orders candidates. A calibrated probability tries to match an observed outcome frequency. A monotone calibrator can change all probability values while preserving ranking order, so NDCG and calibration error measure different properties.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+For the Beta calibrator use s=0.6, a=2, b=1 and c=−0.5. Its logit is 2 log(0.6)−log(0.4)−0.5 ≈ −0.60537; sigmoid gives about 0.35312. At a=b=1,c=0, the output is exactly s. Equal a and b means scaling the logit of s, not fitting a sigmoid to raw s.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+Let $h(s)=a\log s-b\log(1-s)+c$ on $0<s<1$. Since $h\prime(s)=a/s+b/(1-s)$, nonnegative $a,b$ make $\sigma(h(s))$ nondecreasing. The identity follows from $\log s-\log(1-s)=\operatorname{logit}(s)$. A local unconstrained logistic fit can violate these coefficient conditions, so inspect fitted coefficients before asserting monotonicity. Fit calibration on held-out labelled data representing the outcome and population you want to predict; neither calibration nor position-bias weighting establishes fairness. For retrieval, the separate InfoNCE relation is $I(X;Y)\ge\log B-E[L]$ under its joint-positive and independent marginal-negative sampling assumptions, not the reversed inequality.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_8_calibration` in the workbook](workbook.ipynb#cell-28), then run the setup cells above it. Expect about 0.35312 for the explicit formula and exact identity for (1,1,0). Keep fitting, calibration and final evaluation partitions distinct; recomputing ECE on the fitting labels can hide overfitting.
+
 ## Notebook investigation: put the denominator in the figure
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 4, 6 and 9**.

@@ -176,6 +176,33 @@ MIPS marginalizes over action embeddings: both numerator and denominator must ma
 using target and logger policies respectively. Embedding dimension alone does not determine variance.
 See [Saito and Joachims](https://proceedings.mlr.press/v162/saito22a.html).
 
+## Choose your explanation depth: How a positive propensity can still leave almost no evidence
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+Overlap answers whether evaluation is possible in principle. Effective sample size asks whether this particular weighted sample is concentrated on a few rows. A logger can give every action positive probability while almost never choosing the action that the target always selects.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+Consider 100 actions and epsilon-greedy exploration 0.05. If the target always selects a non-greedy action, its logging probability is 0.05/100 = 0.0005. A matching row has weight 2000; all other rows have weight zero. Among 10,000 rows, the expected number of matches is only 5. The expected count is not a guarantee: a realised log can have fewer or none.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+If exactly $m>0$ rows match, then $\mathrm{ESS}=(2000m)^2/(2000^2m)=m$. More generally, for nonnegative weights with nonzero total, Cauchy–Schwarz gives $1\le\mathrm{ESS}\le n$. This diagnostic depends on the observed weights; it is not a confidence interval and does not account for reward noise, temporal dependence or a misspecified logger. With $m=0$, the formula is $0/0$: report no empirical overlap rather than inventing an effective sample. Increasing sample count only helps if the logging distribution supplies relevant outcomes.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_7_ess` in the workbook](workbook.ipynb#cell-25), then run the setup cells above it. Construct five weights of 2000 and 9,995 zeros: expect ESS 5. Repeating the rare-event experiment changes m; plot that distribution alongside estimator error instead of presenting the expected count as observed evidence.
+
 ## Notebook investigation: diagnose the log before trusting its estimate
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 5, 6 and 7**.

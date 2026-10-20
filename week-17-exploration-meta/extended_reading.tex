@@ -1,70 +1,56 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.4cm]{geometry}
 \usepackage{../common/rlstudy}
-
-\title{Week 17 --- Extended Reading: Exploration and Meta-RL}
+\title{Week 17 --- Extended Reading: Exploration and adaptation}
 \author{STUDY-RL}
-\date{\today}
-
+\date{Source audit: 20 October 2026}
 \begin{document}
 \maketitle
+\section*{Read for a claim, an assumption and a test}
+Read the teaching guide first, then use this pack alongside the lecture.
+The annotations below are course-written paraphrases and investigation prompts,
+not quotations from the papers. Each source link identifies a primary paper
+or official guidance. Benchmark results do not transfer automatically to our
+small exercises. For each reading, write the mathematical object, the needed
+assumptions and one observation that would challenge your interpretation.
 
-\section{Burda et al.\ (2018) --- RND}
-\textsc{Y.\ Burda, H.\ Edwards, A.\ Storkey, O.\ Klimov.} \emph{Exploration by Random Network Distillation.} ICLR 2019, arXiv:1810.12894.
+\section{Burda et al. (2018): RND}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1810.12894}
 
-\noindent\textbf{Summary.} Intrinsic reward = predictor-to-fixed-random-target MSE. Simple, scalable. Reaches the first room and beyond on Montezuma's Revenge with PPO.
+\paragraph{Mechanism and scope.} RND rewards prediction error against a fixed randomly initialised target network. The predictor learns visited observations; the target must remain fixed. Novelty in representation space need not correspond to progress on the external task.
 
-\noindent\textbf{Why it matters.} The current default exploration bonus in deep RL practice. The ``random target'' design avoids the noisy-TV trap of ICM by construction.
+\paragraph{Read, derive, investigate.} Check that target parameters receive no optimiser update. Revisit one observation repeatedly and track its prediction error. Then change the observation representation: why can new irrelevant pixels look novel? The exact normalisation convention is part of the algorithm, not a cosmetic unit change.
 
-\begin{quote}
-``Because the target network is fixed, the prediction error reduces to zero only as the predictor learns the random function on visited states; novelty therefore decays with visit count even on stochastic observations.''
-\end{quote}
+\section{Pathak et al. (2017): ICM}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1705.05363}
 
-\section{Pathak et al.\ (2017) --- ICM}
-\textsc{D.\ Pathak, P.\ Agrawal, A.\ Efros, T.\ Darrell.} \emph{Curiosity-Driven Exploration by Self-Supervised Prediction.} ICML 2017, arXiv:1705.05363.
+\paragraph{Mechanism and scope.} ICM learns features through an inverse-dynamics objective and uses forward prediction error as intrinsic reward. The representation aims to emphasise controllable aspects, but that is a modelling choice rather than a universal immunity to irrelevant noise.
 
-\noindent\textbf{Summary.} Intrinsic reward = forward-dynamics error in an inverse-dynamics-learned feature space. Strong on no-reward Atari and on procedurally generated environments.
+\paragraph{Read, derive, investigate.} Compare predicting raw observations with predicting learned features. What information does the inverse action-prediction task preserve or discard? Design a noisy observation channel and identify which assumption would make it irrelevant to the learned representation.
 
-\noindent\textbf{Why it matters.} Establishes the ``learn what is controllable, get curious about what is unpredictable in the controllable manifold'' principle. Direct precursor of RND.
+\section{Badia et al. (2020): Agent57}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2003.13350}
 
-\begin{quote}
-``The inverse model encodes only action-relevant features; the forward model's prediction error in this space is high only when the agent encounters novel transitions it could in principle influence.''
-\end{quote}
+\paragraph{Mechanism and scope.} Agent57 combines multiple exploration and long-horizon learning components with adaptive choice among policies. Its Atari result evaluates the complete system, not an isolated proof that a particular intrinsic bonus always improves exploration.
 
-\section{Badia et al.\ (2020) --- Agent57}
-\textsc{A.\ Badia et al.} \emph{Agent57: Outperforming the Atari Human Benchmark.} ICML 2020.
+\paragraph{Read, derive, investigate.} Build a component map: replay, recurrent state, intrinsic rewards, discount choices and policy selection. Which components are absent from the workbook? State one ablation needed before attributing the full system's result to RND-like novelty alone.
 
-\noindent\textbf{Summary.} Combines NGU's episodic-plus-lifetime curiosity with a meta-controller that adaptively weights intrinsic vs extrinsic reward and short vs long horizons. First agent above human on all 57 Atari games.
+\section{Finn et al. (2017): MAML}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1703.03400}
 
-\noindent\textbf{Why it matters.} Demonstrates that no single exploration bonus suffices across a wide task suite; meta-selection of bonuses is necessary.
+\paragraph{Mechanism and scope.} MAML learns parameters that perform well after a small adaptation update on a task. The outer loss differentiates through the inner update in full MAML. First-order approximations omit part of that derivative.
 
-\begin{quote}
-``Different games require qualitatively different exploration regimes; the meta-controller exposes this directly as an adaptive bandit over reward weights.''
-\end{quote}
+\paragraph{Read, derive, investigate.} For $L_m(\theta)=\tfrac12(\theta-m)^2$, derive the adapted parameter and outer gradient. Explain the factor $(1-\alpha)^2$. In a softmax bandit, adding a constant to every logit changes no probability, so symmetry does not establish a unique optimal parameter vector.
 
-\section{Finn et al.\ (2017) --- MAML}
-\textsc{C.\ Finn, P.\ Abbeel, S.\ Levine.} \emph{Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks.} ICML 2017, arXiv:1703.03400.
+\section{Laskin et al. (2022): Algorithm Distillation}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2210.14215}
 
-\noindent\textbf{Summary.} Find an initialisation $\theta$ such that one (or a few) gradient steps on any task in the meta-distribution gives a high-performing task-specific model. Implemented as a bilevel optimisation through PyTorch's higher-order autograd.
+\paragraph{Mechanism and scope.} Algorithm Distillation trains sequence models on learning histories so that adaptation can occur through context at inference. A history containing rewards and behaviour across episodes differs from a single successful trajectory.
 
-\noindent\textbf{Why it matters.} The first ``learn a learning algorithm'' result that scales to deep networks across a wide range of domains.
+\paragraph{Read, derive, investigate.} Distinguish test-time context changes from gradient updates. Which data order exposes improvement rather than merely good behaviour? Evaluate on tasks held out from training and include a no-history ablation. A short sequence-classification toy is not proof that an optimiser has been fully recovered.
 
-\begin{quote}
-``The key idea is to find model parameters that are sensitive to changes in the task, such that small changes in the parameters produce large improvements on the loss function of any task drawn from the task distribution.''
-\end{quote}
+\section*{Connect the reading to your workbook}
+Run novelty, external return and coverage diagnostics together. For meta-learning, keep adaptation and evaluation samples separate, then compare full and first-order meta-gradients on a scalar problem before scaling up. Novelty, task learning and across-task adaptation answer different questions.
 
-\section{Laskin et al.\ (2022) --- Algorithm Distillation}
-\textsc{M.\ Laskin et al.} \emph{In-Context Reinforcement Learning with Algorithm Distillation.} arXiv:2210.14215.
-
-\noindent\textbf{Summary.} Train a causal transformer on histories of an RL agent's learning curve (across many tasks). At test time roll the transformer on a new task: it exhibits a similar learning curve with \emph{no} gradient updates.
-
-\noindent\textbf{Why it matters.} Re-frames meta-RL as sequence modelling; positions transformers as universal learners. Direct path to DPT and the broader ``foundation-model policies'' programme.
-
-\begin{quote}
-``Algorithm Distillation treats RL learning as a sequence prediction problem: the model is taught to imitate the entire learning trajectory, not just the final policy.''
-\end{quote}
-
-\vfill
-\noindent\emph{Sourced from} \texttt{research/exploration\_meta\_sota.md} (parts I, sections 2-5; part II, sections 13, 17).
-
+\noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
 \end{document}

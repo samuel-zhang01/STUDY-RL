@@ -184,6 +184,33 @@ Dropping the outer discount gives 0.25, twice the correct start-state gradient.
 For the original discounted policy-gradient setting, see
 [Sutton et al., Policy Gradient Methods for RL with Function Approximation](https://proceedings.neurips.cc/paper/1999/hash/464d828b85b0bed98e80ade0a5c43b0f-Abstract.html).
 
+## Choose your explanation depth: Why the best baseline is a weighted mean
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+A baseline changes the noise of a policy-gradient sample without changing its expectation when it does not depend on the sampled action. Samples with larger score gradients have more influence on gradient variance, so the best baseline does not generally equal the ordinary average return.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+For returns (2,5) with squared score magnitudes (1,4), the weighted baseline is (1×2+4×5)/(1+4) = 4.4. The ordinary mean is 3.5. The corresponding weighted squared residual sums are 7.2 and 11.25 respectively; the first is smaller for these fixed samples.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+Write $z=\nabla_\theta\log\pi_\theta(A\mid s)$. Since $E[z\mid s]=\nabla_\theta\sum_a\pi_\theta(a\mid s)=0$, subtracting an action-independent $b(s)$ preserves the expected gradient. Minimise $E[\|z\|^2(G-b)^2\mid s]$ over $b$: differentiating gives $b^*=E[\|z\|^2G\mid s]/E[\|z\|^2\mid s]$ when the denominator is positive. This is a population result under finite moments. Fitting a baseline on the very same samples can introduce dependencies requiring additional care.
+
+</details>
+
+**Try it in Jupyter:** jump to [`optimal_baseline` in the workbook](workbook.ipynb#cell-26), then run the setup cells above it. Expect 4.4. Measure variance of gradient vectors across samples or runs; variance of scalar losses is a different quantity.
+
 ## Notebook investigation: plot the gradient estimator, not just its loss
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2, 4 and 5**.

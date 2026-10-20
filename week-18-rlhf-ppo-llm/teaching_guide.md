@@ -35,6 +35,33 @@ The sample log ratio is log(0.5/0.25)=log(2). KL is the policy expectation over 
 **Carry it onward:** [DPO](../week-19-dpo-zoo/teaching_guide.md) uses chosen/rejected pairs to train relative odds directly.
 
 
+## Choose your explanation depth
+
+How reference regularisation changes a two-action policy. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+A preference model gives a score; the reference policy supplies a starting distribution. The KL penalty makes expensive departures from that starting distribution matter. A high score alone does not determine the new probability.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+Let the reference assign **[0.5, 0.5]**, rewards be **[log(3), 0]**, and β = 1. Exponentiating reward multiplies the reference weights by **[3, 1]**; normalising gives **[0.75, 0.25]**. At β = 2 the result is approximately **[0.634, 0.366]**, closer to the reference.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+For fixed context and finite supported actions, maximize $\sum_a\pi_a r_a-\beta\sum_a\pi_a\log(\pi_a/q_a)$ with $\beta>0$, $q_a>0$ and $\sum_a\pi_a=1$. Differentiating the normalised Lagrangian gives $\pi_a=q_a\exp(r_a/\beta)/Z$. This exact distribution-level optimum motivates the preference connection; a sampled clipped neural PPO step need not reach it or satisfy a hard KL bound.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 7: `optimal_logp`](workbook.ipynb#cell-31), backed by `exercise_7_optimal_policy_logprob`. The helper returns **unnormalised log weights**: apply `torch.softmax(log_weights, dim=-1)` (or subtract log-sum-exp before exponentiating) to recover **[0.75, 0.25]**. Test that adding the same constant to both rewards leaves them unchanged. Then contrast [Exercise 3](workbook.ipynb#cell-15): its PPO ratio uses the **old rollout policy**, not the reference distribution in this derivation. Mixing those two probability roles is the common failure.
+
 ## Mechanism at a glance
 
 ```mermaid

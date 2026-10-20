@@ -44,7 +44,7 @@ learning-tests:
 	$(PY) -m unittest discover -s learning_projects/tests -v
 
 lab-tests:
-	node --test interactive/tests/engine.test.js study-lab/model.test.cjs portal/tests/plot-model.test.mjs portal/tests/state.test.mjs
+	node --test interactive/tests/engine.test.js study-lab/model.test.cjs portal/tests/plot-model.test.mjs portal/tests/state.test.mjs portal/tests/progress-store.test.mjs
 
 browser-tests:
 	PY=$(PY) node interactive/tests/run-browser.js

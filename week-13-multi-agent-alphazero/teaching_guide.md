@@ -167,6 +167,33 @@ The no-noise forced-win regression checks sign correctness directly.
 `evaluate_vs_random` now counts positive agent outcomes as wins; its legacy `winrate` field is a score rate with draws worth 0.5.
 A second regression checks that a forced agent win is reported as a win.
 
+## Choose your explanation depth: Whose value is stored in a search node?
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+Tic-Tac-Toe alternates players. The child node is evaluated from the player who moves there, while its parent wants the opposite outcome. The local MCTS stores each node’s own-player value and negates the child value during selection. Without a fixed perspective convention, search can prefer moves that help the opponent.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+Let a child’s mean value be −0.1 from O’s perspective, its prior be 0.5, its visit count be 1, the parent child-visit total be 1 and c=1.5. Its parent-view score is −(−0.1)+1.5×0.5×sqrt(1)/(1+1) = 0.475. An unvisited corner with prior 0.1 scores 0.15, so the centre is selected in this comparison.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+For the local storage convention, $\mathrm{score}(a)=-Q_{\mathrm{child}}+cP(a)\sqrt{\max(1,\sum_bN_b)}/(1+N_a)$. Backup alternates sign at every edge. The initial max with 1 lets priors distinguish zero-visit children. This allocation rule is not a proof that finite search improves every decision. Separately, in a finite zero-sum matrix game with payoff matrix $M$, external regrets bound $\max_x x^TM\bar y-\min_y\bar x^TMy\le(R_1(T)+R_2(T))/T$. This follows by adding both regret inequalities and cancelling realised payoffs. It concerns average strategies and exact matrix payoffs, not unconditional convergence of a last-iterate neural self-play policy.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_1_puct` in the workbook](workbook.ipynb#cell-7), then run the setup cells above it. The exercise helper takes child-view Q and negates it; pass `q=-0.1` for this worked case. Compare it with `MCTS._select_child` in `project/alphazero.py`. Report wins/draws/losses: the legacy winrate field gives draws half credit, so it is a score rate, not an Elo rating.
+
 ## Notebook investigation: label every search value with its player
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 4**.

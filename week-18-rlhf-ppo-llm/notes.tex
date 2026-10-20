@@ -31,7 +31,7 @@ By the end of this lecture you will be able to:
         explain why each term exists.
   \item Derive the PPO clipped surrogate at the \emph{token level}, including
         Generalised Advantage Estimation (GAE), the value head, and the
-        adaptive KL controller of \textsc{Schulman et al.\ 2017}.
+        adaptive reference-KL controller used in later language-model fine-tuning recipes.
   \item Explain length bias, reward hacking, and reward-model
         overoptimisation, and pair each with a concrete mitigation.
   \item Implement the full three-stage RLHF pipeline (SFT $\to$ RM $\to$ PPO)
@@ -72,7 +72,7 @@ would a human say is better?'' is hard, so we collect a few thousand
 pairwise judgements and \emph{interpolate} them with a neural reward
 model. \textbf{Step two}: ``what should the language model say?'' is
 hard, so we run PPO against the interpolant, with a leash (a KL
-penalty) tying us back to the supervised baseline so we never drift
+penalty) discouraging departure from the supervised baseline when the policy drifts
 too far into reward-hacking land.
 \end{intuition}
 
@@ -107,7 +107,7 @@ at the end of stage~2; the value head learns alongside the policy.}
 
 \begin{pitfall}
 A common confusion: ``why do I need a critic if PPO has the clip?''
-The clip is a \emph{trust region} on the policy update; it does not
+The clip is a surrogate device that removes some incentives for large ratio changes; it is not a hard trust-region constraint and it does not
 estimate advantages. Without a critic, advantages are just rewards
 minus a moving baseline --- usable, but high-variance. Token-level
 PPO without a value head is what GRPO eventually re-introduces in
@@ -179,11 +179,13 @@ $y_l$, can be batched.
 \end{remark}
 
 \begin{pitfall}
-The Bradley--Terry model assumes \emph{transitive, deterministic}
-preferences from each annotator. Real annotators are noisy and
-internally inconsistent; \textsc{Azar et al.\ 2024}~(IPO) show that
-when preferences saturate ($\Prb \to 1$), the BT model pushes
-$\beta \to \infty$ in DPO. We discuss this fix in week~19.
+Bradley--Terry is a \emph{probabilistic} model with one scalar score per response.
+Its score ordering imposes transitive pairwise tendencies, but individual labels
+can be noisy. It cannot represent every cyclic population preference pattern.
+On separable empirical pairs, logistic likelihood may favour unbounded fitted
+score margins. In DPO, $\beta$ is normally fixed: the fitted log-ratio margin,
+not the hyperparameter itself, can diverge. IPO changes that empirical objective.
+
 \end{pitfall}
 
 \section{Stage 2: the KL-regularised RL objective}
@@ -198,11 +200,7 @@ J(\theta)
 \label{eq:rlhf-obj}
 \end{equation}
 The KL term is a soft penalty on drift from the SFT baseline; it is not
-a hard upper bound on KL or a safety guarantee. Without it the policy will
-quickly find adversarial sequences that the reward model loves but
-that aren't even valid English --- the canonical example being
-``aaaaaaaa\ldots'' for a sentiment model that loves repeated friendly
-characters.
+a hard upper bound on KL or a safety guarantee. A misspecified reward model can favour repetitive or otherwise poor responses. Removing the penalty can make such exploitation easier, but the behaviour depends on the reward, policy and optimisation setting.
 
 \begin{theorem}[Closed-form optimum of \eqref{eq:rlhf-obj}]
 \label{thm:closed-form}
@@ -346,18 +344,20 @@ $c_v \approx 0.5$, $c_e \in [0, 0.01]$.
 
 \section{The adaptive KL controller}
 
-The InstructGPT recipe lets $\beta$ float to keep the observed KL
-around a target $\KL^{\text{target}}$ (typically $0.05$--$0.2$). The
-\textsc{Schulman 2017} update rule is
+A reference-KL feedback controller appears in the language-model
+fine-tuning implementation accompanying \href{https://arxiv.org/abs/1909.08593}{Ziegler et al.\ (2019)}.
+It is distinct from PPO (2017)'s adaptive penalty on new-versus-old policy KL.
+One controller form is
 \begin{equation}
-\beta \leftarrow \beta \cdot \left(1 + \mathrm{clip}\!\left(
-  \frac{\KL^{\text{obs}}}{\KL^{\text{target}}} - 1,\, -0.2,\, +0.2
-\right) \cdot \frac{1}{H}\right),
+\beta \leftarrow \beta\left[1+\operatorname{clip}
+ \left(\frac{\widehat{\mathrm{KL}}}{\mathrm{KL}_{\mathrm{target}}}-1,-0.2,0.2\right)
+ \frac{n_{\mathrm{steps}}}{H}\right].
 \label{eq:adaptive-kl}
 \end{equation}
-with horizon $H \approx 10$ rollouts. When KL drifts above target,
-$\beta$ rises and pulls the policy back; when KL undershoots, $\beta$
-relaxes and lets the policy explore.
+$H$ and $n_{\mathrm{steps}}$ must use the same unit. The workbook helper uses
+one controller update per call ($n_{\mathrm{steps}}=1$). A target on summed
+sequence KL differs from a target on mean token KL, especially for varying
+response lengths. Feedback can oscillate and does not enforce a hard bound.
 
 \begin{pitfall}
 With small batch sizes the observed KL is noisy and \eqref{eq:adaptive-kl}
@@ -409,9 +409,7 @@ token additionally receives the scalar reward-model score.}
 \end{axis}
 \end{tikzpicture}
 \caption{The Bradley--Terry logistic loss versus the hinge variant
-used by Slic-HF. The logistic never saturates to zero, which is
-both a strength (always provides gradient) and a weakness (saturated
-preferences push $\beta$ to infinity in DPO, motivating IPO).}
+used by Slic-HF. At a finite real-valued margin the logistic derivative is nonzero, but it tends to zero at a large positive margin and can underflow numerically. Separable empirical pairs can favour arbitrarily large fitted margins, motivating finite-margin alternatives such as IPO.}
 \label{fig:btloss}
 \end{figure}
 
@@ -454,9 +452,7 @@ pass per token in the completion) plus $K$ training epochs each
 requiring one forward+backward over the rollout. For batch $B$,
 completion length $L$, $K{=}4$ epochs the cost is $\mathcal{O}(B \cdot L)$
 rollout-time + $\mathcal{O}(K \cdot B \cdot (P + L))$ training-time, where
-$P$ is the prompt length. Memory is dominated by the four models;
-LoRA shrinks the policy and value-head footprint by 100$\times$
-vs.\ full FT.
+$P$ is the prompt length. Peak memory also depends on activations, sequence length, frozen model storage, optimiser states and checkpointing. LoRA reduces trainable parameters and their optimiser state; it does not imply a fixed hundred-fold reduction in total model memory.
 
 \section{Worked numerical example}
 
@@ -474,11 +470,11 @@ Then the BT loss \eqref{eq:rm-loss} evaluates to
 \[
 -\tfrac12\!\left[\log\sigma(0.8 - (-0.2)) + \log\sigma(0.5 - 0.1)\right]
 = -\tfrac12[\log\sigma(1.0) + \log\sigma(0.4)]
-\approx 0.428.
+\approx 0.41314.
 \]
 Pairwise accuracy is $1.0$ (both differences positive). After
 another epoch, the gaps widen to $(1.6, 0.9)$ and the loss falls to
-$\approx 0.291$. Compare the empirical curves in \autoref{fig:sft-rm}.
+$\approx 0.26253$. Compare the empirical curves in \autoref{fig:sft-rm}.
 
 \chapter{Implementation walkthrough}
 
@@ -548,16 +544,14 @@ loss = policy_loss + vf_coef * value_loss - ent_coef * entropy
 \end{minted}
 \end{codebox}
 
-\paragraph{TRL on a real LM (24~GB GPU).} For the same recipe on
-Pythia-160M or SmolLM2-360M, the production code is much shorter
-because TRL wraps everything; see
-\texttt{project/trl\_recipe.py} for the SFT, RM, and PPOv2
-configurations. Recommended LoRA: $r{=}16$, $\alpha{=}32$, on
-\texttt{["q\_proj","k\_proj","v\_proj","o\_proj"]}; batch~4;
-grad-accum~8; lr $5{\times}10^{-5}$ (SFT), $1{\times}10^{-4}$ (RM
-LoRA), $1{\times}10^{-6}$ (PPO); $\beta = 0.05$ adaptive; expect
-$\sim 1$k prompts/hour. The TRL recipe is dossier-sourced
-(cf.\ \textsc{Lambert et al.\ 2024}, \emph{T\"ulu~3}, arXiv:2411.15124).
+\paragraph{Move from the toy model to the maintained notebook.}
+\texttt{project/trl\_recipe.py} is a compatibility pointer, not a pretrained
+PPO/RM trainer. The executable optional lab is
+\href{../llm-lab/README.md}{\texttt{llm-lab/README.md}} and its Jupyter workbook;
+it implements pretrained-model SFT and DPO with explicit dependency versions,
+save/reload and evaluation. The full SFT--RM--PPO loop here remains the local
+tiny PyTorch exercise. Do not infer hardware throughput or API compatibility
+from an old unpinned trainer snippet.
 
 \chapter{Empirical results}
 
@@ -617,7 +611,7 @@ $\pi_{\theta_{\text{old}}}$, the same gradient is the gradient of
 $\E_t[r_t(\theta) \hat A_t]$ at $\theta = \theta_{\text{old}}$.
 PPO's contribution is that the clipped \emph{lower bound} on
 $r_t(\theta) \hat A_t$ has the same gradient at the on-policy point
-\emph{and} prevents the optimiser from straying too far in one update.
+\emph{and} removes the clipped sample\textquotesingle s incentive to move farther in its favourable direction; it does not bound the actual update.
 
 \begin{lemma}[Local gradient equivalence at $\theta = \theta_{\text{old}}$]
 \label{lem:local}
@@ -692,42 +686,32 @@ This identity is what makes ``per-token KL penalty'' algorithmically
 honest: the expectation of the sampled log-ratio sum equals the sequence KL.
 One sampled sum can be negative; the KL itself cannot.
 
-\section{The KL controller as a PI loop in log-space}
-
-The adaptive controller \eqref{eq:adaptive-kl} is a stripped-down
-proportional controller acting on $\log \beta$. Let
-$e = \KL^{\text{obs}}/\KL^{\text{target}} - 1$ be the error signal.
-Then $\beta_{n+1} = \beta_n (1 + \mathrm{clip}(e, \pm 0.2)/H)$, i.e.\
-$\log\beta_{n+1} \approx \log\beta_n + \mathrm{clip}(e, \pm 0.2)/H$.
-This is a P-controller in log-space with horizon $H$. In production
-recipes (Tülu-3, Open-Reasoner-Zero), the clip is often dropped
-\emph{entirely} for verifiable-reward setups --- the implicit
-regulariser is the verifier itself, not a leash on the SFT.
+\section{The KL controller as integral feedback in log-space}
+Let $e_n=\widehat{\mathrm{KL}}/\mathrm{KL}_{\mathrm{target}}-1$ and
+$\Delta_n=\operatorname{clip}(e_n,-0.2,0.2)n_{\mathrm{steps}}/H$.
+For small $\Delta_n$, $\log\beta_{n+1}\approx\log\beta_n+\Delta_n$.
+Thus the log multiplier accumulates error over updates: it resembles integral
+feedback, not a complete proportional--integral controller. The closed-loop
+response also depends on policy optimisation and sampling delay. A verifier
+is not a replacement mathematical trust region.
 
 \section{Common questions, answered}
 
 \begin{description}
-  \item[Why does RLHF work at all?] Because the implicit reward
-    surface near the SFT policy is dense and well-shaped:
-    helpfulness, harmlessness, tone --- these are all smooth
-    functions of the response that the BT loss models well within
-    a small KL ball around the SFT.
-  \item[Why does PPO ``do better than DPO'' in some papers?]
-    Three reasons: (i) PPO sees on-policy data, fixing the
-    distribution-shift problem of offline DPO; (ii) the value head
-    soaks up token-level variance; (iii) the KL leash is adaptive,
-    not fixed. None of these is fundamental; modern iterative DPO
-    closes all three gaps.
-  \item[Why does PPO need a frozen reference but DPO does not (operationally)?]
-    Because DPO's reference is \emph{baked into the implicit reward
-    parametrisation}, not used as a runtime entropy regulariser.
-    Both methods carry the reference; PPO writes it in a separate
-    set of weights, DPO writes it in the formula.
-  \item[Can I skip stage 1 (SFT)?] You can, and people do --- ``RL
-    from base'' is the headline of DeepSeek-R1-Zero. But on
-    open-ended preference data the base model's distribution is so
-    flat that the KL leash has nowhere to anchor, and reward
-    hacking is wildly easier.
+  \item[Why can RLHF improve responses?] Preference data can supply useful
+    distinctions absent from demonstration-only training. Generalisation depends
+    on label quality, coverage, optimisation and evaluation; smooth human quality
+    near every SFT policy is not an established premise.
+  \item[When might PPO and DPO differ?] PPO generates new policy samples and
+    optimises an explicit reward model; offline DPO fits fixed comparisons.
+    Neither universally wins. Compare data budgets and independent evaluation.
+  \item[Do both use a reference?] Classical reference-regularised PPO and DPO
+    both do. DPO reference log probabilities can sometimes be precomputed;
+    this does not remove the reference from the objective.
+  \item[Can SFT be skipped?] Some reasoning-RL studies train from a pretrained
+    base model. That is an empirical design choice, not proof that an arbitrary
+    base model has enough correct samples for a sparse verifier.
+
   \item[Is the BT model identifiable?] Only up to an additive
     per-prompt constant. This is fine for ranking but means you
     cannot compare scores across prompts.
@@ -770,24 +754,20 @@ inspect the actual ratios and KL after the update.
 \chapter{Safety angle}
 
 \begin{safetyangle}
-RLHF \emph{is} the alignment training pipeline shipped in every major
-production language model from 2022 to 2024. Its known failure modes
-are not academic curiosities; they are recurring incidents.
+RLHF optimises a learned proxy. Independent evaluation should test both
+preference quality and failure cases not captured by that proxy.
 
-\paragraph{Reward-model overoptimisation.} \textsc{Gao, Schulman,
-Hilton 2023} show analytically and empirically that the proxy-vs-gold
-gap grows roughly with $\sqrt{\KL}$ on simple-RM scaling laws; gold
-reward peaks at a finite KL and then declines (\autoref{fig:overopt}).
-\emph{Mitigation}: early-stopping by gold-eval on held-out human
-preferences; KL penalty; reward-model ensembles; iterative refresh
-of preference data.
+\paragraph{Reward-model overoptimisation.} Gao, Schulman and Hilton study
+proxy optimisation against a fixed larger gold model. Their fitted curves
+are experimental summaries, not an analytic universal law of human reward.
+The course schematic is not their fitted data. Compare held-out evaluations,
+policy drift and generated examples as optimisation continues.
 
-\paragraph{Length bias.} Longer outputs receive larger absolute
-per-token KL costs but also larger absolute reward; PPO with mean
-per-token loss tilts toward verbosity (the same mechanism SimPO and
-Dr.GRPO address explicitly). \emph{Mitigation}: length normalisation
-in the reward; or token-level (sum) loss as in DAPO/Dr.GRPO; or an
-explicit per-prompt length cap.
+\paragraph{Length bias.} Sum versus mean losses, reward-label preferences,
+termination rules and length penalties can all change the weighting of
+responses. Neither longer sequences nor per-token averaging inevitably imply
+higher reward or verbosity. Report the precise denominator and measure the
+length--quality relationship before changing it.
 
 \paragraph{Reward hacking via likelihood displacement.} The policy
 can win at the proxy by raising the probability of a small set of
@@ -797,48 +777,26 @@ helps!''' --- without improving on the underlying task.
 \emph{Mitigation}: KL leash; regular human spot-checks; preference-data
 refresh; iterative DPO (see week~19, §iterative).
 
-\paragraph{Catastrophic Goodhart.} \textsc{arXiv:2407.14503} (2024)
-prove that under heavy-tailed reward misspecification, \emph{no}
-finite KL bound suffices. The rigorous answer is to reduce
-misspecification (process reward models, verifiable rewards), not to
-crank $\beta$.
+\paragraph{Limits of controls.} A KL penalty, ensemble or early stopping
+rule can limit a particular failure without making the reward model correct.
+Evaluate sycophancy, excessive refusal and factual errors separately. The
+scope of a theorem about reward misspecification must remain attached to its
+assumptions rather than being presented as a universal deployment rule.
 
-\paragraph{Sycophancy and refusal collapse.} Two empirically common
-failure modes that the InstructGPT paper itself warns about:
-preference data is biased toward agreement, and PPO will obediently
-amplify that. \emph{Mitigation}: explicit factuality datasets;
-red-teaming prompts; rule-based corrections during data collection.
-
-Spend a full afternoon reading \textsc{Gao et al.\ 2023} before
-shipping anything RLHF-trained to production. The scaling laws are
-small, simple, and uncomfortably accurate.
 \end{safetyangle}
 
 \chapter{Matching application}
 
 \begin{matching}
-The lead-routing problem at synthetic insurance is, formally, a contextual
-bandit: a lead $x$ arrives, the system picks a broker $a$, and we
-observe a delayed conversion signal $r$. \emph{RLHF in this setting}
-reframes ``which broker did the lead pick when shown two options?''
-as a Bradley--Terry pairwise preference dataset. We can then train a
-reward model $r_\phi(x, a)$ on those clicks, freeze it, and use PPO
-(or a contextual-bandit reduction thereof) to nudge a learned router
-toward broker assignments that historic leads would have preferred,
-while a KL penalty against the live rule-based router keeps us
-inside the regulatory comfort zone.
+\textbf{Hypothetical matching example.} Pairwise recruiter judgements about
+alternatives for the same context can train a preference model. A recorded
+click or application is not automatically a pairwise preference: exposure,
+availability and the alternatives shown affect its meaning. A contextual
+bandit or preference-optimisation experiment must define its action and
+logging policy. A KL penalty limits one form of deviation from a baseline;
+it does not establish regulatory compliance. A synthetic example can compare
+clicks with later retention, but no business-loss incident is asserted here.
 
-The same template applies to synthetic ATS: candidates' apply-or-skip
-decisions on a small randomised set of job suggestions form pairwise
-preferences that we can distil into a ranking reward, with a KL
-leash to the production keyword-match baseline. Two warnings carry
-over directly: (i) the \emph{reward-model overoptimisation} caveat
-applies in full force --- the proxy here is broker-click probability,
-the gold is broker--customer six-month retention --- and the gap
-between them is exactly what cost the business \pounds 40k in 2025
-Q3; (ii) \emph{length bias} translates into \emph{result-set bias}:
-PPO will happily learn to surface more candidates per query to bump
-the click-through reward, drowning recruiters in volume.
 \end{matching}
 
 \chapter{Exercises}
@@ -957,30 +915,13 @@ $\mathcal{H}$ & token-level entropy \\
 
 \section{Memory accounting on a 24 GB GPU}
 
-For Pythia-160M in bf16 with LoRA $r=16$ on QKVO, the per-component
-peak VRAM is approximately:
-
-\begin{center}
-\small
-\begin{tabular}{lc}
-\toprule
-Component & VRAM (GB) \\
-\midrule
-Policy $\pi_\theta$ (bf16 + LoRA grads/state) & 1.2 \\
-Reference $\pi_{\text{ref}}$ (bf16, no grad) & 0.4 \\
-Reward $r_\phi$ (bf16, no grad) & 0.4 \\
-Value $V_\psi$ (a scalar head sharing the trunk) & 0.05 \\
-Rollouts (batch $\times$ seq) + activation memory & 1.5 \\
-Adam state + LoRA grads & 0.5 \\
-\midrule
-Total (with headroom) & $\approx 4.5$ \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-A SmolLM2-360M scale-up roughly doubles the policy and reference
-columns; the total stays comfortably under 12 GB. Above 1.5B
-parameters, 4-bit (QLoRA) or sequence chunking become necessary.
+Memory depends on base weights, trainable parameters, optimiser state,
+activations, cached generation and whether value/reward models share a backbone.
+LoRA reduces trainable parameter and optimiser storage; it does not remove
+frozen weights or guarantee a fixed total-memory reduction. Measure peak
+memory with the actual sequence length, batch size, dtype and library versions.
+The optional lab documents its measured scope; no universal 4.5 GB or 24 GB
+capacity claim follows from model parameter count alone.
 
 \section{Hyper-parameter recipe summary}
 
@@ -1027,48 +968,22 @@ PPO & total steps & 500--2000 \\
     reward. Pioneer of the entire modern RLHF lineage.
   \item \textbf{InstructGPT} (\textsc{Ouyang et al.\ 2022}). The
     industrial recipe: SFT $\to$ RM $\to$ PPO at scale, with adaptive
-    KL. Ships in production as ChatGPT in November 2022.
+    KL. This describes the cited InstructGPT experiment; it does not establish an identical recipe for every later deployed product.
 \end{enumerate}
 
-\section{Why GRPO replaced PPO for reasoning RL}
+\section{Why study critic-free alternatives?}
+A group of sampled completions supplies an alternative baseline when rewards
+are available at sequence level. DeepSeekMath introduces GRPO; RLOO uses a
+leave-one-out baseline. These change sampling, normalisation and credit
+assignment as well as memory use. They do not imply that PPO is invalid for
+terminal rewards or that token-level credit assignment is unnecessary.
+Week 20 derives the estimators and the limits of their unbiasedness.
 
-PPO's value head buys variance reduction at the cost of a fourth
-model in memory. For \emph{reasoning} tasks --- where the reward is
-a sparse, often binary verifier signal at the end of a long chain
-of thought --- the value head struggles to fit, and the rollout
-budget is dominated by long generations. \textsc{Shao et al.}
-(DeepSeekMath, 2024) realised that if you sample $G$ rollouts per
-prompt and use their group-relative reward as the baseline, you can
-drop the critic entirely. This is GRPO; the rest of the algorithm
-(clip, KL leash) is PPO unchanged. Week 20 is devoted to it.
-
-GRPO's relationship to PPO is analogous to A2C's relationship to
-DQN: an architectural simplification that becomes practical only
-once compute allows you to amortise the missing variance reduction
-through bigger batches. On a 24 GB GPU, $G = 8$ rollouts per
-prompt is comfortable; on a multi-GPU cluster, $G \ge 32$ is
-typical.
-
-\section{What was wrong with classical RLHF, exactly?}
-
-By 2024, three things had become clear:
-
-\begin{enumerate}[leftmargin=*]
-  \item The reward model is the weakest link. RM scaling laws
-    (\textsc{Gao et al.\ 2023}) say the proxy-vs-gold gap grows
-    monotonically with KL; modern PRMs and GenRMs attack this.
-  \item PPO is over-engineered for the LLM setting. The clip,
-    GAE, value head, adaptive KL --- this is a lot of moving parts
-    relative to the underlying ``maximise BT-likelihood with a KL
-    leash'' goal. DPO showed you can drop almost all of it.
-  \item Length and refusal biases are systemic. Both stem from
-    misaligned per-token loss accounting; SimPO's length
-    normalisation and Dr.GRPO's sum-not-mean accounting are the
-    cleanest fixes.
-\end{enumerate}
-
-The week 19 zoo and the week 20 GRPO family are the field's response
-to these three observations.
+\section{Questions to carry to preference optimisation}
+Which supervision defines quality? Does the dataset cover the new policy?
+Are the reward and evaluation independent? What does the response-length
+normalisation change? These questions apply to PPO, DPO and critic-free
+methods alike. A simpler optimiser does not remove reward misspecification.
 
 \chapter{Further reading}
 

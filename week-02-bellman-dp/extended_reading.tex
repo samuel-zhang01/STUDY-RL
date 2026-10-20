@@ -1,207 +1,76 @@
-\documentclass[12pt]{scrartcl}
-\usepackage[a4paper,margin=3.0cm]{geometry}
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
-\linespread{1.15}\selectfont
-
 \title{Extended reading --- Week 02: Bellman Equations and Dynamic Programming}
 \date{\today}
 \begin{document}
 \maketitle
+\section*{Read with a question in mind}
+Start with the week's teaching guide and its small worked example. Then use
+these readings to connect the algorithm to its assumptions and evidence.
+The explanations and investigations below are course commentary, not
+quotations. Read the source before reusing a theorem or a reported result.
+For each paper, record the objective, observation model, claimed result,
+conditions and one condition your local experiment does not reproduce.
 
-\section*{How to use this list}
-Read these five in order. Bellman (1957) and Howard (1960) are the
-founding documents; Puterman (1994) is the canonical modern textbook
-chapter you should re-read every couple of years; Tsitsiklis \& Van Roy
-(1997) explains \emph{why} naive DP-with-function-approximation diverges
-and motivates the contraction-preserving variants you will meet in
-Week 5 onward; Munos \& Szepesv\'ari (2008) bridges DP to learning by
-delivering the first proper finite-sample bounds for approximate
-value iteration.
+\section*{1. Bellman (1957): Dynamic Programming}
+\textbf{Primary source or book record:} \url{https://press.princeton.edu/books/paperback/9780691146683/dynamic-programming}.
 
-\section{Bellman (1957) --- Dynamic Programming, Chapters 1--3}
-\textit{Princeton University Press. Republished by Dover, 2003.}
+\paragraph{What to learn.} The principle of optimality decomposes a decision sequence into its immediate consequence and an optimal continuation. This is the conceptual starting point for Bellman backups.
 
-\paragraph{Summary.} Bellman defines the \emph{principle of optimality}
-(``an optimal policy has the property that whatever the initial state and
-initial decision are, the remaining decisions must constitute an optimal
-policy with regard to the state resulting from the first decision'') and
-derives the recursion that bears his name. The book is short, conversational,
-and oddly readable for something written in the mid-1950s.
+\paragraph{What the result requires.} The state must retain what is needed to predict rewards and transitions. A history-dependent problem may need an augmented state before the recursion is valid. Finite-horizon values also depend on remaining time.
 
-\paragraph{Why it matters for this week.} The principle of optimality is the
-\emph{semantic} content of the Bellman optimality equation. Knowing the
-equation is one thing; knowing it is a statement about the recursive structure
-of optimal substructures is what lets you recognise DP when it shows up in
-disguise (the LP formulation, the linear-system formulation in Eq.~3.8 of the
-notes, the policy-gradient theorem).
+\paragraph{Notebook investigation.} Use \texttt{exercise\_1\_bellman\_operator}. With one action, reward 2, successor value 3 and discount 0.9, a backup gives 4.7. Identify which quantity is an input estimate and which is an environment property.
 
-\begin{quote}\itshape
-``In place of determining the optimal sequence of decisions from the fixed
-state of the system, we wish to determine the optimal decision to be made at
-any state of the system. Only if we know the latter do we understand the
-intrinsic structure of the solution.''
-\end{quote}
-The shift from ``sequence of decisions'' to ``decision per state'' is the move
-from open-loop control to closed-loop policy --- the conceptual leap that
-makes RL possible.
+\section*{2. Howard (1960): Dynamic Programming and Markov Processes}
+\textbf{Primary source or book record:} \url{https://books.google.com/books?id=fXJEAAAAIAAJ}.
 
-\section{Howard (1960) --- Dynamic Programming and Markov Processes}
-\textit{MIT Press / Wiley. Chapters 4--6.}
+\paragraph{What to learn.} Policy iteration alternates evaluation of a fixed policy and greedy improvement. Reading the two stages separately prevents confusion between evaluating a policy and solving the control problem.
 
-\paragraph{Summary.} Howard introduces policy iteration (the algorithm that
-bears his name) and proves it converges in finitely many steps for finite
-MDPs. The proof uses the policy-improvement theorem of \S 3.4 of your notes;
-the finiteness comes from the strict improvement at every step combined with
-the finite number of deterministic stationary policies.
+\paragraph{What the result requires.} For a finite discounted MDP, exact evaluation and consistent tie handling support termination. There is no general guarantee that policy iteration requires only logarithmically many improvement steps. This catalog link identifies the book; it is not a page-level proof source.
 
-\paragraph{Why it matters for this week.} Howard's PI is the algorithm with
-\emph{strongest convergence properties} in DP: a guaranteed finite number of
-sweeps to the exact optimum, no $\epsilon$ tolerance. Read it for the cleanest
-example of a structural-induction proof in optimisation.
+\paragraph{Notebook investigation.} Compare \texttt{exercise\_3\_policy\_iteration} with \texttt{exercise\_6\_policy\_evaluation\_closed\_form}. Check $(I-\gamma P_\pi)V=r_\pi$ before interpreting a policy switch.
 
-\begin{quote}\itshape
-``A policy that is unimproved by policy improvement is optimal\ldots\ Since
-there are only finitely many policies, the algorithm must terminate in finitely
-many iterations.''
-\end{quote}
-The proof is essentially three sentences. Howard packs the argument into a
-chapter of motivation, but the core idea is this: each iteration strictly
-improves, and there are only $|\Actions|^{|\States|}$ policies, so termination
-is forced.
+\section*{3. Puterman (1994): Markov Decision Processes}
+\textbf{Primary source or book record:} \url{https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316887}.
 
-\section{Puterman (1994) --- Markov Decision Processes, Chapters 6--7}
-\textit{Wiley.}
+\paragraph{What to learn.} Provides a systematic treatment of finite-state decision processes. Use the discounted chapters to follow contraction, existence of optimal stationary policies and evaluation/improvement arguments.
 
-\paragraph{Summary.} The definitive modern treatment of finite-MDP DP.
-Chapter 6 contains the proof of contraction (your Theorem 3.2), the
-existence and uniqueness of $V^\star$, and a polynomial-time bound for
-policy iteration. Chapter 7 covers modified policy iteration with the proof
-that any $k\ge 1$ inner sweeps suffice for convergence, plus action
-elimination (a precursor to Q-learning's targeted updates).
+\paragraph{What the result requires.} Average-reward, undiscounted episodic and discounted results have different hypotheses. A theorem for finite discounted models cannot be transferred to arbitrary neural approximation by changing the symbols.
 
-\paragraph{Why it matters for this week.} The textbook proofs in Puterman are
-the cleanest you will find, and they recur as templates in every subsequent
-DP and ADP analysis. Memorise the inequality
-$|\max_a f(a) - \max_a g(a)| \le \max_a |f(a) - g(a)|$ from \S 6.2; you
-will use it constantly.
+\paragraph{Notebook investigation.} Derive $\|V_k-V^*\|_\infty\le\gamma^k\|V_0-V^*\|_\infty$. Use \texttt{exercise\_5\_contraction\_factor} to check an upper bound, not demand equality at each sweep.
 
-\begin{quote}\itshape
-``Modified policy iteration\ldots\ unifies value iteration ($k=1$) and policy
-iteration ($k=\infty$) as endpoints of a single family of algorithms. The
-convergence rate is geometric for every $k$, with constant depending on $k$
-and $\Disc$.''
-\end{quote}
-Treating VI and PI as endpoints of a single family is the right mental model.
-When we move to learning, ``how many off-policy updates per policy improvement
-step?'' is the same question.
+\section*{4. Tsitsiklis and Van Roy (1997): An Analysis of Temporal-Difference Learning with Function Approximation}
+\textbf{Primary source or book record:} \url{https://web.mit.edu/~jnt/www/Papers/J063-97-bvr-td.pdf}.
 
-\section{Tsitsiklis \& Van Roy (1997) --- An analysis of temporal-difference
-learning with function approximation}
-\textit{IEEE TAC 42(5), 674--690. Available also as MIT LIDS-P-2390.}
+\paragraph{What to learn.} Analyses linear TD under specified on-policy sampling and stochastic-approximation conditions. The limit solves a projected Bellman equation involving a stationary-distribution-weighted $L_2$ projection.
 
-\paragraph{Summary.} Proves that TD(0) with \emph{linear} function approximation
-and on-policy sampling converges to the projection of $V^\Policy$ onto the
-linear subspace, in a weighted sup-norm. Off-policy, with linear FA, the
-same algorithm can \emph{diverge} to infinity --- the famous Baird counterexample
-is the canonical demonstration. The paper is the reason ``deadly triad'' is
-a phrase in RL.
+\paragraph{What the result requires.} The TD fixed point is generally not the orthogonal projection of the true value function. The relevant projection argument is not a weighted sup-norm contraction. Off-policy sampling and nonlinear approximation need separate analysis.
 
-\paragraph{Why it matters for this week.} It is the bridge from exact DP
-(this week) to approximate DP (Weeks 5, 6, 7, 10). Knowing that
-\emph{contraction is preserved on-policy but not off-policy under linear FA}
-explains why DQN needed target networks and Polyak averaging; why TD3 needed
-twin critics; why Soft Actor-Critic uses entropy regularisation to keep its
-critic in a contraction basin.
+\paragraph{Notebook investigation.} For feature matrix $\Phi$, distinguish $\Pi V^\pi$ from the solution to $v=\Pi T^\pi v$. Explain why changing the sampling weights changes the projection geometry.
 
-\begin{quote}\itshape
-``The combination of function approximation, off-policy training, and
-bootstrapping --- the \emph{deadly triad} --- is the source of TD divergence.
-On-policy linear TD(0) converges; remove any one of the three and divergence
-is precluded; have all three and divergence is generically possible.''
-\end{quote}
-The deadly-triad lens is invaluable: when a deep-RL training run diverges,
-the first diagnostic is to identify which of the three is at play and whether
-the algorithm is supposed to handle it.
+\section*{5. Munos and Szepesvari (2008): Finite-Time Bounds for Fitted Value Iteration}
+\textbf{Primary source or book record:} \url{https://jmlr.org/papers/v9/munos08a.html}.
 
-\section{Munos \& Szepesv\'ari (2008) --- Finite-time bounds for fitted value
-iteration}
-\textit{JMLR 9, 815--857.}
+\paragraph{What to learn.} Studies sampling-based fitted value iteration with a generative model, separating statistical approximation and error propagation. The analysis includes inherent Bellman error and concentrability of future state distributions.
 
-\paragraph{Summary.} The first finite-sample analysis of \emph{approximate}
-value iteration with general function approximation. Given a regression
-oracle and an exploration distribution $\mu$, the value-iteration error after
-$K$ iterations is bounded by a sum of (i) the projection error of $T_\star V_K$
-onto the function class, (ii) the concentrability coefficient
-$C_\mu$ that measures how well $\mu$ covers the on-policy distribution, and
-(iii) a $\gamma^K$ term that decays geometrically. The paper invented the
-modern ADP error decomposition you will see in offline-RL papers.
+\paragraph{What the result requires.} A small regression error on one sampling distribution does not automatically imply small control error under a different occupancy. The bounds are not a plug-in convergence theorem for the local deep-Q implementation.
 
-\paragraph{Why it matters for this week.} It tells you what bills come due
-when you replace the table of $V$ by a neural net: regression error plus a
-distribution-shift coefficient. The $C_\mu$ coefficient is the formal version
-of the intuition ``you cannot evaluate $\Policy$ in regions the data never
-visits.'' All of offline RL (Weeks 14, 21) is engineering against $C_\mu$.
+\paragraph{Notebook investigation.} Sketch a distribution that samples one state frequently and misses a valuable reachable state. Explain why more samples from the same distribution may leave the relevant approximation failure unresolved.
 
-\begin{quote}\itshape
-``The performance loss is bounded by a sum involving the approximation error,
-the concentrability of the future-state distribution with respect to the
-sampling distribution, and a $\gamma^K$ term that vanishes geometrically.''
-\end{quote}
-``Concentrability of the future-state distribution'' is the abstract version
-of ``do not extrapolate''. It is also the reason behaviour-cloning baselines
-beat naive offline-RL on out-of-distribution states.
-
-\section*{Reading exercises}
-\begin{enumerate}\setlength\itemsep{4pt}
-  \item \textbf{Bellman, the LP formulation.} Read \S 1.3 of Bellman (1957).
-        The value function $V^\star$ is the minimum-norm vector $V$ satisfying
-        $V \ge T_a V$ for all $a$. Write down the linear program over $V$ and
-        identify the dual variables. (Answer: the dual variables are the
-        \emph{discounted state-occupancy measure} of the optimal policy.)
-  \item \textbf{Howard, finite-time PI bound.} Howard's policy iteration is
-        guaranteed to terminate in at most $|\Actions|^{|\States|}$ outer
-        iterations. Ye (2011, \emph{Math.\ Oper.\ Res.}) proved a stronger
-        bound: PI terminates in $O(|\States|\,|\Actions|/(1-\gamma) \log(\,
-        |\States|/(1-\gamma)))$ outer iterations. Sketch the argument; why
-        is the bound \emph{strongly polynomial} when $\gamma$ is fixed?
-  \item \textbf{Puterman, action elimination.} Read \S 6.7. Implement
-        action elimination on a 10x10 GridWorld and compare the per-sweep
-        cost vs vanilla VI. By how much does it accelerate convergence at
-        $\gamma=0.99$?
-  \item \textbf{Tsitsiklis \& Van Roy, Baird's counterexample.} Reproduce
-        Baird's 7-state ``star'' MDP with linear features. Run off-policy
-        TD(0) with linear FA and a fixed behaviour. Watch it diverge to
-        infinity. Now replace TD(0) with \emph{gradient-TD} (Sutton et al.\
-        2009) and watch it converge. What does the gradient-TD fix change
-        in the update rule?
-  \item \textbf{Munos--Szepesv\'ari, concentrability in offline RL.} Read
-        Theorem 4 of the paper and apply it to a synthetic offline-RL
-        problem where the behaviour distribution is uniform but the optimal
-        on-policy distribution is concentrated. What is $C_\mu$? How does
-        it scale as the gap between the two distributions grows?
+\section*{Synthesis: evidence you should be able to show}
+\begin{enumerate}
+\item Reproduce one numerical calculation before running a long experiment.
+\item Name the precise objective, sampling distribution and terminal convention.
+\item Compare the local implementation with one source: list a shared mechanism
+and one simplification that prevents calling it a full reproduction.
+\item Separate an algebraic identity, an assumption-dependent theorem and an
+empirical result. A plot alone does not prove a theorem.
+\item Save the notebook with seed, parameters, axes, denominators and a short
+explanation of an unexpected result. Keep evaluation data separate from tuning.
 \end{enumerate}
-
-\section*{Connections to later weeks}
-\begin{itemize}\setlength\itemsep{2pt}
-  \item \emph{Week 4 (TD, SARSA, Q-learning)} replaces the expectation in
-        $T_\star$ by a single-sample stochastic gradient; the contraction
-        becomes a stochastic-approximation Lyapunov argument.
-  \item \emph{Week 5 (DQN)} adds neural-net function approximation and is
-        the first place where ``contraction is preserved''
-        breaks --- which is why DQN needs target networks and replay.
-  \item \emph{Week 7 (policy gradients)} re-derives improvement via the
-        \emph{policy gradient theorem}, an explicit closed-form
-        version of the improvement step from Howard's PI.
-  \item \emph{Week 14 (offline RL)} pays the concentrability bill from
-        Munos--Szepesv\'ari in the form of pessimism penalties (CQL, IQL).
-\end{itemize}
-DP is the spine of every algorithm in the rest of the course. Returning
-to this week's contraction proof when a deep-RL method diverges is one of
-the most productive things you can do as a practitioner.
-
-\section*{Sourced from}
-\verb|research/deeprl_core_sota.md| \S 1 and Sutton \& Barto Chapter 4. For
-modern DP-with-LP formulation see Bertsekas, \emph{Dynamic Programming and
-Optimal Control} Vol.\ II (Athena Scientific, 4th ed., 2017).
-
+Return to the teaching guide's notebook investigation for the local function
+names, expected checks and interpretation questions. Source code and notebooks
+are available together in the course repository; the web reader is the entry
+point and the downloaded notebook is the execution workspace.
 \end{document}

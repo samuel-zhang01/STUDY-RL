@@ -16,6 +16,21 @@ Controls change explicit models; the richer plots include values, assumptions,
 accessible tables and CSV exports. Progress and notes are stored in the current
 browser, with explicit import/export. There is no automatic device sync.
 
+All 26 weeks have three diagnostic questions with choice-specific feedback,
+repair explanations and matching workbook/code links. The revision queue mixes
+missed, uncertain and due items; its transparent practice schedule is separate
+from manual milestones. Text size, line width, section bookmarks, equation links
+and diagram enlargement support longer reading sessions. Every reading links
+to its GitHub source and a correction form that excludes personal progress.
+
+Progress storage keeps the original schema-1 import format. A per-field journal
+merges independent tab edits; note branches retain concurrent versions for user
+review. Page hiding flushes pending changes. A visible status reports blocked
+storage and exports remain available. See MDN’s [storage event](https://developer.mozilla.org/en-US/docs/Web/API/Window/storage_event)
+and [visibilitychange](https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event)
+for the browser lifecycle used here. Browser shutdown, storage eviction and
+manual data clearing still make a separately saved backup necessary.
+
 ## Build and serve
 
 Requirements: Node.js 22+, Python 3, Pandoc, `pdflatex`, `pdftocairo`, and the
@@ -44,6 +59,7 @@ exactly the validated static `dist/` artifact.
 cd portal
 npm test
 node tests/browser.cjs /path/to/playwright-core http://127.0.0.1:9223 /path/to/@axe-core/playwright
+node tests/learning-browser.cjs /path/to/playwright-core http://127.0.0.1:9223 /path/to/@axe-core/playwright
 ```
 
 The browser suite uses an isolated context in a dedicated test browser and a

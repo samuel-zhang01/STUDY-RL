@@ -16,3 +16,12 @@ test('search requires all terms and prioritises teaching over code',()=>{
  const results=searchDocuments(docs,'negative clipping');
  assert.equal(results.length,2);assert.equal(results[0].kind,'guide');assert.deepEqual(searchDocuments(docs,'   '),[]);
 });
+test('new backups retain reader settings, saved sections and all preserved note versions',()=>{
+ const state=empty();state.reading={size:130,width:'wide'};state.bookmarks.one={route:'#/lesson/09?view=lecture&section=display-equation-1',title:'PPO equation',createdAt:1};
+ for(let n=0;n<1001;n++)state.conflicts['version-'+n]={week:'01',note:'Preserved '+n,createdAt:n};
+ const restored=validateState(JSON.parse(JSON.stringify(state)));assert.deepEqual(restored.reading,state.reading);assert.deepEqual(restored.bookmarks,state.bookmarks);assert.equal(Object.keys(restored.conflicts).length,1001);
+});
+test('malformed quiz records and unsafe bookmark routes cannot enter imported state',()=>{
+ const state=validateState({schema:1,weeks:{},quiz:JSON.parse('{"__proto__":{},"constructor":{},"toString":{}}'),bookmarks:{bad:{route:'javascript:alert(1)'},external:{route:'https://example.com'},wrongWeek:{route:'#/lesson/99?view=guide'},badView:{route:'#/lesson/01?view=unknown'}}});
+ assert.deepEqual(state.quiz,{});assert.deepEqual(state.bookmarks,{});assert.equal({}.polluted,undefined);
+});

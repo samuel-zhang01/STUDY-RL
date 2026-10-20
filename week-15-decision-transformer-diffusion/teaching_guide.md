@@ -31,6 +31,33 @@ It proves nothing about achieving 10. The conditional model must extrapolate bey
 **Carry it onward:** [Model-based RL](../week-16-model-based/teaching_guide.md) explicitly learns predicted consequences and lets a planner question them.
 
 
+## Choose your explanation depth
+
+How a desired return changes after a reward. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+Return conditioning is a request to the action model. The request must update consistently with the definition used during training. It does not give the model control over luck, missing actions or an impossible goal.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+For rewards `[1, 2, 4]`, the shipped undiscounted helper returns **[7, 6, 4]**. If you instead define discounted returns with γ = 0.5, the values are **[3, 4, 4]**: 3 = 1 + 0.5 × 4. After the first reward, the remaining discounted target is (3 − 1) / 0.5 = **4**, not 2.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+Define $G_t=\sum_{j=t}^{T-1}\gamma^{j-t}r_j$. Splitting off the first term gives $G_t=r_t+\gamma G_{t+1}$ and, for $\gamma>0$, $G_{t+1}=(G_t-r_t)/\gamma$. This is bookkeeping, not a performance theorem. The policy additionally needs appropriate conditional data support; a requested return that was only achieved through favourable noise can be misleading.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 1: `rtg`](workbook.ipynb#cell-6), whose reference is `exercise_1_returns_to_go`; verify `[7, 6, 4]`. Add a **separate** discounted helper for the second calculation so the project convention stays explicit. Then open [Exercise 2: `mask`](workbook.ipynb#cell-9) and check which earlier tokens can influence each predicted action. The common failure is updating a discounted target with the undiscounted subtraction rule, or accidentally letting an action token reveal the action being predicted.
+
 ## Mechanism at a glance
 
 ```mermaid

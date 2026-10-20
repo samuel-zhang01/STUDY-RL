@@ -58,9 +58,9 @@ in six different ways:
 \end{itemize}
 \end{intuition}
 
-BBF (Schwarzer 2023) is the modern descendant: same six ingredients, plus high replay
-ratio, periodic shrink-and-perturb resets, $\gamma$ and $n$ annealing, a wider
-ResNet-style backbone, and an EMA target. It achieved strong Atari-100k results in its 2023 evaluation; this is a
+BBF (Schwarzer 2023) is the modern descendant: a coordinated recipe involving replay, representation learning, resets,
+schedules and larger networks. It is not simply a verbatim Rainbow
+implementation with two extra switches. It achieved strong Atari-100k results in its 2023 evaluation; this is a
 historical result, not a claim about the current leaderboard. SimBa (Lee
 2024) is the architectural analogue for continuous control. Both are studied in detail in
 Week~10.
@@ -69,18 +69,16 @@ Week~10.
 
 \section{Double DQN}
 
-\begin{theorem}[Maximisation bias under function approximation]
-Let $\Qfn_\theta$ be a noisy estimator with bias $\E[\Qfn_\theta] = \Qfn^\star$ and
-per-action noise variance $\sigma^2$. Then
-\[
-  \E[\max_a \Qfn_\theta(s,a)] \ge \max_a \Qfn^\star(s,a),
-\]
-with a gap bounded by $\sigma \sqrt{|\Actions|}/\sqrt{\pi}$ for independent Gaussian noise.
-\end{theorem}
-
-\begin{proof}[Proof sketch]
-Maximum of independent random variables is convex in the location parameters; apply
-Jensen and Wainwright's order-statistic bound.
+\begin{proposition}[Maximisation bias]
+If each action estimate is unbiased, Jensen's inequality gives
+$\E[\max_a\hat Q_a]\ge\max_a\E[\hat Q_a]$.
+For $K\ge2$ mean-zero $\sigma$-sub-Gaussian errors,
+$\E[\max_a\epsilon_a]\le\sigma\sqrt{2\log K}$; thus this also bounds
+the overestimation gap. Strict inequality need not hold.
+\end{proposition}
+\begin{proof}
+For $t>0$, $\E\max_a\epsilon_a\le\log K/t+t\sigma^2/2$ by
+log-sum-exp, Jensen and the moment-generating-function bound. Minimise in $t$.
 \end{proof}
 
 Double DQN (van Hasselt 2016) decouples selection from evaluation in the target:
@@ -223,8 +221,8 @@ projection. Standard: $N=200$, $\kappa = 1$.
 Make the quantile network \emph{implicit}: sample $\tau \sim U[0,1]$, condition the
 network on a cosine embedding $\phi(\tau) = \cos(i\pi\tau)$, output $Z_\tau(s,a)$.
 Variable sample efficiency, and distortion-risk policies (CVaR, Wang's distortion) come
-for free by choosing how you sample $\tau$ at action time. IQN closed half the gap from
-QR-DQN to Rainbow at one quarter the cost.
+for free by choosing how you sample $\tau$ at action time. Compare IQN and QR-DQN under the published evaluation protocol;
+there is no task-independent performance or compute ratio.
 
 \section{Rainbow}
 
@@ -232,27 +230,19 @@ The Rainbow combination (Hessel 2018):
 \[
   \text{Double} + \text{Dueling} + \text{PER} + \text{n-step}\;(n=3) + \text{NoisyNets} + \text{C51}.
 \]
-Ablation lesson: \textbf{multi-step (n) and distributional are the two biggest individual
-contributors}; PER second; NoisyNets smallest but free. Removing any one component costs
-4--8\% on Atari median; removing two costs more than the sum.
+Ablation lesson: evaluate components under a fixed budget and protocol.
+Their interactions mean that effects are not independent or additive.
+The original Atari comparisons do not establish a universal percentage
+loss for removing any component.
 
-\section{BBF (Schwarzer 2023): the modern recipe}
-
-\begin{itemize}
-  \item \textbf{15-layer Impala-style ResNet} with width multiplier; $\sim$5x SR-SPR capacity.
-  \item \textbf{Replay ratio 8} with periodic \textbf{shrink-and-perturb} resets every 40k gradient steps:
-  \[
-    \theta \leftarrow \alpha \theta + (1 - \alpha) \theta_\text{init}, \quad \alpha \approx 0.5.
-  \]
-  \item \textbf{Discount factor annealing} $\Disc: 0.97 \to 0.997$.
-  \item \textbf{n-step annealing} $n: 10 \to 3$.
-  \item \textbf{EMA target update} $\tau = 0.005$.
-  \item Categorical distributional head + Double + Dueling + NoisyNet + self-prediction (SPR) auxiliary loss.
-\end{itemize}
-The published BBF study analyses interacting choices in network scaling,
-replay, auxiliary prediction, and resets. The simplified shrink-and-perturb
-exercise here illustrates one mechanism; it is not the full BBF algorithm
-or evidence that resets alone explain the published improvement.
+\section{BBF (Schwarzer 2023): scaling a value-based agent}
+BBF combines larger networks with replay, self-predictive representation
+learning, resets, and scheduled discount / multi-step targets. Its Atari-100k
+results depend on the complete recipe. The local shrink-and-perturb exercise
+$\theta\leftarrow\alpha\theta+(1-\alpha)\theta_{\mathrm{init}}$ illustrates
+one mechanism; it is not a full reproduction or a claim that these
+coefficients equal every parameter group's published reset schedule.
+Source and configuration: \url{https://arxiv.org/abs/2305.19452}.
 
 \begin{pitfall}
 High replay ratios can magnify overfitting and loss of plasticity. Their
@@ -284,7 +274,8 @@ Initialise $\Qfn_\theta$ (with Noisy + Dueling), copy $\theta^-$\;
 
 \paragraph{Complexity.} Per step: one Noisy-noise reset ($O(\dim)$), one Double-DQN
 forward on online + target ($2\times$ vanilla DQN forward cost), batch backward.
-Wall-clock overhead over vanilla DQN: 2x. Empirical sample efficiency improvement: 2--4x.
+The additional passes and sampling work depend on the enabled components;
+measure wall-clock and learning curves rather than assume fixed overhead or gains.
 
 \chapter{Implementation walkthrough}
 
@@ -360,9 +351,8 @@ gain is small).}
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.7\linewidth]{figs/fig_noisynet_sigma.pdf}
-\caption{Schematic of NoisyNet's $\sigma$ behaviour: parameter-space noise scale decays
-under SGD because the optimiser pushes $\sigma \to 0$ wherever the value is well
-identified, but stays high in unexplored regions.}
+\caption{Illustrative noise-scale curves. Learned NoisyNet scales can grow or
+shrink; they are shared parameters, not calibrated statewise epistemic uncertainty.}
 \end{figure}
 
 \begin{safetyangle}
@@ -397,12 +387,12 @@ denominator and the \emph{target uniform distribution} in the numerator (implici
 via the normalisation). The lesson: every off-policy reweighting in this curriculum, from
 PER to SNIPS (Week 4 / 11) to GRPO (Week 20), is one application of the same identity.
 
-In matching, the practical takeaway is that PER is a free off-policy correction for
-online \emph{contextual-bandit} learners: keep the behaviour-policy probability $\pi_b$
-at logging time, and use it to compute the IS weight at training time. The result is an
-agent that can train on data collected under one routing policy and converge to the
-optimum under another --- exactly what counterfactual learning to rank does. We pick this
-up in detail in Weeks 11--12.
+In matching, distinguish two sampling changes: PER weights correct
+nonuniform replay toward the buffer average, whereas policy importance
+ratios correct action selection under a logger. Neither substitutes for
+the other. If both changes occur, derive their joint correction and
+support assumptions; PER alone cannot certify an off-policy policy value.
+
 \end{matching}
 
 \chapter{Exercises}

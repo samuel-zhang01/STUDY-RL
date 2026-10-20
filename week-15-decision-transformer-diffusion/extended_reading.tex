@@ -1,70 +1,63 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.4cm]{geometry}
 \usepackage{../common/rlstudy}
-
-\title{Week 15 --- Extended Reading: DT, Trajectory Transformer, Diffusion Policies}
+\title{Week 15 --- Extended Reading: Sequence and diffusion policies}
 \author{STUDY-RL}
-\date{\today}
-
+\date{Source audit: 20 October 2026}
 \begin{document}
 \maketitle
+\section*{Read for a claim, an assumption and a test}
+Read the teaching guide first, then use this pack alongside the lecture.
+The annotations below are course-written paraphrases and investigation prompts,
+not quotations from the papers. Each source link identifies a primary paper
+or official guidance. Benchmark results do not transfer automatically to our
+small exercises. For each reading, write the mathematical object, the needed
+assumptions and one observation that would challenge your interpretation.
 
-\section{Chen et al.\ (2021) --- Decision Transformer}
-\textsc{L.\ Chen, K.\ Lu, A.\ Rajeswaran, K.\ Lee, A.\ Grover, M.\ Laskin, P.\ Abbeel, A.\ Srinivas, I.\ Mordatch.}
-\emph{Decision Transformer: Reinforcement Learning via Sequence Modeling.} NeurIPS 2021, arXiv:2106.01345.
+\section{Chen et al. (2021): Decision Transformer}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2106.01345}
 
-\noindent\textbf{Summary.} Casts offline RL as conditional sequence modelling. A GPT-style transformer is trained to predict next actions given a window of $(R, s, a)$ tokens. At test time the user supplies a target return; the model autoregresses. Matches or beats CQL on D4RL with no Bellman backup.
+\paragraph{Mechanism and scope.} DT models actions from a causally ordered history containing return-to-go, states and past actions. Conditioning selects behaviour represented in the training data; requesting a large return does not ensure that the environment will deliver it.
 
-\noindent\textbf{Why it matters.} Removed the assumption that ``RL needs TD''. Cleared the path for transformer-scale offline policies (Q-Transformer, RT-2, Gato).
+\paragraph{Read, derive, investigate.} Write the tokens available before action $a_t$. Which reward is future information during training, and how is the desired target supplied at inference? Audit action-position loss masks so that the action being predicted cannot leak through its own input token.
 
-\begin{quote}
-``Despite its simplicity, Decision Transformer achieves state-of-the-art performance on Atari, OpenAI Gym, and Key-to-Door tasks.''
-\end{quote}
-\emph{Commentary.} The simplicity is the point. There is no value bootstrap, no out-of-support sampling, no policy KL constraint --- just supervised learning with a clever conditioning signal.
+\section{Janner et al. (2021): Trajectory Transformer}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2106.02039}
 
-\section{Janner et al.\ (2021) --- Trajectory Transformer}
-\textsc{M.\ Janner, Q.\ Li, S.\ Levine.} \emph{Offline RL as One Big Sequence Modeling Problem.} NeurIPS 2021, arXiv:2106.02039.
+\paragraph{Mechanism and scope.} The Trajectory Transformer models discretised trajectory components and uses search for planning. Unlike DT's direct return-conditioned action prediction, it can score candidate continuations through a learned sequence model.
 
-\noindent\textbf{Summary.} Discretises state, action, reward to a single token vocabulary and applies beam search over multi-step continuations. Plans by generation: the model proposes many trajectories, returns are accumulated, the best continuation is selected.
+\paragraph{Read, derive, investigate.} Distinguish model likelihood from environment reward. Explain how beam width, discretisation and horizon affect search, and why a high-scoring predicted future may exploit model error. The small course DT is not a Trajectory Transformer implementation.
 
-\noindent\textbf{Why it matters.} Bridge between DT (no planning) and MuZero (search-over-learned-dynamics). TT is in practice slower than DT but more robust on long-horizon tasks.
+\section{Janner et al. (2022): Diffuser}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2205.09991}
 
-\begin{quote}
-``We find that beam search over the full trajectory distribution yields qualitatively different behaviour from token-by-token argmax decoding.''
-\end{quote}
-\emph{Commentary.} A pre-figuring of the now-standard ``inference-time compute'' lesson: planning at inference can substitute for value learning.
+\paragraph{Mechanism and scope.} Diffuser learns trajectory generation by iterative denoising and uses conditioning or guidance to shape plans. Denoising steps and environment time steps are different axes. Guidance changes sampling and can push a generated plan away from familiar data.
 
-\section{Janner et al.\ (2022) --- Diffuser}
-\textsc{M.\ Janner, Y.\ Du, J.\ Tenenbaum, S.\ Levine.} \emph{Planning with Diffusion for Flexible Behavior Synthesis.} ICML 2022, arXiv:2205.09991.
+\paragraph{Read, derive, investigate.} Draw a matrix with denoising iteration horizontally and environment time vertically. Mark which entries are clamped by a known current state. Why does executing only the next action and replanning reduce, but not eliminate, model error? Do not describe iterative denoising as a single forward pass.
 
-\noindent\textbf{Summary.} Train a diffusion model over $(s, a)$ trajectories with classifier-free guidance. At test time, samples are guided by a value function (or any differentiable cost). Generates entire plans in one denoising pass; supports flexible conditioning.
+\section{Chi et al. (2023): Diffusion Policy}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2303.04137}
 
-\noindent\textbf{Why it matters.} First paper to show diffusion can be a competitive planning method. Pre-cursor to DIAMOND world models (week 16).
+\paragraph{Mechanism and scope.} Diffusion Policy represents conditional action distributions using diffusion and action sequences in robotic imitation learning. Its evaluation concerns specific manipulation tasks and data; multimodal action modelling is not itself reinforcement-learning improvement.
 
-\begin{quote}
-``Diffusion provides a natural mechanism for sample-then-rerank planning: we can sample many trajectories cheaply and re-rank by any downstream objective.''
-\end{quote}
+\paragraph{Read, derive, investigate.} Compare a bimodal action distribution to a squared-error regressor that averages its modes. When could the mean action be poor? Separate action-horizon length, observation conditioning and denoising cost. Our toy density experiment does not reproduce the robot experiments.
 
-\section{Chi et al.\ (2023) --- Diffusion Policy}
-\textsc{C.\ Chi, S.\ Feng, Y.\ Du, Z.\ Xu, E.\ Cousineau, B.\ Burchfiel, S.\ Song.} \emph{Diffusion Policy: Visuomotor Policy Learning via Action Diffusion.} RSS 2023, arXiv:2303.04137.
+\section{Hansen-Estruch et al. (2023): IDQL}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2304.10573}
 
-\noindent\textbf{Summary.} A conditional denoising diffusion model over short action chunks, conditioned on a window of image observations. Decisively outperforms BC-RNN and BC-Transformer on contact-rich manipulation tasks. Effectively the new standard for visuomotor BC.
+\paragraph{Mechanism and scope.} IDQL connects implicit value learning with policy extraction and uses a diffusion behaviour model for expressive action proposals. Its extraction perspective helps explain why the critic and proposal distribution must be considered together.
 
-\noindent\textbf{Why it matters.} Demonstrates that for \emph{multi-modal} action distributions (which appear in nearly all real-world demonstration datasets), Gaussian or categorical heads fail and diffusion succeeds.
+\paragraph{Read, derive, investigate.} If every sampled proposal comes from a region with mediocre value, can reranking recover an unproposed action? Trace proposal generation, critic scoring and final selection separately. Compare this to Diffusion-QL, where a Q term affects policy training rather than being only an inference-time guide.
 
-\begin{quote}
-``Diffusion Policy gracefully handles multi-modal action distributions and is robust to temporal aliasing.''
-\end{quote}
-\emph{Commentary.} The multi-modality observation is the deep one: human demonstrations contain different conventions for the same task, and a unimodal head averages them into a non-functional policy.
+\section{Brandfonbrener et al. (2022): When does return conditioning work?}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2206.01079}
 
-\section{Hansen-Estruch et al.\ (2023) --- IDQL}
-\textsc{P.\ Hansen-Estruch, I.\ Kostrikov, M.\ Janner, J.\ Grudzien, S.\ Levine.} \emph{IDQL: Implicit Q-Learning as an Actor-Critic Method with Diffusion Policies.} arXiv:2304.10573.
+\paragraph{Mechanism and scope.} This analysis studies conditions behind return-conditioned supervised learning and its failures. A favourable trajectory can reflect environment luck rather than an action that reliably causes a favourable outcome.
 
-\noindent\textbf{Summary.} Train an IQL value model and use it to weight or re-rank samples from a diffusion behaviour clone. Achieves SOTA on D4RL with a small training-time cost.
+\paragraph{Read, derive, investigate.} Construct two actions with identical observed high-return trajectories but different expected returns. Which conditional-support or near-determinism premise is missing? Use this question to interpret a target-return sweep, rather than assuming achieved return must increase monotonically.
 
-\noindent\textbf{Why it matters.} Cleanly separates ``what is plausible under the data'' (diffusion BC) from ``what is good'' (IQL value). The same factorisation now underlies most production offline pipelines.
+\section*{Connect the reading to your workbook}
+Recompute an undiscounted return-to-go by backward summation, then change the mathematical convention to $G_t=r_t+\gamma G_{t+1}$. The target update becomes $(G_t-r_t)/\gamma$ for $\gamma>0$. The shipped helper uses $\gamma=1$; label any discounted extension explicitly. Compare requested and achieved returns on held-out episodes.
 
-\vfill
-\noindent\emph{Sourced from} \texttt{research/offline\_modelbased\_sota.md} (sections A.8--A.13).
-
+\noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
 \end{document}

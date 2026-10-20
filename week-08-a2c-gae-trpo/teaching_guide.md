@@ -200,6 +200,33 @@ not a pointwise guarantee at every state or at a changed future state distributi
 - [agent.py](project/agent.py) trains A2C. The project supplies TRPO building
   blocks and notes, not a complete TRPO training implementation.
 
+## Choose your explanation depth: Two masks serve two different purposes in GAE
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+At an episode boundary, the advantage trace must not run into the next reset episode. Yet a time limit on a continuing task can still have a valuable final state. One mask controls bootstrapping and another controls whether the trace crosses the boundary.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+Let the final observed reward be 1, current value 0.5, final-state value 2 and discount 0.9. At a time limit, the residual is 1+0.9×2−0.5 = 2.3. At true termination it is 1−0.5 = 0.5. In either case, do not add the following reset episode’s advantage to this trace.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+Use $\delta_t=r_t+\gamma(1-\mathrm{terminal}_t)V(s_{t+1})-V(s_t)$ and $A_t=\delta_t+\gamma\lambda(1-\mathrm{boundary}_t)A_{t+1}$. A boundary includes both termination and truncation; only genuine termination necessarily eliminates continuation. With same-step autoreset, $s_{t+1}$ in the bootstrap must be the final observation, not the reset observation. If the finite time horizon is part of the actual task, include remaining time in the state and treat its endpoint according to that task objective.
+
+</details>
+
+**Try it in Jupyter:** jump to [`compute_gae` in the workbook](workbook.ipynb#cell-7), then run the setup cells above it. Expect final advantages 2.3 and 0.5. Pass `terminals` and `next_values` when truncation matters; the short `dones` interface alone cannot represent both distinctions.
+
 ## Notebook investigation: see which boundary stops which signal
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2 and 3**.

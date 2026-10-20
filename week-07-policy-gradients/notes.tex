@@ -25,7 +25,7 @@ Then use \texttt{workbook.ipynb} to implement and vary the calculations.
 By the end of this week you will be able to:
 \begin{enumerate}[leftmargin=*]
   \item State and \emph{derive} the policy gradient theorem from first principles, including the log-derivative (REINFORCE) trick.
-  \item Distinguish the \textbf{score-function} estimator from the \textbf{reparameterisation} (pathwise) estimator and explain why one is unbiased for discrete actions while the other gives lower variance for continuous ones.
+  \item Distinguish the \textbf{score-function} estimator from the \textbf{reparameterisation} (pathwise) estimator and explain their support and differentiability assumptions without assuming a universal variance ordering.
   \item Implement REINFORCE with a learned value baseline in $\sim$80 lines of PyTorch and demonstrate the variance-reduction effect empirically on CartPole-v1.
   \item Explain why subtracting any state-dependent function $b(s)$ preserves unbiasedness and how to derive the optimal baseline.
   \item Translate the algorithm to a \emph{ranking} setting: REINFORCE for top-$K$ list selection in the YouTube paper style.
@@ -140,7 +140,13 @@ Substituting this conditional expectation while retaining the outer $\Disc^t$ fa
 \end{proof}
 
 \begin{pitfall}
-Many implementations drop the leading $\Disc^t$ in $\Disc^t \Qfn(s_t,a_t)$ --- this introduces a small bias but works better empirically. Be aware that you are then optimising the \emph{undiscounted average} of discounted returns, not a true policy-gradient estimator. (Thomas 2014, \emph{Bias in Natural Actor-Critic Algorithms}, discusses this in depth.)
+Many practical trajectory losses omit the leading $\Disc^t$ required by
+the stated start-state discounted objective. That changes the estimator;
+the bias need not be small, and the resulting update need not be the
+exact gradient of a different scalar objective. Specify the state weighting
+and discount convention. See Thomas (2014),
+\url{https://proceedings.mlr.press/v32/thomas14.html}.
+
 \end{pitfall}
 
 \section{Variance reduction: baselines}
@@ -205,9 +211,9 @@ for arbitrary objectives and distributions. Week 10 (SAC) uses this aggressively
 \centering\small
 \begin{tabular}{lll}\toprule
  & Score function (REINFORCE) & Reparameterisation \\ \midrule
-Applicability & any sampler & needs $a = f_\theta(\epsilon)$ \\
+Applicability & differentiable log density & differentiable sampling path \\
 Bias & unbiased & unbiased \\
-Variance & high & low (deterministic gradient path) \\
+Variance & problem-dependent & problem-dependent \\
 Gradient through & $\log \Policy_\theta$ & $\Policy_\theta$ itself \\
 Used by & REINFORCE, A2C, TRPO, PPO, GRPO & SAC, TD3 actor loss, VAEs \\ \bottomrule
 \end{tabular}
@@ -234,8 +240,8 @@ $N^{-1}\sum_i\|\hat g_i\|^2-\|\bar g\|^2$ under a specified sampling scheme.
   \item Compute returns-to-go $G_t = \sum_{t'\ge t} \Disc^{t'-t} r_{t'}$.
   \item Compute advantages $A_t = G_t - \Vfn_\phi(s_t)$.
   \item Standardise: $A_t \leftarrow (A_t - \bar A)/(\hat\sigma_A + 10^{-8})$.
-  \item Policy loss: $L_\Policy = -\frac{1}{T+1}\sum_t \log \Policy_\theta(a_t\given s_t)\, A_t$.
-  \item Value loss: $L_\Vfn = \frac{1}{T+1}\sum_t (\Vfn_\phi(s_t) - G_t)^2$.
+  \item Policy loss: $L_\Policy = -\frac{1}{T}\sum_{t=0}^{T-1} \log \Policy_\theta(a_t\given s_t)\, A_t$.
+  \item Value loss: $L_\Vfn = \frac{1}{T}\sum_{t=0}^{T-1} (\Vfn_\phi(s_t) - G_t)^2$.
   \item $\theta \leftarrow \theta - \eta_\theta \nabla L_\Policy$;\quad $\phi \leftarrow \phi - \eta_\phi \nabla L_\Vfn$.
 \end{enumerate}
 \textbf{Estimator convention:} the displayed practical loss omits the outer
@@ -328,7 +334,7 @@ The full trainer lives in \texttt{project/train.py}; see also \texttt{project/ag
 REINFORCE in production --- be it a router for high-stakes leads or an LLM fine-tuner --- has three failure modes worth surfacing now, because every later policy method inherits them.
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Premature entropy collapse.} A few lucky early returns can push the policy to a near-deterministic, suboptimal mode in $\sim$50 updates. Mitigation: an explicit entropy bonus $-\beta \E[\log \Policy(a\given s)]$ with $\beta\approx 0.01$; or KL-trust-region (TRPO/PPO, weeks 8--9). Connects to the alignment literature on mode collapse in RLHF; see Gao, Schulman, Hilton 2022 (arXiv:2210.10760).
-  \item \textbf{Reward hacking.} If the surrogate reward differs from the true objective, PG will gleefully optimise the proxy. Skalse et al.\ NeurIPS 2024 give a clean definition of ``unhackable'' proxies. For matching: $r=$ click is not $r=$ booking; if you train on the proxy you will sell clickbait listings.
+  \item \textbf{Reward hacking.} If the surrogate reward differs from the true objective, PG will gleefully optimise the proxy. Skalse et al.\ (2022, \emph{Defining and Characterizing Reward Hacking}) give a clean definition of ``unhackable'' proxies. For matching: $r=$ click is not $r=$ booking; if you train on the proxy you will sell clickbait listings.
   \item \textbf{Catastrophic gradients on high-magnitude rewards.} A single 1000-return outlier can shift $\theta$ off-distribution. Mitigation: advantage standardisation, gradient clipping at $\|g\|_2 \le 0.5$. Without it, the agent can transition from learning to broken in a single mini-batch.
 \end{enumerate}
 None of these are theoretical. In synthetic insurance's matching context, premature entropy collapse means we stop showing newer brokers entirely after a brief lucky run; reward hacking means we optimise CTR rather than NPS; gradient explosions corrupt models silently and only surface at deploy time.
@@ -343,7 +349,9 @@ Setup: a context $s$ (user features, partial session), a candidate pool $\mathca
 \[
   \nabla_\theta \E_{a\sim\Policy_\theta(\cdot\given s)}[r(s,a)] = \E_{a}[r(s,a) \nabla_\theta \log\Policy_\theta(a\given s)].
 \]
-\textbf{Top-$K$ off-policy correction} (Chen et al., WSDM 2019, \emph{Top-K Off-Policy Correction for a REINFORCE Recommender System}): sampling $K$ items without replacement, the per-item gradient picks up a multiplier $\lambda_K(s,a) = K(1-\Policy_\theta(a\given s))^{K-1}$ --- this is the correction that turned PG-for-recsys from a research idea into the YouTube recommender.
+\textbf{Top-$K$ off-policy correction} (Chen et al., WSDM 2019, \emph{Top-K Off-Policy Correction for a REINFORCE Recommender System}): independently drawing $K$ items with replacement and then deduplicating,
+the per-item gradient picks up a multiplier $\lambda_K(s,a) = K(1-\Policy_\theta(a\given s))^{K-1}$ under that inclusion model. The resulting set can have fewer than $K$
+items; fixed-size sampling without replacement has a different inclusion probability.
 
 \paragraph{Concrete translation to synthetic ATS / synthetic insurance.}
 \begin{itemize}

@@ -33,8 +33,8 @@ By the end of this week you will be able to:
         is the unique fixed point.
   \item Implement \emph{value iteration} and \emph{policy iteration} in
         $<\!100$ lines of NumPy on a deterministic and a stochastic GridWorld.
-  \item State \emph{generalised policy iteration} (GPI) and explain why every
-        algorithm in the rest of this course is a GPI variant.
+  \item State \emph{generalised policy iteration} (GPI) and use it to organise
+        value-based and actor--critic methods, while recognising its limits.
   \item Solve Jack's car rental problem (Sutton \& Barto Example 4.2) to
         within $10^{-2}$ in sup-norm.
   \item Articulate why DP requires a full model and what changes when we do
@@ -266,11 +266,13 @@ Initialise $\Policy$ arbitrarily.\;
 \end{algorithm}
 
 \paragraph{Complexity.}
-One VI sweep costs $O(|\States|\,|\Actions|\,|\States|)$. PI does $O(|\States|^3)$
-for the linear solve plus $O(|\States|^2 |\Actions|)$ for improvement; in
-practice PI converges in $O(\log(1/\epsilon))$ outer iterations while VI
-needs $O(\log(1/\epsilon)/\log(1/\Disc))$. PI is therefore favoured when
-$\Disc$ is close to one; VI when $|\States|$ is large.
+A dense VI sweep costs $O(|\States|^2|\Actions|)$; a dense PI evaluation
+costs $O(|\States|^3)$, plus $O(|\States|^2|\Actions|)$ for improvement.
+For synchronous VI, contraction gives
+$k\ge \log(\|V_0-V^*\|_\infty/\epsilon)/\log(1/\Disc)$ when
+$0<\Disc<1$. Exact PI with consistent tie-breaking terminates after finitely
+many policy changes; this alone supplies no universal $O(\log(1/\epsilon))$
+outer-iteration bound. Compare total work as well as outer sweeps.
 
 \begin{example}[A 3-state worked example]
 Consider three states $\{1,2,3\}$, one action that always transitions
@@ -330,7 +332,9 @@ in time where $K$ is the capacity and $P$ is the Poisson truncation point.
 # project/carrental.py (excerpt)
 def expected_reward_and_next(self, s, a):
     n1, n2 = s
-    a_eff = max(-n2, min(n1, a))           # feasible move
+    lower = -min(n2, self.cap - n1)
+    upper = min(n1, self.cap - n2)
+    a_eff = max(lower, min(upper, a))      # both capacities respected
     n1m, n2m = n1 - a_eff, n2 + a_eff
     move_r = -self.move_cost * abs(a_eff)
     rent_r = self.rental_reward * (self.exp_req[0][n1m] + self.exp_req[1][n2m])
@@ -345,9 +349,8 @@ def expected_reward_and_next(self, s, a):
 \begin{figure}[ht]\centering
 \includegraphics[width=0.92\linewidth]{figs/fig_convergence.pdf}
 \caption{Sup-norm gap $\|V_{k+1}-V_k\|_\infty$ during value iteration on a
-6$\times$6 GridWorld, for three discount factors. The slope on the
-semi-log axis equals $\log\Disc$, exactly as
-Theorem~\ref{thm:contraction} predicts.}
+6$\times$6 GridWorld, for three discount factors. The contraction theorem bounds the rate by $\Disc$; observed slopes
+can be steeper and finite-horizon reward information can propagate in finitely many sweeps.}
 \end{figure}
 
 \begin{figure}[ht]\centering
@@ -432,7 +435,7 @@ See \texttt{workbook.ipynb}. Highlights:
   \item \textbf{Ex.\ 1 ($\star$).} Apply the Bellman optimality operator to a
         zero value function on a 3$\times$3 grid.
   \item \textbf{Ex.\ 2 ($\star$).} Run value iteration on a 5$\times$5
-        deterministic GridWorld and confirm geometric convergence at rate $\Disc$.
+        deterministic GridWorld and compare convergence with the geometric upper bound.
   \item \textbf{Ex.\ 3 ($\star\star$).} Policy iteration on the same grid;
         check $V^{\text{PI}} = V^{\text{VI}}$ to floating-point precision.
   \item \textbf{Ex.\ 4 ($\star\star$).} Stochastic GridWorld with slip

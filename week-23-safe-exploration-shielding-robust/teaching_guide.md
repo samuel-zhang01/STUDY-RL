@@ -32,6 +32,33 @@ Only right remains under the stated one-step hazard model. A guarantee for all f
 **Carry it onward:** [The matching capstone](../week-24-capstone-safe-matching/teaching_guide.md) combines learning, evaluation and a cost constraint while keeping their claims separate.
 
 
+## Choose your explanation depth
+
+When a safety correction has no possible solution. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+A shield or barrier filter can change an action only when a safe action exists. Projecting onto an impossible constraint is not a safety mechanism. Check the available actions and control authority before trusting a formula.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+For the scalar inequality **2a ≥ −1**, a proposed action **−2** projects to **−0.5**. A proposed action **0.2** is already feasible and stays unchanged. If the coefficient becomes zero and the right side is positive, **0 × a ≥ 1** has no solution: returning a large finite action would conceal the failure.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+Minimize $\tfrac12(a-a_\pi)^2$ subject to $ga\ge b$. With $g\ne0$, stationarity and complementarity give $a^*=a_\pi+\max(0,b-ga_\pi)g/g^2$. For $g=0$, feasibility requires $b\le0$. This is an exact affine projection. Forward invariance of a real dynamical system additionally needs a correct model, feasible continuous-time control and regularity; a sampled nonlinear system needs its own argument.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 7](workbook.ipynb#cell-24), using `exercise_7(a_proposed, h_val, dh_da, alpha)`. Inputs **(−2, 1, 2, 1)** should give **−0.5**; the zero-authority case **(0, −1, 0, 1)** should raise. Then inspect [Exercise 4](workbook.ipynb#cell-15) and `QLearner.update`: execution is shielded but its backup currently maximises all next actions. Give an unsafe next action Q = 10 and a safe one Q = 1; compare unrestricted and masked bootstrap targets. That optimistic value can distort learning even when the shield blocks execution.
+
 ## Mechanism at a glance
 
 ```mermaid

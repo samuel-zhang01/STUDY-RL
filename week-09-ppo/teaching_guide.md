@@ -175,6 +175,33 @@ Policy probability ratios and value predictions have different units, even if a 
 Training improvement on a particular short run is an empirical result, not an algebraic invariant.
 Separate “the loss matches these examples” from “three independent seeds improve.”
 
+## Choose your explanation depth: Why clipping treats advantage signs differently
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+PPO limits the reward for making a good sampled action more likely, and for making a bad sampled action less likely. It can still penalise movement in the harmful direction. The clip is part of the objective; it is not a command that clamps every policy probability.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+With epsilon 0.2, advantage +2 and ratio 1.4, the two candidate terms are 2.8 and 2.4, so the surrogate is 2.4. With advantage −2 and ratio 1.4, they are −2.8 and −2.4, so it is −2.8. The second case continues penalising an increased probability for a bad sampled action.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+For $L=\min(rA,\operatorname{clip}(r,1-\epsilon,1+\epsilon)A)$, positive $A$ has a flat incentive beyond $r=1+\epsilon$; negative $A$ has a flat incentive below $r=1-\epsilon$. Taking a minimum makes this surrogate no larger than the unclipped sampled surrogate, not a lower bound on true return. Old rollout log probabilities stay fixed through repeated optimisation epochs. Shared parameters, unsampled actions and other losses can still move probability ratios beyond the clip interval.
+
+</details>
+
+**Try it in Jupyter:** jump to [`ppo_clip_loss` in the workbook](workbook.ipynb#cell-6), then run the setup cells above it. Expect surrogates 2.4 and −2.8; a minimised implementation returns their negatives. Keep `old_logp` detached and unchanged while re-evaluating the current policy.
+
 ## Notebook investigation: read a ppo plot in the optimiser’s direction
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2, 3 and 6**.

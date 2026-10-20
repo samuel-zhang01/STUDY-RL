@@ -290,18 +290,20 @@ recover the final observation supplied in its info dictionary.
 \section{GAE in $\sim$10 lines}
 
 \begin{minted}{python}
-def compute_gae(rewards, values, dones, last_value, gamma=0.99, lam=0.95):
-    T = len(rewards)
-    advantages = np.zeros(T, dtype=np.float32)
-    last_adv = 0.0
-    for t in reversed(range(T)):
-        v_next = last_value if t == T - 1 else values[t + 1]
-        nonterm = 1.0 - float(dones[t])
-        delta = rewards[t] + gamma * v_next * nonterm - values[t]
-        last_adv = delta + gamma * lam * nonterm * last_adv
-        advantages[t] = last_adv
-    returns = advantages + values
-    return advantages, returns
+from common.rollouts import generalized_advantage_estimate
+
+def compute_gae(rewards, values, dones, last_value,
+                gamma=0.99, lam=0.95, *,
+                next_values=None, terminals=None):
+    # dones stops traces at termination OR truncation.
+    # terminals only removes the bootstrap at true termination.
+    # next_values uses final observations, never reset observations.
+    return generalized_advantage_estimate(
+        rewards, values, dones, last_value, gamma, lam,
+        next_values=next_values, terminals=terminals,
+    )
+
+
 \end{minted}
 
 \section{A2C update}
@@ -359,21 +361,31 @@ def fisher_vector_product(kl_fn, params, v, damping=1e-2):
 \begin{safetyangle}
 The KL trust-region in TRPO is not just an optimisation gadget --- it is \emph{the structural safety mechanism} of modern policy methods.
 
-\paragraph{Why KL is the right safety knob.}
-Total variation between a policy and a reference policy is exactly the maximum-over-events probability that they behave differently. Pinsker's inequality, $\TV(p,q) \le \sqrt{\tfrac12 \KL(p\|q)}$, makes a small KL imply a small worst-case behavioural divergence. For a high-stakes RL deployment, ``my new policy differs from the old reviewed-and-approved one by at most $\sqrt{\delta/2}$ in any event probability'' is a meaningful guarantee.
+\paragraph{What KL can bound.}
+For action distributions at one fixed state, Pinsker gives
+$\mathrm{TV}(p,q)\le\sqrt{\mathrm{KL}(p\|q)/2}$, bounding every
+action-event probability difference at that state. If only
+$\E_{s\sim d}[\mathrm{KL}_s]\le\delta$ is known, Jensen yields an
+\emph{average} TV bound under the same $d$, not a per-person, rare-state,
+trajectory-risk or fairness guarantee. Empirical average KL adds sampling
+error. Policy proximity is an optimisation diagnostic, not safety itself.
 
 \paragraph{The pattern reappears everywhere downstream.}
 \begin{itemize}[leftmargin=*]
-  \item RLHF/PPO for LLMs: penalty $-\beta \KL(\Policy_\theta \| \Policy_\text{ref})$ keeps the policy near the SFT model and is the only thing standing between the agent and reward-hacking the reward model (Stiennon et al.\ 2020, Ouyang et al.\ 2022).
-  \item DPO and friends (week 19): the closed-form $r(x,y) = \beta \log \Policy/\Policy_\text{ref}$ \emph{is} the KL constraint, made explicit.
-  \item Constrained RL (week 16): CPO is TRPO with an extra cost-constraint solved jointly via a closed-form 2D quadratic.
+  \item RLHF/PPO for LLMs: penalty $-\beta \KL(\Policy_\theta \| \Policy_\text{ref})$ keeps the policy near the SFT model and discourages policy drift, but does not eliminate reward-model exploitation (Stiennon et al.\ 2020, Ouyang et al.\ 2022).
+  \item DPO and friends (week 19): an optimal-policy reward reparameterisation takes the form
+$r(x,y)=\beta\log(\Policy/\Policy_\text{ref})+\beta\log Z(x)$.
+It follows from KL-regularised reward optimisation under its assumptions;
+it is not a hard KL constraint.
+  \item Constrained RL (week 22): CPO is TRPO with an extra cost-constraint solved jointly via a closed-form 2D quadratic.
 \end{itemize}
 
 \paragraph{Failure modes.}
 \begin{enumerate}[leftmargin=*]
   \item \emph{Damping mis-set.} A too-small CG damping causes the Fisher matrix to be effectively singular along low-variance directions and the line search collapses. Mitigation: set damping to $10^{-2} \cdot \mathrm{trace}(F)/|\theta|$ as a sane prior.
   \item \emph{KL divergence asymmetry.} TRPO penalises $\KL(\Policy_\text{old}\|\Policy_\text{new})$, not the reverse. This is mode-covering, not mode-seeking; in a multi-modal optimal policy you may end up in the wrong mode but with a reassuring small KL.
-  \item \emph{Stale advantages on long-running envs.} If $\Vfn_\phi$ has not converged, $\hat\Adv$ is biased and the trust region protects a wrong direction. Schulman 2015 fits $\Vfn_\phi$ to convergence with L-BFGS every outer iteration to avoid exactly this.
+  \item \emph{Stale advantages on long-running envs.} If $\Vfn_\phi$ has not converged, $\hat\Adv$ is biased and the trust region protects a wrong direction. Fit and diagnose the critic separately; a finite optimiser run does not
+guarantee an accurate value function or remove advantage bias.
 \end{enumerate}
 \end{safetyangle}
 
@@ -382,17 +394,27 @@ Total variation between a policy and a reference policy is exactly the maximum-o
 \begin{matching}
 \textbf{Trust regions for production policy updates in synthetic insurance.}
 
-Imagine the current synthetic insurance lead-router has been A/B-tested and shipped --- a known-quality policy $\Policy_\text{old}$. We want to fine-tune it with the latest week of logged conversions, but with a hard guarantee that the new policy is behaviourally close to the old one (so the existing SLA, audit trail, and broker-fairness review remain valid).
+Imagine the current synthetic insurance lead-router has been A/B-tested and shipped --- a known-quality policy $\Policy_\text{old}$. We want to fine-tune it with the latest week of logged conversions, while measuring changes in its action distribution. A sampled average-KL
+constraint alone does not preserve an SLA or a fairness review.
 
 \paragraph{Direct translation.}
 \begin{itemize}
   \item \textbf{Surrogate $L$:} importance-weighted conversion reward, $\E_{s,a\sim\Policy_\text{old}}[(\Policy_\theta/\Policy_\text{old}) \cdot \Adv]$, where $\Adv$ is fitted from the logs.
-  \item \textbf{Trust region:} $\bar{\KL}(\Policy_\text{old} \| \Policy_\theta) \le \delta \approx 10^{-3}$. This bounds the maximum change in any broker's expected slot-share to $\sqrt{\delta/2} \approx 2\%$ --- a reasonable per-week ceiling for a regulated marketplace.
+  \item \textbf{Trust region:} an average-KL target of $10^{-3}$ is an
+        illustrative setting. Under the same fixed context distribution,
+        exact average KL bounds average action-event changes by
+        $\sqrt{10^{-3}/2}\approx0.0224$. It does not bound each
+        candidate's probability change or preserve every exposure review.
+
   \item \textbf{Solver:} A2C+GAE plus a back-tracking line-search against the empirical KL is sufficient; we do not need the full conjugate-gradient TRPO machinery for the modest-sized policies in production.
 \end{itemize}
 
 \paragraph{synthetic ATS connection.}
-For candidate-to-role matching the same architecture buys a different guarantee: ``no candidate's expected interview probability changes by more than $\eta$ between weekly model retrains.'' This is exactly what compliance teams demand from ML systems with disparate-impact reviews; the KL trust region is the math that lets you offer it.
+For candidate-to-role matching, separately audit individual and group
+outcomes, context shift and uncertainty. Small measured mean KL can coexist
+with a large change for a rare candidate group. No compliance requirement
+or per-person guarantee follows from this surrogate alone.
+
 \end{matching}
 
 \chapter{Exercises}
@@ -405,7 +427,7 @@ For candidate-to-role matching the same architecture buys a different guarantee:
   \item \textbf{E5} ($\star\star$) Sweep $\lambda$; reproduce Figure~\ref{fig:lambda-sweep}.
   \item \textbf{E6} ($\star\star$) Derive the Fisher matrix for a diagonal Gaussian policy.
   \item \textbf{E7} ($\star\star\star$) Code a conjugate-gradient solver and verify $F^{-1}g$ on a toy MVN.
-  \item \textbf{E8} ($\star\star\star$, meaningful objective) Trust-region weekly retrain on logged matching data; show KL bound implies bounded slot-share change.
+  \item \textbf{E8} ($\star\star\star$, meaningful objective) Trust-region weekly retrain on logged matching data; distinguish fixed-context average slot-share bounds from per-context claims.
 \end{enumerate}
 
 \chapter{Further reading}

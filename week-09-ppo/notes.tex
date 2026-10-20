@@ -26,7 +26,8 @@ By the end of this week you will be able to:
 \begin{enumerate}[leftmargin=*]
   \item Motivate PPO's clipped surrogate using TRPO's trust-region idea; explain why clipping is a heuristic objective rather than a hard trust-region constraint.
   \item State and implement the PPO-KL variant (adaptive penalty) and contrast its behaviour with PPO-clip.
-  \item Recite, implement, and \emph{check off} the 37 implementation details that separate a paper PPO from a working PPO.
+  \item Audit the task-relevant implementation choices using the source article
+and the course checklist; verify each enabled option in code.
   \item Train PPO on BipedalWalker-v3 with vector envs and reproduce the canonical learning curve.
   \item Understand why PPO is the universal workhorse of RLHF and what about its design makes it the right algorithm for LLM fine-tuning (preview of week 18).
 \end{enumerate}
@@ -34,7 +35,8 @@ By the end of this week you will be able to:
 
 \chapter{Motivation and intuition}
 
-TRPO works but is expensive: every update requires a conjugate-gradient solve of $Fx=g$ ($\sim$10 Fisher--vector products), a back-tracking line search, and a separate value-function fit.\marginnote{The Engstrom 2020 paper (week 8 extended reading) showed that the algorithm-vs-code-tricks split is roughly 20--80 in favour of code tricks; this informs the entire structure of this week.} For deep RL at scale, this is a non-starter. PPO is the engineer's compromise: keep the trust-region \emph{idea} (don't move the policy too far per update) but replace the second-order solve with a first-order surrogate that mini-batch SGD can handle, and run multiple epochs of mini-batch updates per rollout.
+TRPO works but is expensive: every update requires a conjugate-gradient solve of $Fx=g$ ($\sim$10 Fisher--vector products), a back-tracking line search, and a separate value-function fit.\marginnote{Engstrom et al. (2020) demonstrate implementation sensitivity
+in controlled comparisons; they do not establish a universal 20--80 split.} For deep RL at scale, this is a non-starter. PPO is the engineer's compromise: keep the trust-region \emph{idea} (don't move the policy too far per update) but replace the second-order solve with a first-order surrogate that mini-batch SGD can handle, and run multiple epochs of mini-batch updates per rollout.
 
 \begin{intuition}
 Picture the importance ratio $\rho_t(\theta) = \Policy_\theta(a_t\given s_t)/\Policy_{\theta_\text{old}}(a_t\given s_t)$. An exact action importance ratio still changes measure correctly at a fixed state, but large ratios increase variance and the old-policy state distribution becomes stale. PPO compares the unclipped and clipped objectives and removes an incentive for further improvement beyond a threshold. It does not constrain every actual ratio to $[1-\varepsilon,1+\varepsilon]$ or guarantee a KL bound.
@@ -120,7 +122,7 @@ with $\beta$ adapted online: if measured KL exceeds the target by $1.5\times$, d
   - c_v\, \underbrace{\E_t\!\left[(\Vfn_\phi(s_t) - \hat R_t)^2\right]}_\text{value}
   + c_H\, \underbrace{\E_t\!\left[\mathcal{H}(\Policy_\theta(\cdot\given s_t))\right]}_\text{entropy bonus}.
 \]
-With value clipping enabled (detail \#13), the value loss becomes
+With value clipping enabled (course detail \#8), the value loss becomes
 \[
   L^{\mathrm{V}}(\phi) = \E_t\!\left[\max\Big( (\Vfn_\phi(s_t) - \hat R_t)^2,\; (\mathrm{clip}(\Vfn_\phi(s_t), \Vfn_\text{old} - \varepsilon, \Vfn_\text{old}+\varepsilon) - \hat R_t)^2 \Big)\right].
 \]
@@ -160,7 +162,7 @@ The canonical list (Huang et al., \emph{The 37 Implementation Details of Proxima
 4 & Linear learning-rate schedule (decay to zero). & core \\
 5 & GAE with $\Disc=0.99, \lambda=0.95$. & core \\
 6 & Per-mini-batch advantage normalisation. & core \\
-7 & PPO-clip $\varepsilon=0.2$; alternative: clip on the log-ratio. & core \\
+7 & PPO-clip $\varepsilon=0.2$; log-ratio bounds require $\log(1\pm\varepsilon)$. & core \\
 8 & Value-function clipping (clip range $\varepsilon$). & core \\
 9 & Joint policy+value MSE+entropy loss, weights $1, 0.5, 0.01$. & core \\
 10 & Global gradient norm clipping at $0.5$. & core \\
@@ -185,7 +187,7 @@ The canonical list (Huang et al., \emph{The 37 Implementation Details of Proxima
 29 & Final value head init: orthogonal $1.0$. & core \\
 30 & Mini-batch size $\le$ rollout / 4 (typically). & core \\
 31 & $K=10$ epochs (continuous), $K=4$ (Atari). & core \\
-32 & Seed all RNGs identically (Python, NumPy, Torch, env). & core \\
+32 & Seed each RNG reproducibly; use distinct seeds for vector environments. & core \\
 33 & Deterministic CUDNN \emph{off} for speed. & core \\
 34 & LSTM: \texttt{burn-in} hidden state from rollout for first $T_b$ steps. & LSTM \\
 35 & LSTM: zero-out hidden state at episode boundaries. & LSTM \\
@@ -193,7 +195,9 @@ The canonical list (Huang et al., \emph{The 37 Implementation Details of Proxima
 37 & Mixed-precision off by default (FP32 matters for small policies). & core \\
 \bottomrule
 \end{tabular}
-\caption{The 37 implementation details, distilled from Huang et al.\ 2022. The project's \texttt{train.py} checks off (1)--(18) and (28)--(33).}
+\caption{Course audit prompts inspired by Huang et al.\ (2022), not a
+verbatim or exhaustive implementation of their numbered list. Some rows
+are task-specific alternatives; inspect the current trainer before marking one implemented.}
 \end{table}
 
 \chapter{Implementation walkthrough}
@@ -210,10 +214,13 @@ recover the final observation supplied in its info dictionary.
 \section{Vector env + GAE collection (details 1, 5, 6, 12)}
 
 \begin{minted}{python}
-envs = gym.vector.SyncVectorEnv(
-    [lambda i=i: gym.wrappers.NormalizeObservation(
-                  gym.wrappers.NormalizeReward(gym.make(env_id, autoreset=True)))
-     for i in range(num_envs)])
+# Use the version-aware helper used by project/train.py.
+from common.rollouts import sync_vector_env
+# Inspect its arguments before constructing environments. The helper
+# requests same-step autoreset and preserves final observations.
+# Store sampled Gaussian actions for log probabilities; only clip the
+# copy sent to the environment.
+
 \end{minted}
 
 \section{PPO loss (details 7, 8, 9, 11)}
@@ -277,8 +284,12 @@ for it in range(n_iters):
 
 \paragraph{Failure modes (concrete).}
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{Reward over-optimisation.} Gao--Schulman--Hilton 2022 (arXiv:2210.10760) show RLHF's proxy reward gap grows quadratically in $\sqrt{\KL}$ from the SFT. Mitigation: KL-penalty (above), early stopping by KL.
-  \item \textbf{Mode collapse / repetition.} Removing the entropy bonus collapses LLM outputs to a few canned responses. Mitigation: keep $c_H \ge 0.001$ even at the cost of slightly lower reward-model score.
+  \item \textbf{Reward over-optimisation.} Gao--Schulman--Hilton (2022) fit gold-model performance in a synthetic
+reward-model setup, with different forms for RL and best-of-$n$. Their
+result is not a universal quadratic law for the proxy--true reward gap. Mitigation: KL-penalty (above), early stopping by KL.
+  \item \textbf{Mode collapse / repetition.} Reward optimisation can reduce output diversity. Monitor diversity and
+held-out quality; entropy and reference-KL penalties have different roles,
+and no universal entropy coefficient prevents collapse.
   \item \textbf{Distribution shift in the value head.} The value net is trained on $\Policy_\text{old}$ rollouts; if $\Policy$ moves too fast, $\Vfn_\phi$ is stale and advantages are biased. Mitigation: lower learning rate, more epochs to fit $\Vfn$ relative to $\Policy$.
   \item \textbf{Spec-gaming by clip exploitation.} If a state has hugely positive advantage and $\rho_t$ jumps above $1+\varepsilon$ before the gradient saturates, you can still get a destructive update. Mitigation: detail \#11 (KL early stopping).
 \end{enumerate}
@@ -294,7 +305,8 @@ A preview of week 18: every one of these failure modes will reappear when we tra
 The leap from REINFORCE-for-ranking (week 7) to PPO-for-ranking is modest: replace the single-update gradient step with the PPO-clip surrogate over a mini-batch of logged slates, run for $K=4$ epochs, and apply value-function clipping. The benefits:
 \begin{itemize}
   \item \textbf{Stability under reward-model drift.} A click-through-rate proxy reward $r_\text{RM}$ that gets re-trained nightly cannot induce a runaway optimiser; PPO-clip discourages large updates, while measured KL and independent evaluation remain necessary.
-  \item \textbf{Mini-batch parallelism.} The same logged batch supports multiple SGD steps; you extract roughly $4\times$ the gradient signal per data unit relative to REINFORCE.
+  \item \textbf{Mini-batch parallelism.} The same logged batch supports multiple SGD steps; four passes make four optimisation passes over the same data, not
+four independent samples or a guaranteed fourfold information gain.
   \item \textbf{Direct KL audit.} The approximate-KL metric is logged at every update; an alarm at $\KL > 0.05$ catches a misbehaving update before it ships.
 \end{itemize}
 
@@ -313,12 +325,13 @@ This is an application sketch, not an established universal recipe: PPO normally
 \begin{enumerate}[label={},leftmargin=0pt,labelsep=0pt]
   \item \textbf{E1} ($\star$) Implement \texttt{ppo\_clip\_loss(ratio, adv, eps)} and unit-test edge cases.
   \item \textbf{E2} ($\star$) Show that $L^{\mathrm{CLIP}}$ is differentiable everywhere except $\rho \in \{1-\varepsilon, 1+\varepsilon\}$ and explain why this is fine in practice.
-  \item \textbf{E3} ($\star\star$) Implement value-function clipping; show that disabling it degrades final return on a 50-update toy.
+  \item \textbf{E3} ($\star\star$) Implement value-function clipping; compare enabled and disabled variants on a 50-update toy without assuming the result.
   \item \textbf{E4} ($\star\star$) Train PPO on BipedalWalker-v3; reach mean return $\ge 100$ within 800 updates.
   \item \textbf{E5} ($\star\star$) Ablate three details from the 37; produce Figure~\ref{fig:details-ablation}.
   \item \textbf{E6} ($\star\star$) Compute the empirical KL between $\Policy_\theta$ and $\Policy_{\theta_\text{old}}$ each update; verify the KL early-stop fires sensibly.
   \item \textbf{E7} ($\star\star\star$) Implement PPO-KL (adaptive penalty) and compare to PPO-clip head-to-head.
-  \item \textbf{E8} ($\star\star\star$, meaningful objective) Add a $-\beta \KL(\Policy\|\Policy_\text{ref})$ term to the reward (RLHF-style); show that with $\beta > 0$ the policy stays within a small KL ball of $\Policy_\text{ref}$ even when the reward model is biased.
+  \item \textbf{E8} ($\star\star\star$, meaningful objective) Add a $-\beta \KL(\Policy\|\Policy_\text{ref})$ term to the reward (RLHF-style); measure KL for several positive penalties; explain why a finite penalty
+does not enforce a specified KL ball when rewards change scale.
 \end{enumerate}
 
 \chapter{Further reading}

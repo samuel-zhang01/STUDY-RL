@@ -12,7 +12,10 @@ first session, the [course map](https://study-rl.samuelzhang.co.uk/#/curriculum)
 for all 26 weeks, and [Notebooks & downloads](https://study-rl.samuelzhang.co.uk/#/downloads)
 for individual `.ipynb` files, self-contained weekly ZIPs, PDFs and Jupyter setup.
 The website teaches the lessons directly and links each explanation to its
-actual notebook and project code.
+actual notebook and project code. Each week also has three diagnostic questions
+with answer-specific explanations and a cumulative [revision queue](https://study-rl.samuelzhang.co.uk/#/review).
+Save section bookmarks, adjust the reader, and export your browser-local notes,
+milestones and quiz history from [Your progress](https://study-rl.samuelzhang.co.uk/#/progress).
 
 **This GitHub repository is the downloadable source:**
 [samuel-zhang01/STUDY-RL](https://github.com/samuel-zhang01/STUDY-RL).

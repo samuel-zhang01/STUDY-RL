@@ -25,11 +25,11 @@ Then use \texttt{workbook.ipynb} to implement and vary the calculations.
 \begin{keyidea}
 By the end of this lecture you will be able to:
 \begin{enumerate}
-  \item Derive the one-step temporal-difference (TD) error $\delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t)$ from the Bellman equation and prove it is the unique unbiased estimator of the Bellman residual at a state.
+  \item Derive the one-step temporal-difference (TD) error $\delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t)$ from the Bellman equation and show that its conditional mean is the Bellman residual for a fixed value estimate.
   \item State and analyse the bias\textendash variance trade-off between Monte Carlo, $n$-step TD, and TD($\lambda$).
   \item Implement SARSA (on-policy), Q-learning (off-policy), Expected SARSA, and Double-Q learning from scratch on \texttt{CliffWalking-v1} and \texttt{Taxi-v3}.
   \item Explain why on-policy and off-policy control converge to different policies under a fixed $\varepsilon$-greedy behaviour (the cliff-jumping behaviour gap).
-  \item Construct a 2-state MDP where Q-learning suffers maximisation bias and show how Double-Q removes it in expectation.
+  \item Construct a 2-state MDP where Q-learning suffers maximisation bias and show how Double-Q separates selection from evaluation without guaranteeing zero bias.
   \item Connect TD-style online updates to incremental policy improvement in a lead-scoring matching system and to off-policy evaluation via self-normalised IS.
 \end{enumerate}
 \end{keyidea}
@@ -186,7 +186,8 @@ where $a_{t+1} \sim \Policy(\cdot|s_{t+1})$ is the action the agent actually tak
 Hence the name SARSA = (state, action, reward, next-state, next-action).
 
 \begin{theorem}[Singh--Jaakkola--Littman--Szepesv\'ari 2000]
-SARSA with $\varepsilon$-greedy behaviour, decaying $\varepsilon \to 0$ in the limit (GLIE),
+In a finite discounted MDP with bounded rewards, SARSA with GLIE behaviour
+(infinite visits to every state--action pair and greedy in the limit),
 and step sizes satisfying Robbins--Monro, converges almost surely to $\Qfn^\star$ and the
 associated policy $\Policy \to \Optpol$.
 \end{theorem}
@@ -202,7 +203,8 @@ control algorithm: the agent can learn $\Qfn^\star$ from any exploratory behavio
 as every $(s,a)$ pair is visited infinitely often (Watkins--Dayan 1992).
 
 \begin{theorem}[Convergence of Q-learning, Watkins--Dayan 1992]
-Under Robbins--Monro step sizes and the visitation assumption above, tabular Q-learning
+In a finite discounted MDP with bounded rewards, per-state--action
+Robbins--Monro step sizes and the visitation assumption above, tabular Q-learning
 converges almost surely to $\Qfn^\star$.
 \end{theorem}
 
@@ -236,7 +238,7 @@ Consider an MDP with two states $\{A, B\}$, $A$ is start. From $A$ there are two
 \emph{left} (to $B$, reward 0) and \emph{right} (terminal, reward 0). From $B$ there are
 $k$ actions, each terminal, with rewards i.i.d.\ $\mathcal{N}(-0.1, 1)$. The optimal policy
 goes \emph{right} (expected return $0 > -0.1$). Q-learning overestimates $\max_a \Qfn(B,a)$
-early in training and persistently chooses \emph{left}. Double-Q removes this.
+early in training and persistently chooses \emph{left}. Double-Q reduces this mechanism; finite runs can still select the inferior branch.
 \end{example}
 
 Double-Q learning (Hasselt 2010) maintains two estimators $\Qfn_1, \Qfn_2$ updated on
@@ -342,8 +344,8 @@ def sarsa(env, n_episodes, alpha, gamma, eps_start, eps_end, eps_decay, seed):
         while not done and t < max_steps:
             sn, r, term, trunc, _ = env.step(a)
             done = term or trunc
-            an = eps_greedy(Q, sn, eps, rng) if not done else 0
-            target = r + (0.0 if done else gamma * Q[sn, an])
+            an = eps_greedy(Q, sn, eps, rng) if not term else 0
+            target = r + (0.0 if term else gamma * Q[sn, an])
             Q[s, a] += alpha * (target - Q[s, a])
             s, a = sn, an
             G += r; t += 1
@@ -360,8 +362,9 @@ In gymnasium 1.x, \texttt{env.reset()} returns the tuple \texttt{(obs, info)} an
 \texttt{env.step()} returns 5-tuples \texttt{(obs, reward, terminated, truncated, info)}.
 Confusing \texttt{terminated} (true terminal) with \texttt{truncated} (time-limit) is
 critical: never bootstrap through a true terminal; do bootstrap through a truncation.
-We collapse both into \texttt{done} here for clarity but production code should
-distinguish them.
+Use either flag to end collection, but only true termination removes the
+bootstrap for an external time limit. A genuine finite-horizon task instead
+includes remaining time in its state and terminates at the horizon.
 \end{pitfall}
 
 \chapter{Empirical results}
@@ -373,8 +376,8 @@ distinguish them.
 \includegraphics[width=0.95\linewidth]{figs/fig_cliffwalking_curves.pdf}
 \caption{CliffWalking learning curves (mean $\pm 1$ std across 3 seeds, smoothed window 20).
 SARSA and Expected SARSA quickly settle on the safer longer path. Q-learning and Double-Q
-learn the optimal greedy path but pay an exploration cost: every $\varepsilon$-step near
-the cliff is a fall.}
+learn the optimal greedy path but pay an exploration cost: a random exploratory action near the cliff can cause a fall,
+although many exploratory actions remain safe.}
 \end{figure}
 
 \begin{figure}[h]
@@ -390,8 +393,9 @@ Bias\textendash variance dial:
 \centering
 \includegraphics[width=0.7\linewidth]{figs/fig_bias_variance.pdf}
 \caption{Schematic variance of the $n$-step return target. For a fixed (correct) value
-function the variance grows linearly in $n$ while the (correctly-modelled) bias is zero;
-in practice an imperfect $V$ adds bias that decreases in $n$.}
+function, target variance is non-decreasing under the assumptions of
+Proposition~\ref{prop:bv}; it need not grow linearly. An imperfect $V$
+removes that variance ordering. These curves are illustrative.}
 \end{figure}
 
 \section{Taxi-v3}
@@ -416,7 +420,8 @@ mitigations:
     deployment.} The policy you evaluate against is the policy you will run.
   \item \textbf{Bound the exploratory action set.} A shield or action mask
     (Alshiekh et al., AAAI 2018, see \texttt{research/safety\_rl\_sota.md} \S2) eliminates
-    the cliff-adjacent action outright. Conservative but provably safe.
+    the cliff-adjacent action outright. This can prevent the specified hazard if the model and admissible-action
+set are correct; it does not certify unmodelled hazards.
 \end{enumerate}
 These themes recur in Weeks 22--23 (CMDPs and shielded RL). For now: if your bandit/RL
 policy's behaviour gap between training and serving has a cost asymmetry, prefer SARSA or
@@ -457,8 +462,9 @@ The full graded notebook is in \texttt{workbook.ipynb}. Summary:
 \end{enumerate}
 \begin{intuition}
 For Exercise~9, remember that SNIPS divides by $\sum_i w_i$ rather than $N$: the
-self-normalisation is what gives it lower variance than vanilla IPS, at the cost of
-asymptotic bias of order $O(1/N)$.
+self-normalisation changes finite-sample bias and variance. Under suitable
+moment assumptions the bias is $O(1/N)$ and vanishes asymptotically; variance
+or MSE superiority over IPS is not universal.
 \end{intuition}
 
 \chapter{Further reading}

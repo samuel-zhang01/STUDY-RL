@@ -31,6 +31,33 @@ The gap is 1+0.9+0.9²=2.71. Even this simple per-step reward error compounds; t
 **Carry it onward:** [Exploration and meta-learning](../week-17-exploration-meta/teaching_guide.md) ask which real experience to collect and how to adapt to a changed task.
 
 
+## Choose your explanation depth
+
+Where imagined credit must stop. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+A world model supplies guessed transitions, rewards and continuation probabilities. A lambda return blends a short bootstrap with longer imagined rewards. Once an imagined transition is terminal, no later reward or value should flow backward across it.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+Use rewards `[1, 2]`, values `[10, 20, 30]`, γ = 0.9 and λ = 0.5. With continuation `[1, 0]`, the last return is **2** and the first is **10.9**: 1 + 0.9 × (0.5 × 20 + 0.5 × 2). Changing the final value from 30 to 300 must leave both answers unchanged.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+In the helper, $r_t,c_t$ belong to the transition from $z_t$ to $z_{t+1}$ and $v_{t+1}=V(z_{t+1})$. Set $G_H=v_H$ and recurse $G_t=r_t+\gamma c_t[(1-\lambda)v_{t+1}+\lambda G_{t+1}]$. A zero $c_t$ removes both future terms. The identity defines a model-based target; its accuracy still depends on the learned reward, continuation and latent dynamics.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 2: `lam_ret`](workbook.ipynb#cell-9), then call `exercise_2_lambda_return` with lists of one-element tensors and the numbers above. Expect **[10.9, 2]**. Perturb the terminal bootstrap by a factor of ten. If the result changes, the mask or value index is wrong. [Exercise 7](workbook.ipynb#cell-24) reports separate model-loss components; it does not turn a falling reconstruction loss into evidence of accurate counterfactual planning.
+
 ## Mechanism at a glance
 
 ```mermaid

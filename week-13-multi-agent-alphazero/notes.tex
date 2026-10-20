@@ -83,11 +83,10 @@ is it a desirable one?
 
 \section{Anchoring}
 
-You already know self-play if you have ever trained a GAN: the generator
-and discriminator are two agents in a zero-sum game, each adapting to the
-other's current best policy. AlphaZero is GAN-with-MCTS: the policy is the
-generator, the value head is the discriminator, MCTS is the adversarial
-optimisation that picks the next move.
+A useful connection is iterative data collection: the policy changes the
+opponent distribution it trains against. AlphaZero is not a GAN: its value
+head predicts game outcomes and its search procedure does not play the role
+of a discriminator. Track the policy, search and value targets separately.
 
 You already know MAPPO if you know PPO: it is PPO with a centralised critic
 that consumes the global state and per-agent actors that consume only
@@ -102,15 +101,15 @@ This week we put the games back. The same machinery (UCB, posterior
 sampling, importance-weighted policy gradients) carries over with the
 extension that each agent's update must anticipate the others' updates.
 Self-play and PSRO are best-response \emph{cascades}: I update my best
-response to your current policy, you update yours, repeat. Provably
-convergent in two-player zero-sum games; messier in general-sum.
+response to your current policy, you update yours, repeat. Some exact finite-game procedures have convergence results; generic
+neural self-play and approximate best responses do not inherit them.
 
 \begin{pitfall}
 The non-stationarity problem is the central pitfall of MARL. A naive
 extension of single-agent DQN to two agents (each running independent DQN)
 loses every theoretical convergence guarantee. Empirically it sometimes
-works, often does not. CTDE was invented to recover stability: the
-centralised critic provides a stationary learning signal.
+works, often does not. CTDE was invented to recover stability: the critic can condition on joint information, but target policies
+continue to change and training is not automatically stationary.
 \end{pitfall}
 
 % =============================================================================
@@ -146,9 +145,8 @@ No agent can unilaterally improve by deviating.
 \end{definition}
 
 \begin{intuition}
-Nash is the right solution concept when agents are strategic. In
-cooperative settings it is overkill (the optimal joint policy is a Nash
-but so is every coordination failure); in zero-sum it is tight (the
+Nash is the right solution concept when agents are strategic. in cooperative settings, a joint optimum is a Nash equilibrium, but
+some suboptimal coordination points are also equilibria; not every failure is; in zero-sum it is tight (the
 minimax value). General-sum may have multiple Nashes and learning may
 oscillate among them.
 \end{intuition}
@@ -205,12 +203,13 @@ function. The critic is shared across agents (one network, fed each
 agent's transitions); the actor is per-agent (or can be shared too, with
 agent-id embedding).
 
-\begin{theorem}[MAPPO surprise, Yu et al.\ NeurIPS 2022]
-With careful normalisation and centralised value functions, MAPPO matches
-or exceeds MADDPG, QMIX, COMA, and IPPO on the StarCraft Multi-Agent
-Challenge (SMAC) and the Multi-Agent MuJoCo benchmark, despite being one
-of the simplest CTDE recipes.
-\end{theorem}
+\paragraph{Published evidence.}
+Yu et al. evaluate PPO-based methods on particle-world environments, SMAC,
+Google Research Football and Hanabi. The comparisons are empirical and
+protocol-dependent; neither a theorem of dominance nor a MA-MuJoCo result
+follows from that evaluation. Source: \url{https://arxiv.org/abs/2103.01955}.
+
+
 
 \subsection{QMIX (Rashid et al.\ ICML 2018)}
 
@@ -240,20 +239,21 @@ opponents that are previous versions of the same network. Goes back to
 Tesauro's TD-Gammon (1992) and is the recipe behind AlphaGo, AlphaZero,
 AlphaStar, and OpenAI Five.
 
-\begin{theorem}[Self-play convergence in zero-sum games, Singh et al.\ 2000]
-In a two-player zero-sum stochastic game, fictitious-play self-play
-converges to the minimax (Nash) equilibrium under standard regularity
-conditions. The result extends to function-approximation settings under
-the additional assumption that the function class realises the
-equilibrium.
-\end{theorem}
+\paragraph{Convergence boundary.}
+Generic last-iterate neural self-play has no unconditional Nash-convergence
+guarantee. Classical fictitious-play results concern specified finite games
+and empirical mixed strategies; realisability of a neural policy class alone
+does not supply exact best responses or the required learning dynamics.
+
+
 
 \subsection{Fictitious play}
 
 At iteration $t$, each agent plays the best response to the empirical
 distribution of the opponent's historical actions $\bar\pi_{-i}^{(t)} = \frac{1}{t} \sum_{k=1}^t \pi_{-i}^{(k)}$.
-In matrix games this is guaranteed to converge to a Nash equilibrium in
-zero-sum and identical-interest games (Robinson 1951; Monderer \&
+For finite matrix games, the classical results concern convergence of
+empirical mixed play toward equilibrium in two-player zero-sum and
+identical-interest settings, not convergence of each selected action (Robinson 1951; Monderer \&
 Shapley 1996).
 
 \subsection{Policy-Space Response Oracles (PSRO)}
@@ -270,14 +270,17 @@ inner ``best response'' step is the only RL step; the meta-game over the
 policy population is solved by classical game-theoretic methods (LP for
 zero-sum, replicator dynamics for general-sum).
 
-\begin{theorem}[PSRO convergence in two-player zero-sum games, Lanctot et al.\ 2017]
-In a two-player zero-sum game, PSRO converges to an $\epsilon$-Nash
-equilibrium in finite iterations under exact best response. With
-approximate best response (PPO with bounded sample complexity), the
-convergence rate degrades to $\tilde O(1/\sqrt{T})$.
-\end{theorem}
+\begin{remark}[Exact double-oracle versus practical PSRO]
+In a finite two-player zero-sum normal-form game, exact best responses and
+an exact restricted-game equilibrium let double-oracle terminate when no
+profitable deviation remains. Finite policy populations and approximate RL
+oracles can miss deviations. No generic $\widetilde O(1/\sqrt T)$ neural
+PSRO convergence rate follows merely from calling PPO as the oracle.
+Source: \url{https://arxiv.org/abs/1711.00832}.
+\end{remark}
 
 % =============================================================================
+
 \chapter{AlphaZero}
 
 This chapter is the heart of the lecture. AlphaZero (Silver et al.\
@@ -298,9 +301,9 @@ $s$.
 
 \textbf{(2) Monte Carlo Tree Search.} Given a root state, MCTS uses the
 network as a heuristic to do focused tree search. Output: a refined policy
-$\pi_{\mathrm{MCTS}}(\cdot \mid s)$ that is provably better than the raw
-network policy (proof: MCTS visits the best moves more, so the visit-count
-distribution is a strict improvement).
+$\pi_{\mathrm{MCTS}}(\cdot \mid s)$ that uses both learned evaluations and lookahead. A finite search with
+an imperfect network need not improve every state or produce a calibrated
+winning probability. Evaluate its decisions separately.
 
 \textbf{(3) Self-play training.} Generate games by self-play using MCTS at
 each move. For each (state, $\pi_{\mathrm{MCTS}}$, game-result) triple,
@@ -336,11 +339,12 @@ $\sqrt{\log N}$) gives \emph{aggressive} exploration of the priors;
 empirically this is what makes AlphaZero work on board games.
 \end{intuition}
 
-\begin{theorem}[PUCT regret on bandit subproblems, Rosin 2011]
-On the bandit subproblem at any tree node, PUCT achieves
-$O(\sqrt{N \log K})$ regret asymptotically, matching the minimax-optimal
-rate for $K$-armed bandits with strong priors.
-\end{theorem}
+\begin{remark}[PUCT is a search allocation rule]
+The prior-weighted bonus allocates simulations; it is not an uncertainty
+interval. Do not attach a minimax bandit regret rate to this tree rule
+without specifying prior support, value estimation and the nonstationary
+returns induced by deeper search. This lecture asserts no such rate.
+\end{remark}
 
 \section{Dirichlet noise}
 
@@ -348,15 +352,16 @@ At the root of every MCTS, AlphaZero adds Dirichlet noise to the prior:
 \[
 P'(\cdot \mid s_{\mathrm{root}}) = (1 - \epsilon) P(\cdot \mid s_{\mathrm{root}}) + \epsilon\, \eta, \quad \eta \sim \mathrm{Dirichlet}(\alpha \mathbf{1}).
 \]
-Typical values: $\epsilon = 0.25$, $\alpha = 0.3$ for Go, $\alpha = 0.5$
-for chess. The noise injects exploration at the root, preventing the
+Typical values: the AlphaZero preprint uses $\alpha=0.3$ for chess, $0.15$ for shogi
+and $0.03$ for Go, with root noise scaled to typical legal-action counts
+(\url{https://arxiv.org/abs/1712.01815}). The noise injects exploration at the root, preventing the
 network from collapsing onto a single move.
 
 \begin{pitfall}
 Forgetting the Dirichlet noise is the most common AlphaZero bug. Without
 it, the policy network gets trained only on its own preferences, never
-explores alternatives, and converges to a sub-optimal fixed point. The
-noise is the only source of exploration in the entire pipeline.
+explores alternatives, and converges to a sub-optimal fixed point. Root noise is one exploration mechanism; PUCT and sampling from
+root visits also affect which moves are explored.
 \end{pitfall}
 
 \section{Training loss}
@@ -371,25 +376,25 @@ trains the policy head to match the MCTS visit distribution; the third is
 L2 regularisation.
 \end{theorem}
 
-\begin{proof}[Why this works]
-The MCTS visit distribution $\pi_{\mathrm{MCTS}}$ is a \emph{policy
-improvement} over the network's raw $\pi(\cdot \mid s; \theta)$ because MCTS
-visits high-value actions more (the bandit subproblem at each node has
-sub-linear regret on the visit distribution). So training the network to
-match $\pi_{\mathrm{MCTS}}$ improves the network's policy. Similarly, the
-game outcome $z$ is an unbiased sample of $V^\pi(s)$ under the current
-self-play policy, so the value head learns the current policy's value
-function. The combination is a generalised-policy-iteration step: improve
-the policy, evaluate the policy, repeat. $\square$
-\end{proof}
+\paragraph{Why these targets are useful.}
+The policy head distils a finite search distribution; the value head learns
+the realised outcome from the stored player's perspective. Outcomes are
+samples under the data-generating self-play/search policies, which can
+change during training. This resembles generalised policy iteration, but
+neither finite search nor neural regression guarantees a monotone
+improvement or equilibrium strategy.
+
+
 
 \section{Symmetry augmentation}
 
 For Tic-Tac-Toe (and Go, and chess to a lesser extent), the game has
 geometric symmetries. AlphaZero augments each (state, $\pi_{\mathrm{MCTS}}$,
 $z$) tuple with all $D_4$ symmetries (4 rotations $\times$ 2 reflections =
-8 augmentations on a square board). This multiplies the effective dataset
-by 8 at no compute cost and is essential for fast learning on small boards.
+8 augmentations on a square board). This creates eight correlated transformations, not eight independent
+games, and adds training work. The local Tic-Tac-Toe demo uses $D_4$
+symmetries; AlphaZero's cross-game implementation did not use the same
+augmentation recipe as AlphaGo Zero.
 
 \section{Putting it together}
 
@@ -473,11 +478,15 @@ matches AlphaGo Zero at $\sim 10^6$ TPU-hours. The lessons:
 
 \section{Self-play in two-player zero-sum games: theory}
 
-\begin{theorem}[Self-play converges to Nash, Singh, Kearns, Mansour 2000]
-In a two-player zero-sum stochastic game, if both players use
-no-regret learning algorithms (e.g., Hedge / Exp3), the time-average
-of joint policies converges to a Nash equilibrium.
-\end{theorem}
+\begin{proposition}[No regret in a finite zero-sum matrix game]
+If both players have external regrets $R_1(T),R_2(T)$, their average
+mixed strategies have saddle-point gap at most
+$(R_1(T)+R_2(T))/T$. Sublinear regrets therefore yield a vanishing gap.
+This concerns the \emph{product of the average strategies}, not each
+last iterate or an arbitrary statewise average in a stochastic game.
+\end{proposition}
+
+
 
 The result generalises to extensive-form games via Counterfactual Regret
 Minimisation (CFR; Zinkevich et al.\ NeurIPS 2007), which is the
@@ -497,8 +506,8 @@ dynamics exist between unit compositions). The recipe:
   \item Train ``main exploiters'' (focused on beating main agents) and
         ``league exploiters'' (focused on beating the league average).
 \end{itemize}
-This produces robust play against the entire StarCraft strategy space ---
-not just whatever the latest opponent happened to play.
+League diversity broadens training opponents; measured robustness
+against an evaluation pool does not exhaust the entire strategy space.
 
 % =============================================================================
 \chapter{Algorithms}
@@ -523,7 +532,7 @@ not just whatever the latest opponent happened to play.
   \tcp{PPO update}
   \For{epoch $= 1, \dots, K$}{
     Sample minibatch; compute $L^{\mathrm{CLIP}}_i$ and critic MSE.\;
-    Step on $\sum_i L^{\mathrm{CLIP}}_i + \tfrac{1}{2}(V(s) - R)^2$.\;
+    Minimise $-\sum_i L^{\mathrm{CLIP}}_i + \tfrac{1}{2}(V(s)-R)^2$\;
   }
 }
 \end{algorithm}
@@ -544,30 +553,27 @@ Initial state (all empty), to-move = X. Suppose the network priors put
 $P(\text{centre}) = 0.5$, $P(\text{corner}) = 0.1$ each (4 corners),
 $P(\text{edge}) = 0.025$ each (4 edges). $c_{\mathrm{puct}} = 1.5$.
 
-\textbf{Simulation 1.} Root has $N = 0$; PUCT bonus is
-$1.5 \cdot P(c) \cdot \sqrt{0}/(1+0) = 0$ for all children --- the
-selection rule degenerates to ``pick by prior''. Centre wins: $a = \text{centre}$. Network
-evaluates the resulting state (one X in centre, O to move); say
-$v = -0.1$ (slight advantage to X from X's POV). Backpropagate: root's
-centre child gets $Q = 0.1$, $N = 1$.
+\textbf{Simulation 1.} The literal formula with parent count zero gives
+zero bonuses, so it needs a tie rule. The local implementation uses
+$\max(1,\sum_cN(c))$ in the square root, making the prior break the
+initial tie. The centre bonus is $1.5(0.5)=0.75$.
+After moving there, the child is O-to-move. Suppose its value is $-0.1$
+from O's perspective. Store child $Q=-0.1$ and back up $+0.1$ to X.
 
-\textbf{Simulation 2.} Root's centre child has $Q = -0.1$ from O's POV;
-its PUCT score from root is $-(-0.1) + 1.5 \cdot 0.5 \cdot \sqrt{1}/(1+1) = 0.475$.
-Each corner has $Q = 0$ and PUCT $= 0 + 1.5 \cdot 0.1 \cdot 1/1 = 0.15$.
-Centre wins again; we expand a child move (say corner from O's POV).
-Network gives value $v = -0.05$.
+\textbf{Simulation 2.} With one visit to that child, its parent-view score is
+$-(-0.1)+1.5(0.5)\sqrt1/(1+1)=0.475$; each unvisited corner scores
+$1.5(0.1)=0.15$. Centre is selected again. The eventual visit distribution
+requires the subsequent leaf evaluations; it cannot be deduced from these
+two simulations. If counts later sum to $N$, normalise by that actual $N$.
 
-After 30 simulations, centre typically has $\sim$15 visits, corners
-$\sim$3 each, edges $\sim$1 each. The output $\pi_{\mathrm{MCTS}}$ is
-$\approx (0.5, 0.1, 0.1, 0.1, 0.1, 0.03, 0.03, 0.02, 0.02)$ depending on
-final visit counts. This $\pi_{\mathrm{MCTS}}$ is what trains the policy
-network on the next iteration.
+
 \end{example}
 
-\textbf{Complexity.} MCTS per move: $O(n_{\mathrm{sim}} \cdot \text{depth})$
-network evaluations. For 30 simulations on Tic-Tac-Toe (max depth 9), this
-is $\sim 200$ evaluations per move, $\sim 1000$ per game. Self-play of $\sim 1000$
-games per iteration is $\sim 10^6$ evaluations --- about 1 minute on CPU.
+\textbf{Complexity.} MCTS visits up to $O(n_{\mathrm{sim}}\cdot\text{depth})$
+tree edges. With cached node expansions, it usually makes at most one
+new leaf-network evaluation per simulation plus root expansion; traversal
+count is not network-inference count. Time the selected budget on the
+actual machine rather than assume a one-minute runtime.
 MAPPO scales linearly in number of agents (per-agent actor inference) and
 linearly in episode length.
 
@@ -687,8 +693,9 @@ out = train(seed=0, az_iters=12, mappo_episodes=60, coord_episodes=200)
 \caption{AlphaZero winrate vs.\ a uniform-random opponent on Tic-Tac-Toe.
 The network is a tiny CNN (32 hidden conv channels) trained for 12
 iterations of 5 self-play episodes with 25 MCTS simulations per move.
-Winrate climbs from $\sim$0.5 (random) to $\sim$0.9 (almost-always wins
-or draws against random). Note: against an optimal opponent, perfect play
+The legacy \texttt{winrate} field is score rate: wins plus half
+draws divided by games. Report wins/draws/losses and uncertainty separately;
+this curve is not an Elo rating or an optimal-play certificate. Note: against an optimal opponent, perfect play
 on TTT yields a draw.}
 \label{fig:az_winrate}
 \end{figure}
@@ -754,9 +761,8 @@ PSRO; explicit exploration regularisation.
 Nash equilibria with incompatible actions (canonical example: two cars
 at a 4-way stop --- both go = crash, both stop = deadlock). Without
 explicit communication or a tie-breaking convention, agents may converge
-to a coordination-failure equilibrium. \emph{Mitigation:} parameter
-sharing (force agents to use the same network --- they cannot disagree
-on the equilibrium they target); explicit communication channels;
+to a coordination-failure equilibrium. \emph{Mitigation:} parameter sharing with agent/role information where needed; this
+can help learning but does not force compatible sampled actions; explicit communication channels;
 Schelling-style focal points.
 
 \textbf{F4 --- Reward hacking via opponent modelling.} In zero-sum
@@ -767,14 +773,13 @@ against a diverse opponent population (PSRO is exactly this); evaluate
 against held-out opponents; use league training (AlphaStar) with
 explicit ``main exploiters'' and ``league exploiters''.
 
-\textbf{F5 --- Manipulating the centralised critic.} If the centralised
-critic uses information unavailable at deployment, the deployed policy
-may be much weaker than the training policy (because the actor was
-trained against advantages it could not estimate from local
-observations alone). \emph{Mitigation:} ablate the critic's
-extra-information channels at training time periodically; ensure the
-actor's policy is consistent with what a local-observation-only
-estimator could rationalise.
+\textbf{F5 --- Information leakage into execution.} Privileged information
+in the training-only critic is intentional CTDE and does not itself violate
+local execution. Test that actors receive only their permitted observations,
+that training and evaluation use the same actor inputs, and that no critic
+or future-label feature is accidentally passed to the deployed actor.
+
+
 
 Two cites: Vinyals et al., \emph{Grandmaster level in StarCraft II using
 multi-agent reinforcement learning}, Nature 2019 (AlphaStar league
@@ -795,15 +800,15 @@ allocation policy and the broker strategy co-evolve. A naive ``platform
 optimises bind rate'' policy plays into a general-sum game where brokers
 adapt their book of business and bidding to what the platform rewards.
 The Liu--Mania--Jordan AISTATS 2020 framework (Week 12) is the rigorous
-version of this dynamic; PSRO is the algorithmic recipe for converging
-to a stable equilibrium.
+version of this dynamic; PSRO can explore policy responses, but stability in a matching
+market and Nash equilibrium of a specified game are distinct concepts.
 
 \textbf{Self-play for synthetic data}. When real labels are scarce
 (early-stage synthetic insurance or a new ATS vertical), we can build a synthetic
 adversary that generates challenging leads, and train the allocator
 against it via self-play. AlphaZero-style policy iteration generates
-both the data and the learner; the value head can be used as a
-calibrated outcome predictor.
+both the data and the learner; the value head is a fitted predictor that requires a separate
+calibration and distribution-shift audit.
 
 \textbf{Centralised training, decentralised execution.} The synthetic insurance panel
 of brokers each runs their own scoring model (a recruiter desk runs its

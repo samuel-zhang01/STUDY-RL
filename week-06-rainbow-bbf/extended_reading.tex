@@ -1,149 +1,77 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
-
 \title{Extended reading --- Week 6: Rainbow DQN and BBF}
 \author{STUDY-RL}
 \date{\today}
 \begin{document}
 \maketitle
+\section*{Read with a question in mind}
+Start with the week's teaching guide and its small worked example. Then use
+these readings to connect the algorithm to its assumptions and evidence.
+The explanations and investigations below are course commentary, not
+quotations. Read the source before reusing a theorem or a reported result.
+For each paper, record the objective, observation model, claimed result,
+conditions and one condition your local experiment does not reproduce.
 
-\section*{Reading list}
+\section*{1. Hessel et al. (2018): Rainbow}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1710.02298}.
 
-\subsection*{1. Hessel et al.\ 2018 --- ``Rainbow: Combining Improvements in Deep RL''}
+\paragraph{What to learn.} Combines six developments in deep Q-learning and evaluates their contributions through ablations.
 
-\textbf{Citation.} Matteo Hessel, Joseph Modayil, Hado van Hasselt, Tom Schaul,
-Georg Ostrovski, Will Dabney, Dan Horgan, Bilal Piot, Mohammad Azar, David Silver,
-\emph{AAAI} 2018, arXiv:1710.02298.
+\paragraph{What the result requires.} An ablation effect depends on the remaining components, environment and budget. A local teaching implementation can include a subset or simplified variant without reproducing published scores.
 
-\paragraph{Summary.} Combines Double + Dueling + PER + n-step ($n=3$) + NoisyNets + C51
-into a single agent. Reports a careful 1-out ablation across 57 Atari games. Key finding:
-multi-step ($n$) and the distributional value head are the two biggest contributors;
-PER is third; NoisyNets, Dueling, and Double are roughly tied at a smaller magnitude.
+\paragraph{Notebook investigation.} Use \texttt{exercise\_9\_smoke\_ablate}. Confirm that each switch actually changes the computation before attributing a score difference to that component.
 
-\paragraph{Why it matters for this week.} The agent we implement (\texttt{project/agent.py})
-is a deliberate Rainbow-lite: we keep Double, Dueling, PER, NoisyNets but skip the
-distributional head and n-step (deferred to the workbook math).
+\section*{2. van Hasselt, Guez and Silver (2016): Deep Reinforcement Learning with Double Q-learning}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1509.06461}.
 
-\begin{quote}\itshape
-``Our results show that combining the studied improvements yields the state-of-the-art on
-the Atari 2600 benchmark, both in terms of data efficiency and final performance, while
-giving up no critical individual contribution.''
-\end{quote}
-\textbf{Commentary.} The right way to read Rainbow is not as ``the algorithm'' but as a
-\emph{template for combining orthogonal patches}. Each component fixes a different
-failure mode; they compose because the failures are independent.
+\paragraph{What to learn.} Uses the online network for next-action selection and a target network for evaluation.
 
-\subsection*{2. van Hasselt, Guez, Silver 2016 --- ``Deep Reinforcement Learning with Double Q-learning''}
+\paragraph{What the result requires.} Correlated errors remain possible, and the construction is not a guarantee of an unbiased target. A double-network method is not automatically the minimum-of-two rule.
 
-\textbf{Citation.} Hado van Hasselt, Arthur Guez, David Silver, \emph{AAAI} 2016,
-arXiv:1509.06461.
+\paragraph{Notebook investigation.} Use \texttt{exercise\_1\_double\_dqn\_target}. For online values $(5,4)$ and target values $(1,3)$, the selected next value is 1; an ordinary target maximum would be 3.
 
-\paragraph{Summary.} Lifts the Double-Q idea from Hasselt 2010 (Week 4) into the
-function-approximation regime. Concretely: use the target network for evaluation but the
-online network for the argmax. Demonstrates that vanilla DQN over-estimates Q-values
-across the entire Atari suite (running average of max-Q diverges over a few million
-steps); Double-DQN keeps them bounded and improves final score on 47/57 games.
+\section*{3. Schaul et al. (2016): Prioritized Experience Replay}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1511.05952}.
 
-\paragraph{Why it matters for this week.} The single most impactful one-line patch on
-DQN, and the template for the same trick later applied to actor-critics (TD3, REDQ).
+\paragraph{What to learn.} Samples replay entries nonuniformly and uses importance weights to control the resulting change in the replay objective.
 
-\begin{quote}\itshape
-``We show that this idea, which was originally proposed in a tabular setting, can be
-generalized to work with large-scale function approximation. We propose a specific
-adaptation to the DQN algorithm and show that the resulting algorithm not only reduces
-the observed overestimations, as hypothesized, but that this also leads to much better
-performance on several games.''
-\end{quote}
-\textbf{Commentary.} Note the structural parallel to van Seijen et al.\ 2009 (Expected
-SARSA): the same decoupling-selection-from-evaluation trick reappears as soon as you
-look at the bootstrap target through Jensen's lens.
+\paragraph{What the result requires.} At full correction, weights undo replay-sampling bias toward high-priority entries. They do not correct the action probabilities of the behaviour policy or make a bootstrapped target unbiased.
 
-\subsection*{3. Schaul et al.\ 2016 --- ``Prioritized Experience Replay''}
+\paragraph{Notebook investigation.} Use \texttt{exercise\_3\_per\_weight} and \texttt{exercise\_4\_priority\_update}. Keep sampling probability $P(i)$ distinct from a policy propensity $\mu(a\mid s)$.
 
-\textbf{Citation.} Tom Schaul, John Quan, Ioannis Antonoglou, David Silver, ICLR 2016,
-arXiv:1511.05952.
+\section*{4. Bellemare, Dabney and Munos (2017): A Distributional Perspective on Reinforcement Learning}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1707.06887}.
 
-\paragraph{Summary.} Replaces uniform replay sampling with priority $p_i \propto
-|\delta_i|^\alpha$, importance-weight-corrected with $w_i = (N P(i))^{-\beta}$,
-$\beta: 0.4 \to 1.0$. Introduces a sumtree for $O(\log N)$ sampling. Big improvements on
-sparse-reward Atari games (Frostbite, Montezuma) where uniform sampling rarely sees the
-informative transition.
+\paragraph{What to learn.} Learns a return distribution and introduces categorical distributional control with projection onto a fixed support.
 
-\paragraph{Why it matters for this week.} The IS-weight derivation in our notes follows
-this paper directly, and the algorithm is implemented in \texttt{common/replay.py} as
-\texttt{PrioritizedReplayBuffer}.
+\paragraph{What the result requires.} Distributional policy-evaluation contraction and control behaviour need separate statements. Projection can lose tail information outside the support, and the mean of a distribution is not a risk guarantee.
 
-\begin{quote}\itshape
-``With prioritized replay we develop a framework for prioritizing experience, so as to
-replay important transitions more frequently, and therefore learn more efficiently. We
-use prioritized experience replay in Deep Q-Networks (DQN), a reinforcement learning
-algorithm that achieved human-level performance across many Atari games.''
-\end{quote}
-\textbf{Commentary.} Note how the importance-sampling story connects to OPE. The
-mechanism is identical: weight each sample by the ratio of the target distribution to
-the sampling distribution. In PER the target is uniform over the buffer; in OPE the
-target is the policy we want to evaluate.
+\paragraph{Notebook investigation.} Use \texttt{exercise\_6\_categorical\_project}. Verify total mass remains one, including a target exactly on an atom. A terminal target collapses continuation before projection.
 
-\subsection*{4. Bellemare, Dabney, Munos 2017 --- ``A Distributional Perspective on RL''}
+\section*{5. Schwarzer et al. (2023): Bigger, Better, Faster}
+\textbf{Primary source or book record:} \url{https://proceedings.mlr.press/v202/schwarzer23a.html}.
 
-\textbf{Citation.} Marc G.\ Bellemare, Will Dabney, R\'emi Munos, \emph{ICML} 2017,
-arXiv:1707.06887.
+\paragraph{What to learn.} Investigates scaling value networks with a coordinated recipe for sample-efficient Atari learning, including replay, representation learning and resets.
 
-\paragraph{Summary.} Introduces C51 (categorical 51-atom distributional DQN). Models the
-return distribution $Z(s,a)$ rather than just its mean $Q(s,a)$. Trains with a
-KL-projected distributional Bellman backup; chooses actions by $\argmax \E_Z[Z]$ but
-benefits from the richer auxiliary signal (better representations, more stable targets
-after the $\min$/$\max$ aggregation). Beats DQN on 41/57 Atari games at $V_{\min}=-10$,
-$V_{\max}=+10$, 51 atoms.
+\paragraph{What the result requires.} The published result is a benchmark evaluation, not a 2025 universal frontier or evidence that adding two switches reproduces BBF. Sample efficiency and wall-clock efficiency require different denominators.
 
-\paragraph{Why it matters for this week.} The conceptual jump from ``regression on a
-mean'' to ``classification on a distribution''. The 2024 Farebrother ``Stop Regressing''
-paper (HL-Gauss two-hot loss) is the direct descendant in continuous control.
+\paragraph{Notebook investigation.} Use \texttt{exercise\_8\_shrink\_perturb} to inspect a reset in isolation. Report parameter change and the role of fresh noise; distinguish this toy mechanism from the full published training system.
 
-\begin{quote}\itshape
-``We argue for the fundamental importance of the value distribution: the distribution of
-the random return received by a reinforcement learning agent. This is in contrast to the
-common approach to reinforcement learning that models the expectation of this return, or
-value.''
-\end{quote}
-\textbf{Commentary.} The framing is more important than the specific algorithm. Once you
-internalise that the right learning target is a distribution, risk-sensitive control,
-uncertainty quantification, and exploration bonuses all become natural; with a scalar
-mean they require auxiliary machinery. See \texttt{research/deeprl\_core\_sota.md} \S4
-for the modern landscape.
-
-\subsection*{5. Schwarzer et al.\ 2023 --- ``Bigger, Better, Faster: Human-Level Atari with Human-Level Efficiency'' (BBF)}
-
-\textbf{Citation.} Max Schwarzer, Johan Obando-Ceron, Aaron Courville, Marc Bellemare,
-Rishabh Agarwal, Pablo Samuel Castro, \emph{ICML} 2023, arXiv:2305.19452.
-
-\paragraph{Summary.} Combines Rainbow with three modern ingredients: (i) a wider
-ResNet backbone (15-layer Impala-style with width multiplier), (ii) periodic
-\emph{shrink-and-perturb resets} every 40k gradient steps,
-(iii) discount and n-step \emph{annealing} ($\Disc: 0.97 \to 0.997$, $n: 10 \to 3$). EMA
-target update at $\tau=0.005$. Self-prediction (SPR) auxiliary loss. Reaches super-human
-median on Atari-100k in around 6 GPU-hours --- the current single-GPU SOTA for
-sample-efficient discrete control.
-
-\paragraph{Why it matters for this week.} The 2025 frontier. Read this paper as the
-``what is Rainbow now?'' answer.
-
-\begin{quote}\itshape
-``We dissect a long-standing puzzle in deep RL: why don't bigger networks help? We argue
-that the answer is plasticity loss, which we address with periodic shrink-and-perturb
-resets. With this single ingredient we enable a much larger network to train stably at
-high replay ratios, yielding super-human Atari-100k median performance.''
-\end{quote}
-\textbf{Commentary.} BBF is the cleanest evidence that the next decade of Deep RL
-improvements will come from \emph{deep-learning hygiene} (normalisation, residuals,
-regularisation, resets) rather than from new algorithmic ideas. The companion work
-SimBa (Lee 2024) makes the same argument for continuous control. Both papers are
-prerequisites for Week 10's modern actor-critic best-practice checklist.
-
-\bigskip
-\textit{Sourced from:} \texttt{research/deeprl\_core\_sota.md} \S1.2--1.12 (DQN family
-canon and BBF descendants); the OPE-PER connection is from \S0 of
-\texttt{research/bandits\_matching\_sota.md}.
-
+\section*{Synthesis: evidence you should be able to show}
+\begin{enumerate}
+\item Reproduce one numerical calculation before running a long experiment.
+\item Name the precise objective, sampling distribution and terminal convention.
+\item Compare the local implementation with one source: list a shared mechanism
+and one simplification that prevents calling it a full reproduction.
+\item Separate an algebraic identity, an assumption-dependent theorem and an
+empirical result. A plot alone does not prove a theorem.
+\item Save the notebook with seed, parameters, axes, denominators and a short
+explanation of an unexpected result. Keep evaluation data separate from tuning.
+\end{enumerate}
+Return to the teaching guide's notebook investigation for the local function
+names, expected checks and interpretation questions. Source code and notebooks
+are available together in the course repository; the web reader is the entry
+point and the downloaded notebook is the execution workspace.
 \end{document}

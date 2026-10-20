@@ -1,154 +1,56 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.4cm]{geometry}
 \usepackage{../common/rlstudy}
-
-\title{\textbf{Week 22 — Extended reading}\\\large Constrained MDPs, CPO/FOCOPS/P3O, Lagrangian Safety}
+\title{Week 22 --- Extended Reading: Constrained objectives and practical updates}
 \author{STUDY-RL}
-\date{\today}
-
+\date{Source audit: 20 October 2026}
 \begin{document}
 \maketitle
+\section*{Read for a claim, an assumption and a test}
+Read the teaching guide first, then use this pack alongside the lecture.
+The annotations below are course-written paraphrases and investigation prompts,
+not quotations from the papers. Each source link identifies a primary paper
+or official guidance. Benchmark results do not transfer automatically to our
+small exercises. For each reading, write the mathematical object, the needed
+assumptions and one observation that would challenge your interpretation.
 
-\section*{Paper 1 --- ``Benchmarking Safe Exploration in Deep RL'' (PPO-Lagrangian)}
-\textbf{Authors:} Alex Ray, Joshua Achiam, Dario Amodei. \textbf{Year:} 2019.
-\textbf{Venue:} OpenAI tech.\ report. \textbf{arXiv:} 1910.01708.
+\section{Ray, Achiam and Amodei (2019): Safety Gym}
+\noindent\textbf{Primary source.} \url{https://cdn.openai.com/safexp-short.pdf}
 
-\paragraph{Summary.} Introduces \emph{Safety Gym}, a suite of MuJoCo
-robotics tasks with constraint signals (e.g.\ entering hazards, contacting
-fragile objects), and benchmarks PPO-Lagrangian and CPO on them. The paper
-formalises the CMDP API for deep RL, gives canonical hyperparameters, and
-shows that simple primal-dual PPO already matches or beats CPO on most tasks
-when carefully tuned --- a foundational empirical reference.
+\paragraph{Mechanism and scope.} The paper introduces a benchmark for safe exploration and compares constrained-learning approaches using reward and cost measures. It supplies an evaluation framework, not a proof that a neural Lagrangian policy never violates a constraint.
 
-\paragraph{Why it matters for this week.} It is the canonical implementation
-template for PPO-Lagrangian. Our \texttt{project/agent.py} follows the same
-architecture (separate $V_r$, $V_c$ heads; combined advantage; projected
-multiplier update) and its decision to keep the rollout small for the dual
-loop comes directly from this paper.
+\paragraph{Read, derive, investigate.} Distinguish final expected cost from costs incurred while learning. Which reported quantity counts constraint violations before convergence? The course lava grid uses a simpler state/action space, so its runtime and curves are not benchmark reproductions.
 
-\paragraph{Annotated key passage.}
-\begin{quote}
-``Despite the simplicity of the Lagrangian approach, getting it to work
-reliably in practice required several engineering decisions: separate cost
-critics, advantage standardisation \emph{only} on the reward, and a learning
-rate for $\lambda$ that is one to two orders of magnitude smaller than the
-policy learning rate to avoid oscillation.''
-\end{quote}
-\emph{Commentary.} Every implementer rediscovers this trio of tricks within
-their first week of hacking on safe RL --- the paper saves you that week. The
-small dual-LR is essentially a poor-person's PID damping; the same effect is
-later formalised by Stooke et al.\ as PID-Lagrangian.
+\section{Achiam et al. (2017): CPO}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1705.10528}
 
-% -------------------------------------------------------------------
-\section*{Paper 2 --- ``Constrained Policy Optimization'' (CPO)}
-\textbf{Authors:} Joshua Achiam, David Held, Aviv Tamar, Pieter Abbeel.
-\textbf{Year:} 2017. \textbf{Venue:} ICML. \textbf{arXiv:} 1705.10528.
+\paragraph{Mechanism and scope.} CPO derives policy-performance bounds and a practical constrained trust-region update. Local linear/quadratic approximations, sampled gradients and approximate line searches add implementation limitations beyond the ideal inequalities.
 
-\paragraph{Summary.} The first deep-RL algorithm with a per-iteration
-near-feasibility guarantee. CPO extends TRPO by adding a cost-constraint to
-the trust-region QP, deriving a closed-form dual solution (Theorem 4.1 in
-the paper). It also describes a \emph{recovery step} when the linearised
-constraint cannot be satisfied inside the trust region.
+\paragraph{Read, derive, investigate.} For the quadratic subproblem, derive the step $H^{-1}(g-\nu b)/\lambda$ and the sign of each dual term. Check feasibility before using the formula. If $c>\sqrt{2\delta b^\top H^{-1}b}$, explain why a recovery step reduces cost without satisfying the original linearised constraint in one step.
 
-\paragraph{Why it matters.} It is the theoretical reference point for all
-later constrained RL work; FOCOPS, P3O, and PID-Lag all benchmark against
-it. Even if you choose not to implement Fisher-vector products on a single
-GPU, you must understand CPO to read modern papers.
+\section{Zhang, Vuong and Ross (2020): FOCOPS}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2002.06506}
 
-\paragraph{Annotated key passage.}
-\begin{quote}
-``Theorem 1 (CPO performance bound). For any policies $\pi'$ and $\pi$,
-$J_c(\pi') \leq J_c(\pi) + \tfrac{1}{1-\gamma}\E_{s \sim d^\pi, a \sim \pi'}[A_c^\pi(s,a)]
- + \tfrac{\sqrt{2}\gamma\epsilon_c^\pi}{(1-\gamma)^2}\sqrt{\tfrac{1}{2}\bar D_\KL(\pi'\Vert\pi)}.$''
-\end{quote}
-\emph{Commentary.} This inequality is the central object of CPO. The
-$1/(1-\gamma)^2$ scaling tells you the long-horizon penalty for trust-region
-slack --- short-horizon tasks tolerate larger $\delta$. The
-$\sqrt{\bar D_\KL}$ dependence is what makes the trust-region argument
-non-vacuous, and exactly why TRPO's KL constraint pulls double duty here.
+\paragraph{Mechanism and scope.} FOCOPS derives a nonparametric exponential-tilt target, then projects using $D_{\mathrm{KL}}(\pi_\theta\Vert\pi^\star)$. The ideal multipliers are coupled. The practical method uses a fixed temperature and an adaptive cost multiplier with KL controls.
 
-% -------------------------------------------------------------------
-\section*{Paper 3 --- ``FOCOPS''}
-\textbf{Authors:} Yiming Zhang, Quan Vuong, Keith Ross. \textbf{Year:} 2020.
-\textbf{Venue:} NeurIPS. \textbf{arXiv:} 2002.06506.
+\paragraph{Read, derive, investigate.} Read the projection direction directly from Eq.~10. Reversing it yields another optimisation problem. Restore the $(1-\gamma)$ factor when converting an unnormalised discounted cost budget to normalised-occupancy advantage expectations. The workbook computes a target row, not the entire FOCOPS algorithm.
 
-\paragraph{Summary.} Solves the CPO problem in two phases: (i) compute the
-non-parametric optimal policy in closed form (KL-regularised reward maximisation
-with a cost multiplier); (ii) project onto the parametric family by KL
-minimisation. Replaces all Fisher--vector products with first-order updates.
+\section{Zhang et al. (2022): P3O}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2205.11814}
 
-\paragraph{Why it matters.} Best-in-class fit to a single-GPU budget.
-Conjugate-gradient steps inside CPO can dominate the wall-clock cost on
-deep policies; FOCOPS removes them while retaining a CPO-style theoretical
-worst-case bound (in expectation, not worst-case-per-state).
+\paragraph{Mechanism and scope.} P3O applies an exact-penalty perspective to proximal policy optimisation. A reward objective to maximise subtracts a nonnegative violation penalty; a loss to minimise adds it after negating reward.
 
-\paragraph{Annotated key passage.}
-\begin{quote}
-``Lemma 1. Given fixed multipliers $\nu, \lambda$, the optimal solution to
-the relaxed problem in non-parametric policy space is $\pi^\star(a|s)
-\propto \pi_k(a|s) \exp(\tfrac{1}{\lambda}(A_r - \nu A_c))$.''
-\end{quote}
-\emph{Commentary.} This is the safe-RL analogue of the energy-based
-reweighting that appears in advantage-weighted regression (AWR) and KL-control
-LLM finetuning. The same trick keeps appearing because it is just the
-Boltzmann form of an entropy-regularised reward-max problem.
+\paragraph{Read, derive, investigate.} Using an optimal multiplier $\lambda^\star$, prove that $\kappa>\lambda^\star$ makes a violating policy strictly worse than a feasible optimum in the ideal globally optimised problem. Which step fails for an arbitrary local neural surrogate optimum? Check the hinge subgradient separately from policy-gradient estimation.
 
-% -------------------------------------------------------------------
-\section*{Paper 4 --- ``P3O'' (Penalised PPO)}
-\textbf{Authors:} Linrui Zhang, Quan Vuong, Keith Ross. \textbf{Year:} 2022.
-\textbf{Venue:} IJCAI. \textbf{arXiv:} 2205.11814.
+\section{Stooke, Achiam and Abbeel (2020): PID Lagrangian}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2007.03964}
 
-\paragraph{Summary.} Replaces the saddle-point with an exact-penalty
-formulation: $L_r - \kappa [\hat J_c - d]_+$. Under mild constraint
-qualification, sufficiently large $\kappa$ yields a feasible minimiser of the
-penalised problem that is also the constrained optimum.
+\paragraph{Mechanism and scope.} PID Lagrangian methods view multiplier adaptation as feedback control, using proportional and derivative information alongside accumulated violation. Their experiments examine response and oscillation under particular systems.
 
-\paragraph{Why it matters.} Often a one-line drop-in into PPO. The cost is
-that $\kappa$ becomes a hyperparameter to tune; the benefit is that there is
-no dual variable to maintain, and the loss is smoother to optimise.
+\paragraph{Read, derive, investigate.} Plot cost error, accumulated error and its change before combining them. Increasing a coefficient does not universally stabilise a noisy delayed system. When rescaling costs, also rescale the budget and multiplier units; otherwise the control target itself changes.
 
-\paragraph{Annotated key passage.}
-\begin{quote}
-``Proposition 4.1 (exact penalty). Let $\kappa^\star = \lambda^\star + \rho$
-for any $\rho > 0$, where $\lambda^\star$ is the optimal Lagrange multiplier
-of the original CMDP. Then for any $\kappa \geq \kappa^\star$, every local
-minimiser of $L_r - \kappa[\hat J_c - d]_+$ is feasible.''
-\end{quote}
-\emph{Commentary.} This is a clean application of the exact-penalty theorem
-of nonlinear programming. The catch: you do not know $\lambda^\star$ a
-priori, so $\kappa$ is over-set in practice --- which is fine for the
-penalty argument but sometimes destabilises the policy gradient.
+\section*{Connect the reading to your workbook}
+Use the exact one-state budget example to verify signs before neural training. Derive the empirical lower-tail CVaR with fractional mass at the quantile, then contrast it with upper-tail cost risk. Neither an expected budget nor a lower-tail cost summary is a zero-violation safety certificate.
 
-% -------------------------------------------------------------------
-\section*{Paper 5 --- ``PID-Lagrangian''}
-\textbf{Authors:} Adam Stooke, Joshua Achiam, Pieter Abbeel. \textbf{Year:} 2020.
-\textbf{Venue:} ICML. \textbf{arXiv:} 2007.03964.
-
-\paragraph{Summary.} Treats the dual variable as the output of a PID
-controller driven by the constraint error $\hat J_c - d$. The integral term
-removes steady-state bias; the derivative term damps oscillations. Empirically
-matches CPO with a much simpler implementation.
-
-\paragraph{Why it matters.} Best-in-class \emph{practical} Lagrangian
-implementation as of 2024--2025 (see the May 2025 empirical-study paper
-arXiv:2510.17564, which reports PID-Lag-with-cost-normalisation as top-2
-across modern Safety-Gymnasium tasks).
-
-\paragraph{Annotated key passage.}
-\begin{quote}
-``We discovered that the Lagrangian's instability is best understood as a
-classical control problem. The optimisation alternates between two coupled
-loops (policy, multiplier) with different timescales --- the same structure
-that motivates PI control in process engineering.''
-\end{quote}
-\emph{Commentary.} This re-framing is genuinely useful: once you start seeing
-Lagrangian RL as a control problem, the bag of damping tricks
-(moving averages, leaky integrators, anti-windup) becomes available
-off-the-shelf. The exercise on PID-Lagrangian (workbook Ex.\ 8) sets up the
-mechanics.
-
-% -------------------------------------------------------------------
-\paragraph{Sourced from.} \texttt{research/safety\_rl\_sota.md}, sections 1
-(Constrained MDPs and Lagrangian methods) and 3 (risk-sensitive RL).
-
+\noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
 \end{document}

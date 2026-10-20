@@ -133,7 +133,7 @@ The CMDP becomes a linear program over the polytope of valid occupancies:
 \[
   \max_\mu\; \tfrac{1}{1-\gamma}\!\sum_{s,a} \mu(s,a)\, r(s,a)
   \;\;\text{s.t.}\;\; \tfrac{1}{1-\gamma}\!\sum_{s,a} \mu(s,a)\, c(s,a) \leq d,
-  \;\; \text{Bellman flow}.
+  \;\; \mu(s,a)\geq 0,\quad \text{Bellman flow}.
 \]
 Because there are $m$ scalar constraints, an optimal vertex of this polytope
 needs at most $m$ randomisations beyond the basic deterministic feasible set
@@ -158,8 +158,7 @@ Form the (one-constraint) Lagrangian
 \end{equation}
 
 \begin{theorem}[Strong duality for finite CMDPs]\label{thm:strong-dual}
-If the CMDP from \cref{def:cmdp} is feasible (i.e., there exists $\pi_0$
-with $J_c(\pi_0) < d$, Slater's condition), then strong duality holds:
+For a finite discounted CMDP with $0\leq\gamma<1$, fixed initial distribution, bounded rewards/costs, and a nonempty feasible occupancy polytope, strong duality holds:
 \[
    \max_\pi \min_{\lambda \geq 0} L(\pi, \lambda) \;=\; \min_{\lambda \geq 0} \max_\pi L(\pi, \lambda).
 \]
@@ -176,16 +175,15 @@ conditions are
 \end{theorem}
 
 \begin{proof}[Proof sketch]
-Re-write the CMDP as the LP above. The feasible polytope is bounded by Bellman
-flow + simplex constraints + the linear cost constraint. The dual LP
-has variables $\lambda \geq 0$ (for the cost constraint) and free variables
-for the Bellman-flow constraints. Slater $\Rightarrow$ the primal LP is strictly
-feasible $\Rightarrow$ strong duality for LP (no gap). KKT is the LP
-optimality criterion. Translating dual variables back to policies: the
-inner $\max_\pi$ at fixed $\lambda$ is an unconstrained MDP with reward
-$r - \lambda c$, hence has a deterministic optimum --- and a randomisation
-between two such MDPs (corresponding to $\lambda \pm \epsilon$) realises the
-constrained optimum.
+The nonempty bounded occupancy polytope has an optimum. Finite-dimensional
+LP strong duality gives an optimal dual solution; strict feasibility of the
+cost inequality is not required for this LP result. Recover a stationary
+randomised policy by $\pi(a|s)=\mu(s,a)/\sum_b\mu(s,b)$ wherever the denominator
+is positive, and choose any action distribution at zero-occupancy states.
+The Bellman-flow equations ensure this policy induces the same occupancy.
+KKT then gives the displayed conditions. This argument optimises over all
+stationary randomised policies, not a restricted neural parameterisation.
+
 \end{proof}
 
 \begin{remark}
@@ -206,7 +204,7 @@ $\theta$ and descend $L$ in $\lambda$:
 \]
 Both gradients are policy-gradient quantities:
 \[
-   \nabla_\theta J_r(\pi_\theta) = \E_{\pi_\theta}\!\left[ \sum_t \nabla_\theta \log \pi_\theta(a_t|s_t)\, A^{\pi_\theta}_r(s_t, a_t) \right],
+   \nabla_\theta J_r(\pi_\theta) = \E_{\pi_\theta}\!\left[ \sum_t \gamma^t \nabla_\theta \log \pi_\theta(a_t|s_t)\, A^{\pi_\theta}_r(s_t, a_t) \right],
 \]
 and analogously for cost. The combined gradient uses the
 \emph{augmented advantage}
@@ -228,8 +226,7 @@ primal-dual loop computes it for us.
 
 \section{The CPO trust-region update}
 
-\textsc{Achiam et al.\ 2017} (arXiv:1705.10528) gave the first deep-RL
-algorithm with a per-iteration constraint-satisfaction guarantee. The key
+\textsc{Achiam et al.\ 2017} (arXiv:1705.10528) derive a cost-improvement bound and a practical constrained trust-region algorithm. Exact-model bounds and approximate sampled updates have different guarantees. The key
 inequality, derived from the standard performance-difference lemma (Kakade \&
 Langford 2002):
 \begin{equation}\label{eq:cpo-bound}
@@ -297,7 +294,7 @@ $\pi_k$, what is the optimal $\pi'$?), then projects.
 Starting from the Lagrangian of the CPO QP \emph{in non-parametric form},
 \[
    \max_{\pi'} \; \E_{s \sim d^{\pi_k}, a \sim \pi'}[A^{\pi_k}_r(s,a)]
-   \;\;\text{s.t.}\;\; \E[A^{\pi_k}_c(s,a)] + c \leq 0,\;\; D_\KL(\pi' \Vert \pi_k) \leq \delta,
+   \;\;\text{s.t.}\;\; \E[A^{\pi_k}_c(s,a)] + (1-\gamma)c \leq 0,\;\; D_\KL(\pi' \Vert \pi_k) \leq \delta,
 \]
 and forming the Lagrangian $\mathcal{L}(\pi', \nu, \lambda)$, the KKT
 stationarity in $\pi'(a|s)$ gives
@@ -309,34 +306,46 @@ Exponentiating and absorbing $\mu(s)$ into the normaliser:
 \begin{equation}\label{eq:focops-closed-form}
    \boxed{\;\;\pi^\star(a|s) \;\propto\; \pi_k(a|s) \, \exp\!\left( \tfrac{1}{\lambda}\bigl( A_r^{\pi_k}(s,a) - \nu A_c^{\pi_k}(s,a) \bigr) \right). \;\;}
 \end{equation}
-Two free multipliers ($\lambda, \nu$) are determined by the KL and cost
-constraints, both 1-D root-finds.
+The multipliers $\lambda,\nu$ enter a coupled dual problem; they are not
+independent scalar root finds. The practical FOCOPS algorithm fixes a
+positive temperature $\lambda$, updates the nonnegative cost multiplier
+$\nu$, and uses KL-based stopping/masking.
 
-The \emph{projection} step then minimises $D_\KL(\pi^\star \Vert \pi_\theta)$
-over $\theta$ in the parametric family (a vanilla supervised step), giving
-the parameter update.
+The projection minimises $D_\KL(\pi_\theta\Vert\pi^\star)$ over the
+parametric family (FOCOPS, Eq.~10). Reversing this KL would define a
+different projection, such as weighted maximum likelihood.
 
 \paragraph{Why FOCOPS is friendlier than CPO on a single GPU.}
 No Fisher-vector products, no conjugate gradients --- both phases are
-first-order. The price: the trust-region inequality \cref{eq:cpo-bound} is
-respected \emph{only on average over states}, not worst-case per-state.
+first-order. The projection and sampled KL controls remain approximate. An average-KL condition is not a worst-case per-state guarantee, and this distinction also matters when interpreting practical CPO.
 
 \section{P3O --- penalised PPO}
 
-\textsc{Zhang, Vuong, Ross 2022} (arXiv:2205.11814). The exact-penalty trick:
+\textsc{Zhang et al.\ 2022} (arXiv:2205.11814) use an exact-penalty
+approach. With $S_r^{\mathrm{clip}}$ denoting a reward surrogate to
+\emph{maximise}, its sign convention is
 \begin{equation}\label{eq:p3o}
-   L_{\text{P3O}}(\theta) \;=\; L^{\text{PPO}}_r(\theta) - \kappa\, [J_c(\pi_\theta) - d]_+.
+ S_{\mathrm{pen}}(\theta)=S_r^{\mathrm{clip}}(\theta)
+       -\kappa[J_c(\pi_\theta)-d]_+.
 \end{equation}
+A minimising optimiser instead receives $-S_r^{\mathrm{clip}}+
+\kappa[J_c-d]_+$. Real P3O uses sampled cost surrogates rather than
+backpropagating through an observed scalar episode cost.
 
-\begin{theorem}[Exact penalty]
-Under mild Slater-type assumptions on the CMDP, there exists
-$\kappa^\star < \infty$ such that for any $\kappa \geq \kappa^\star$, the
-unconstrained minimiser of \cref{eq:p3o} is also a feasible (and in fact
-optimal) solution of the original constrained problem.
+\begin{theorem}[Exact penalty for the ideal constrained problem]
+Suppose strong duality holds and a finite optimal multiplier
+$\lambda^\star$ exists. For $\kappa>\lambda^\star$, every global maximiser
+of $J_r(\pi)-\kappa[J_c(\pi)-d]_+$ is feasible and constrained-optimal.
 \end{theorem}
-
-The hinge $[\cdot]_+$ is non-smooth; in practice we take a subgradient
-($\kappa$ above $d$, $0$ below) and PPO does the rest.
+\begin{proof}
+A feasible optimum attains $J_r^\star$. For a violating policy with
+$v=J_c-d>0$, dual optimality gives
+$J_r-\kappa v\leq J_r^\star-(\kappa-\lambda^\star)v<J_r^\star$.
+A feasible suboptimal policy also cannot maximise the penalised objective.
+\end{proof}
+This proof concerns exact objectives and global optimisation. It does not
+make every local optimum of a neural PPO surrogate feasible. At the hinge,
+a valid subgradient may be chosen; below the budget the penalty is zero.
 
 \section{Risk-sensitive primer: CVaR and distributional critics}
 
@@ -388,8 +397,7 @@ selects the smallest costs and would answer the wrong safety question.
         \emph{Do not} normalise $A_c$ --- the multiplier needs to see the raw
         cost scale.
   \item Combine: $A^{\text{tot}} = \dfrac{A_r - \lambda A_c}{1 + \lambda}$. The
-        $1+\lambda$ denominator keeps surrogate gradient magnitudes bounded as
-        $\lambda$ grows.
+        $1+\lambda$ denominator keeps the coefficients on the two advantages bounded as $\lambda$ grows; this is not a bound on arbitrary neural gradients.
   \item PPO update on $\pi_\theta$ with $A^{\text{tot}}$, clip ratio $\epsilon$,
         $K$ epochs, minibatches of size $M$. Train $V_r, V_c$ by MSE to GAE
         returns.
@@ -401,24 +409,15 @@ selects the smallest costs and would answer the wrong safety question.
 passes plus the same many backward passes. The multiplier update is
 $\mathcal{O}(1)$. Storage is $\mathcal{O}(T)$ for the rollout buffer.
 
-\section{A 5-step worked numerical example}
-
-Consider a 2-state, 2-action MDP with
-$r = [[0, 0],[0, +1]]$ and $c = [[0, +1],[0, +1]]$ (rows are states, cols
-are actions: action 1 always costs 1, action 1 in state 2 also pays 1). Set
-$\gamma = 0.9$, budget $d = 0.5$, and discount the agent's first
-action.\footnote{This toy example is just to verify the multiplier-update
-mechanics: a budget of 0.5 means at most ~50\% of trajectories should pick
-the costly action.}
-
-A randomly initialised policy plays action 1 with probability 0.5 everywhere,
-giving $\hat J_c \approx 0.5/(1-0.9) = 5$ (vastly over budget). One dual step
-with $\eta_\lambda = 0.1$: $\lambda \leftarrow \max(0, 0 + 0.1 (5 - 0.5)) = 0.45$.
-On the next iteration the augmented advantage on action 1 in state 1 is
-$A_r - 0.45 A_c < 0$ (positive cost, zero reward), driving its probability
-down. After a handful of iterations the policy plays action 1 only in state 2
-(where it pays a reward of 1 that justifies the cost), and the cost falls to
-the budget.
+\section{A numerical budget and multiplier check}
+Consider one state that transitions back to itself. Action 1 has reward and
+cost 1; action 0 has reward and cost 0. A stationary policy takes action 1
+with probability $p$, so $J_r=J_c=p/(1-\gamma)$. With $\gamma=0.9$ and
+$d=0.5$, feasibility requires $p\leq0.05$, not $p\leq0.5$.
+At $p=0.5$, $J_c=5$. Starting from $\lambda=0$ with step size $0.1$, one
+dual update gives $\lambda'=0.1(5-0.5)=0.45$. This arithmetic checks the
+sign and units; it does not prove convergence after a fixed number of
+updates. The constrained optimum has $p=0.05$ and reward $0.5$.
 
 \section{CPO pseudocode}
 
@@ -442,11 +441,10 @@ the budget.
 \begin{tcolorbox}[colback=mintedbg, colframe=rlgray!50, title=\textbf{Algorithm: FOCOPS (one update)}]
 \begin{enumerate}[leftmargin=*]
   \item Rollout, estimate $A_r, A_c$.
-  \item Solve two 1-D root finds for $\lambda, \nu$ such that the KL and cost
-        constraints hold in expectation.
+  \item Use a fixed positive temperature $\lambda$ and update $\nu$ from the cost violation, as in practical FOCOPS; the ideal dual is coupled.
   \item Form the target $\pi^\star$ via \cref{eq:focops-closed-form}
         (only at sampled states).
-  \item Project onto $\pi_\theta$ by SGD on $\KL(\pi^\star \Vert \pi_\theta)$.
+  \item Project onto $\pi_\theta$ by SGD on $\KL(\pi_\theta \Vert \pi^\star)$.
 \end{enumerate}
 \end{tcolorbox}
 
@@ -457,17 +455,19 @@ the budget.
   \item Rollout, compute the PPO surrogate $L_r$ and the cost estimate
         $\hat J_c$.
   \item Compute the hinge $H = \max(0, \hat J_c - d)$.
-  \item Backprop $L_r - \kappa H$. The cost gradient flows through
-        $\hat J_c$ exactly as it would in any score-function estimator.
+  \item Minimise $-L_r + \kappa H$, where $L_r$ is the reward surrogate to maximise. Construct a differentiable score-function cost surrogate; an observed scalar cost alone has no policy gradient.
 \end{enumerate}
 \end{tcolorbox}
 
 \begin{pitfall}
-\textbf{Cost-scale mismatch.} If $c$ takes values in $[0, 100]$ and $r$ in
-$[-1, +1]$, even a tiny multiplier $\lambda = 0.01$ overwhelms the reward
-gradient. Always normalise the cost stream (e.g.\ divide by its running mean
-or by an oracle scale) before plugging it into $A_c$. Many tuning headaches
-trace back to this.
+\textbf{Cost-scale mismatch.} Reward and cost advantages have different
+units. If scaling costs by a fixed $s>0$, also scale the budget by $s$:
+$c'=c/s$, $d'=d/s$. To preserve $r-\lambda c$, use $\lambda'=s\lambda$.
+Untracked running normalisation changes the constraint or its effective
+price. Normalising reward advantages also changes that price, so document
+this practical heuristic rather than interpreting the resulting multiplier
+as an exact economic shadow price.
+
 \end{pitfall}
 
 % =====================================================================
@@ -539,10 +539,10 @@ clip_adv = torch.clamp(ratio, 1 - eps, 1 + eps) * adv_total
 pi_loss = -(torch.min(ratio * adv_total, clip_adv)).mean()
 \end{minted}
 
-The $(1 + \lambda)$ denominator is the variance-reduction trick from
-\textsc{Stooke, Achiam, Abbeel 2020}: as $\lambda$ grows, the combined
-advantage grows linearly, and gradients blow up; dividing by $1+\lambda$
-normalises them.
+The $(1+\lambda)$ denominator forms coefficients $1/(1+\lambda)$ and
+$\lambda/(1+\lambda)$, preventing the relative scale from growing linearly
+with the multiplier for fixed advantages. This does not bound the policy
+Jacobian, variance, or training instability.
 
 \section{Dual update}
 
@@ -554,7 +554,7 @@ self.lam = float(np.clip(self.lam + self.cfg.lam_lr * (mean_cost - self.cfg.cost
 
 This is the simplest possible projected-ascent rule. PID-Lagrangian
 (exercise 8) replaces it with a PID controller; FOCOPS replaces it with a
-two-multiplier root-find. The interface ($\lambda$ as a Python float on the
+different first-order update with a fixed KL temperature and adaptive cost multiplier. The interface ($\lambda$ as a Python float on the
 agent) stays the same.
 
 \begin{pitfall}
@@ -644,29 +644,24 @@ rather than a hyperparameter. But the formalism is not magical:
         between greedy and risk-averse modes. PID-Lagrangian (Stooke et al.\
         2020, arXiv:2007.03964) damps these oscillations.
 \end{itemize}
-References: \textsc{Ray, Achiam, Amodei 2019}, arXiv:1910.01708, ``Benchmarking
+References: \textsc{Ray, Achiam, Amodei 2019}, \href{https://cdn.openai.com/safexp-short.pdf}{author-published Safety Gym report}, ``Benchmarking
 safe exploration in deep RL''; \textsc{Stooke, Achiam, Abbeel 2020},
 arXiv:2007.03964, ``Responsive safety in RL by PID Lagrangian methods''.
 \end{safetyangle}
 
 % =====================================================================
 \begin{matching}
-For the synthetic ATS candidate-matching application, the CMDP form is the
-right level of abstraction for fairness. Define:
-\begin{itemize}[leftmargin=*]
-  \item $r(s,a)$ = match-quality score (skill overlap, recruiter-rating
-        proxy) of presenting candidate $a$ in context $s$.
-  \item $c(s,a) = \bigl| \,\mathbb{1}[g(a) = \text{minority}] - \rho\,\bigr|$
-        where $\rho$ is the target group share and $g(a)$ the candidate's
-        protected attribute. A discounted sum of $c$ measures the policy's
-        average departure from demographic parity.
-  \item $d$ is the maximum tolerated parity gap (set by counsel / DEI policy).
-\end{itemize}
-PPO-Lagrangian then learns a re-ranking policy that maximises match quality
-\emph{subject to} the parity gap not exceeding $d$. The dual variable
-$\lambda$ is the marginal cost of one extra unit of parity violation ---
-literally what a regulator should be auditing. We will productionise this
-exact setup in the week-24 capstone.
+For the synthetic matching exercise, define the population parity gap as
+$|\Pr_\pi(a=1\mid g=0)-\Pr_\pi(a=1\mid g=1)|$. Both conditional rates
+need eligible-population denominators and a stated sampling distribution.
+With fixed exogenous positive group frequencies, bound the signed gap
+above and below by $d$ using two linear constraints in action probabilities.
+The quantity $|\mathbb{1}[g(a)=1]-\rho|$ is not this parity gap: at
+$\rho=1/2$ it is always $1/2$, regardless of the policy.
+Week 24 demonstrates a differentiable finite-batch probability-gap
+surrogate. It is a synthetic exercise, not a production fairness guarantee.
+The multiplier is a learned feedback variable; it is not by itself an
+audit of eligibility, outcomes, uncertainty, or legal obligations.
 
 For synthetic insurance lead routing the analogue is: $r$ = expected gross-written-premium
 contribution; $c$ = saturation of any one broker beyond their capacity quota;
@@ -699,7 +694,7 @@ auto-graded reference. A summary:
 The bibliography for this week is in \texttt{extended\_reading.pdf}:
 \begin{itemize}[leftmargin=*]
   \item Altman, \emph{Constrained Markov Decision Processes}, CRC 1999 --- the canonical reference.
-  \item Ray, Achiam, Amodei, ``Benchmarking safe exploration in deep RL'', arXiv:1910.01708 (2019).
+  \item Ray, Achiam, Amodei, ``Benchmarking safe exploration in deep RL'', \href{https://cdn.openai.com/safexp-short.pdf}{author-published Safety Gym report} (2019).
   \item Achiam, Held, Tamar, Abbeel, ``Constrained Policy Optimization'', arXiv:1705.10528 (2017).
   \item Zhang, Vuong, Ross, ``FOCOPS'', arXiv:2002.06506 (2020).
   \item Stooke, Achiam, Abbeel, ``Responsive safety by PID Lagrangian'', arXiv:2007.03964 (2020).

@@ -59,10 +59,7 @@ The capstone is where those tools come together.
 \textbf{The recruiting analogy.} An ATS shows a recruiter a ranked list of
 candidates for a job. Underlying that list is a learned policy that, at
 training time, was steered by some signal --- clicks, callbacks, hires. That
-signal is biased: every dataset of hiring decisions reflects historical
-hiring patterns, including discrimination. An RL system that maximises the
-literal logged-reward signal will inherit, amplify, and entrench that bias.
-The whole point of this capstone is to build a pipeline that does not.
+signal reflects its collection process and can contain discriminatory patterns, selective observation and missing outcomes. Optimising it can preserve or amplify those problems. This capstone constructs a deliberately biased synthetic logger and makes its assumptions and diagnostics inspectable; it does not certify that an arbitrary hiring pipeline removes discrimination.
 \end{intuition}
 
 \section{The three-phase pipeline}
@@ -136,10 +133,7 @@ This is a policy-level constraint. For fixed exogenous group frequencies,
 the population DP constraint can be expressed as two linear inequalities
 in expected group-conditional action rates. A sliding-window statistic,
 however, depends on history: the displayed context alone is not a Markov
-state for this cost. The toy trainer uses immediate window costs for its
-actor and a full-rollout parity gap for its multiplier, so it is a
-heuristic approximation, not an exact CMDP policy-gradient or a strong-duality
-guarantee. A faithful sequential formulation would include window history
+state for this cost. The toy trainer uses the same differentiable batch gap in predicted recommendation probabilities for its actor penalty and multiplier update. Realised window gaps are diagnostics. This is a finite-batch surrogate, not an exact CMDP policy-gradient or a population strong-duality guarantee. A faithful sequential formulation would include window history
 in state and account for how an action changes future windows.
 
 \section{Off-policy evaluation: SNIPS}
@@ -408,8 +402,7 @@ This week's safety analysis is the entire lecture. A condensed lessons-list:
         constraints fit straight into the CMDP framework; the dual variable
         is the price of fairness.
   \item \textbf{Audits must be multi-metric.} DP and EO disagree on which
-        policies are ``fair''; calibration disagrees with both; OPE bounds
-        let you sanity-check value. All four must be reported.
+        policies satisfy a chosen definition; calibration asks another question. SNIPS is a value point estimate, not a bound. Report the metric definitions, appropriate uncertainty and their limitations together.
   \item \textbf{Counterfactual probes catch attribute leakage.} If flipping
         $g$ changes the top-1 decision rate above your tolerance, you have
         a problem regardless of what DP says.
@@ -418,10 +411,9 @@ This week's safety analysis is the entire lecture. A condensed lessons-list:
         IQL gives a data-informed warm start, not a safety certificate.
 \end{itemize}
 References: \textsc{Kostrikov et al.\ 2021}, arXiv:2110.06169, ``Offline RL
-with Implicit Q-Learning''; \textsc{Ray, Achiam, Amodei 2019}, arXiv:1910.01708;
+with Implicit Q-Learning''; \textsc{Ray, Achiam, Amodei 2019}, \href{https://cdn.openai.com/safexp-short.pdf}{author-published Safety Gym report};
 \textsc{Hardt, Price, Srebro 2016}, arXiv:1610.02413, ``Equality of opportunity''.
-The 2024-2025 update on offline safe RL is the DSRL / SafeMIL line
-(arXiv:2511.08136).
+For additional offline-safe-RL datasets and algorithms, require a verified primary source and a matching cost definition before extending the exercise.
 \end{safetyangle}
 
 % =====================================================================

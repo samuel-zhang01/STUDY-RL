@@ -119,7 +119,7 @@ Apply the chain rule to $\mathcal L(\theta_i^\prime(\theta))$. The Jacobian $\pa
 
 \section{PEARL --- probabilistic context-conditioned meta-RL}
 
-PEARL (Rakelly 2019) learns a latent task encoder $q_\phi(z \mid \mathrm{context}_{\mathcal T})$ that maps a small batch of (s, a, r, s') transitions into a posterior over task identity $z$. The policy is then conditioned: $\pi_\theta(a \mid s, z)$. Trained off-policy with SAC; works far better than MAML on continuous-control meta-tasks.
+PEARL (Rakelly 2019) learns a latent task encoder $q_\phi(z \mid \mathrm{context}_{\mathcal T})$ that maps a small batch of (s, a, r, s') transitions into a posterior over task identity $z$. The policy is then conditioned: $\pi_\theta(a \mid s, z)$. Trained off-policy with SAC; reports improved sample efficiency on its studied continuous-control meta-tasks; the comparison depends on the task distribution and experimental budget.
 
 \section{RL² --- memory as meta-learner}
 
@@ -127,21 +127,21 @@ Duan et al.\ 2016: an LSTM agent receives entire histories (including resets and
 
 \section{In-context RL --- AD and DPT}
 
-Algorithm Distillation (Laskin 2022) trains a transformer to predict the next action given the entire learning history of \emph{another RL algorithm} on each task. At test time the transformer is rolled forward on a new task and exhibits the same learning curve as the source algorithm --- with \emph{no gradient updates}. DPT (Lee 2023) provides a more rigorous posterior-sampling interpretation with regret guarantees.
+Algorithm Distillation (Laskin 2022) trains a transformer to predict the next action given the entire learning history of \emph{another RL algorithm} on each task. At test time the transformer is rolled forward on a new task and can adapt from its context in the studied settings --- with \emph{no gradient updates}. DPT (Lee 2023) provides a more rigorous posterior-sampling interpretation with regret guarantees.
 
 \chapter{Algorithms}
 
 \begin{algorithm}[H]
-\caption{RND-augmented Q-learning}
+\caption{RND-augmented Q-learning ($\hat\sigma$: running intrinsic-reward standard deviation)}
 \KwIn{Environment, RND networks, Q-table, $\alpha, \gamma, \beta, \varepsilon$.}
 \For{episode = 1, ..., N}{
   Reset $s$\;
   \While{not done}{
     $a \leftarrow \varepsilon$-greedy w.r.t.\ $Q(s, \cdot)$\;
     Step env $\to (s', r, \text{done})$\;
-    $r^i \leftarrow \|f_{\mathrm{pred}}(s') - f_{\mathrm{target}}(s')\|^2 / \sqrt{\mathrm{RMS}}$\;
+    $r^i \leftarrow \|f_{\mathrm{pred}}(s') - f_{\mathrm{target}}(s')\|^2 / \max(\hat\sigma,10^{-8})$\;
     Update $f_{\mathrm{pred}}$ to reduce $r^i$\;
-    $Q(s, a) \leftarrow Q(s, a) + \alpha [(r + \beta r^i) + \gamma \max_{a'} Q(s', a') - Q(s, a)]$\;
+    $Q(s, a) \leftarrow Q(s, a) + \alpha [(r + \beta r^i) + \gamma(1-\mathbf1_{\mathrm{terminal}}) \max_{a'} Q(s', a') - Q(s, a)]$\;
     $s \leftarrow s'$\;
   }
 }
@@ -161,7 +161,7 @@ Algorithm Distillation (Laskin 2022) trains a transformer to predict the next ac
 
 Two arms, two tasks. Task A: $\mu = (1, 0)$. Task B: $\mu = (0, 1)$. Policy: softmax of $\theta = (\theta_0, \theta_1)$. Expected reward at $\theta$: $R(\theta) = \sigma(\theta_0 - \theta_1) \cdot \mu_0 + \sigma(\theta_1 - \theta_0) \cdot \mu_1$. Start at $\theta = (0, 0)$ (uniform).
 
-Inner step on task A with $\alpha = 1$: $\nabla R = (\partial R / \partial \theta_0, \partial R / \partial \theta_1) = (0.25, -0.25)$, so $\theta^\prime_A = (0.25, -0.25)$. Post-adapt reward on A: $\sigma(0.5) \approx 0.62$. Compare pre-adapt: 0.5. The MAML outer update on a 50/50 mix of A and B yields a gradient at zero by symmetry --- the optimal MAML initialisation \emph{is} $\theta = 0$. The whole gain comes from adaptation; the meta-learned init is just optimally symmetric.
+Inner step on task A with $\alpha = 1$: $\nabla R = (\partial R / \partial \theta_0, \partial R / \partial \theta_1) = (0.25, -0.25)$, so $\theta^\prime_A = (0.25, -0.25)$. Post-adapt reward on A: $\sigma(0.5) \approx 0.62$. Compare pre-adapt: 0.5. The MAML outer gradient at a zero logit difference is zero by symmetry for the 50/50 task mixture. Symmetry establishes stationarity; an optimality claim additionally needs checking the objective away from that point. Common shifts of both logits leave the policy unchanged. The whole gain comes from adaptation; the meta-learned init is just optimally symmetric.
 
 \chapter{Implementation walkthrough}
 
@@ -209,27 +209,22 @@ theta_t = theta - inner_lr * grad      # depends on theta through grad
 \end{figure}
 
 \begin{safetyangle}
-\textbf{Exploration in high-stakes domains.} An $\varepsilon$-greedy policy in production
-recruitment ranks candidates uniformly at random 5--10\% of the time --- a violation of
-basic fairness expectations and possibly of legal protected-class duties. Intrinsic
-motivation (RND, ICM) shifts the failure mode: instead of \emph{random} exploration we
-have \emph{novelty-seeking} exploration, which means the system will systematically
-prefer atypical candidates. ``Atypical'' is correlated with protected attributes in
-real-world labour data; an unaudited RND-on-CV system would amplify bias in a
-particularly opaque way. Mitigations: (a) define the novelty space carefully so that
-``unseen'' is not synonymous with ``out-of-distribution along protected attributes'';
-(b) cap the intrinsic reward at a level that cannot overwhelm the extrinsic signal;
-(c) audit visit distributions across protected-class strata.
-Citations: \textsc{Burda et al.\ 2018} (RND); \textsc{Ecoffet et al.\ 2021, Nature} (Go-Explore).
+\textbf{Exploration changes who receives exposure.} In the synthetic
+matching analogy, an epsilon-mixture randomises only over its declared
+eligible action set; its exploration rate is a design parameter, not a
+universal 5--10\% rule. Novelty bonuses can reward irrelevant or sensitive
+features, so examine the representation and resulting exposure distribution
+rather than assuming curiosity means useful learning. Compare external
+quality, novelty and group-conditioned exposure separately. The grid's
+coverage result is not evidence that a recruiting policy is fair or legally
+compliant; the RND and Go-Explore papers do not establish that transfer.
+
 \end{safetyangle}
 
 \begin{matching}
 \textbf{Meta-RL for recruiter personalisation.} A recruitment platform serves many
 recruiters, each with idiosyncratic preferences. Treat each recruiter as a separate
-``task'' from an unknown task distribution. With MAML the per-recruiter policy adapts
-in a few clicks; with in-context RL (AD / DPT) the same transformer policy adapts on
-the fly with no parameter updates. This is a perfect match for SaaS deployments where
-fine-tuning per customer is operationally expensive. The safety-angle is the same:
+``task'' from an unknown task distribution. A meta-learning research hypothesis is that related tasks could support faster adaptation. The necessary feedback quantity and transfer quality require experiments; neither MAML nor in-context RL guarantees adaptation from a few recruiter clicks. Context-based adaptation and parameter fine-tuning also have different storage and inference costs. The safety-angle is the same:
 audit task-specific adaptation for systematic harm to protected classes.
 \end{matching}
 

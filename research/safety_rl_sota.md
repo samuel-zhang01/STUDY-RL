@@ -2,7 +2,7 @@
 
 *Compiled May 2026. Scope: constrained, risk-sensitive, robust, and aligned reinforcement learning, with emphasis on 2024–2026 developments. Designed to feed a 24-week Deep RL curriculum for a learner with strong ML/DL background, no prior RL, single consumer GPU (e.g., RTX 4090 / 5090 / single A6000).*
 
-The dossier is organised by topic. Each section ends with **Curriculum slot** indicating the recommended week (1–24) at which to introduce the material. The order assumes weeks 1–6 cover MDPs, dynamic programming, value-based methods (DQN family), and basic policy gradients; weeks 7–10 cover actor-critic, PPO, SAC; weeks 11–14 introduce model-based and distributional RL; weeks 15–20 are devoted to constrained / safe / robust RL; weeks 21–24 are devoted to alignment, RLHF, scalable oversight, interpretability, and capstone.
+The dossier is organised by topic. Each section ends with **Curriculum slot** indicating the recommended week (1–24) at which to introduce the material. These slots record an early planning sequence and do not match the final 26-week course. Use the [current learning map](../docs/LEARNING_MAP.md) for lesson order and prerequisites. This research dossier is supporting material; the 20 October systematic lecture audit covers the weekly lectures and further readings, not every claim in this dossier.
 
 ---
 
@@ -21,7 +21,7 @@ Altman proves that the optimal policy in the *occupancy-measure* LP formulation 
 
 Form the Lagrangian
     L(π, λ) = J_r(π) − Σ_i λ_i (J_{c_i}(π) − d_i),  λ_i ≥ 0.
-Saddle-point: max_π min_λ L. In practice we alternate (i) a few policy-gradient steps on `L` w.r.t. π, holding λ fixed; (ii) a multiplier update `λ_i ← [λ_i + η (J_{c_i}(π) − d_i)]_+`. **PPO-Lagrangian** (Ray, Achiam, Amodei, *Benchmarking Safe Exploration*, arXiv:1910.01708, Oct 2019) is the canonical implementation in OpenAI's Safety Gym.
+Saddle-point: max_π min_λ L. In practice we alternate (i) a few policy-gradient steps on `L` w.r.t. π, holding λ fixed; (ii) a multiplier update `λ_i ← [λ_i + η (J_{c_i}(π) − d_i)]_+`. **PPO-Lagrangian** is one of the baselines evaluated by Ray, Achiam and Amodei in [*Benchmarking Safe Exploration in Deep Reinforcement Learning* (2019)](https://cdn.openai.com/safexp-short.pdf), which introduced Safety Gym.
 
 Two failure modes: oscillation of λ (cost overshoots → λ spikes → reward collapses → λ decays) and reward-cost imbalance when `c` and `r` live on incomparable scales. **PID-Lagrangian** (Stooke, Achiam, Abbeel, ICML 2020, arXiv:2007.03964) treats λ as the output of a PID controller and damps oscillations.
 
@@ -377,7 +377,7 @@ PRISM / Storm probabilistic model checkers can verify *bounded* properties of MD
 ## 14. Reading-First Paper Stack (in dossier order)
 
 1. Altman, *Constrained Markov Decision Processes* (1999, book).
-2. Ray, Achiam, Amodei (2019) arXiv:1910.01708 — Safety Gym + PPO-Lag.
+2. Ray, Achiam, Amodei (2019), [*Benchmarking Safe Exploration in Deep Reinforcement Learning*](https://cdn.openai.com/safexp-short.pdf) — Safety Gym and constrained-RL baselines.
 3. Achiam et al. (2017) arXiv:1705.10528 — CPO.
 4. Zhang, Vuong, Ross (2020) arXiv:2002.06506 — FOCOPS.
 5. Zhang, Vuong, Ross (2022) arXiv:2205.11814 — P3O.

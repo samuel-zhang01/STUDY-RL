@@ -181,6 +181,33 @@ The connection between exact DP and approximate TD is discussed in
 approximation changes the fixed point and the relevant convergence conditions.
 The finite calculations and inequalities above are derived directly here.
 
+## Choose your explanation depth: How a local backup controls a global error
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+A Bellman backup asks what one step plus a continuation is worth. If every continuation estimate is wrong by at most e, averaging cannot enlarge that error, and discounting shrinks its effect. Repeating this reasoning connects a local operation to convergence of the whole value table.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+Use discount 0.9 and a current worst-state error of 2. One exact backup has error at most 1.8; two have error at most 1.62. The actual errors may be much smaller. A line below this envelope passes the check even if its logarithmic slope is not exactly log(0.9).
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+For an exact finite discounted model, $|(TV)(s)-(TW)(s)|\le\max_a\gamma\sum_{s\prime}P(s\prime\mid s,a)|V(s\prime)-W(s\prime)|\le\gamma\|V-W\|_\infty$. Apply this repeatedly with $W=V^*$ to obtain the error envelope. The additional residual certificate is $\|V-V^*\|_\infty\le\|TV-V\|_\infty/(1-\gamma)$, from the triangle inequality and contraction. Approximate regression or a wrong transition model introduces an additional error term.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_5_contraction_factor` in the workbook](workbook.ipynb#cell-22), then run the setup cells above it. Plot observed errors and the geometric upper envelope separately. A zero previous error makes an error ratio undefined; it does not indicate that contraction failed.
+
 ## Notebook investigation: watch information move through a value table
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 6**.

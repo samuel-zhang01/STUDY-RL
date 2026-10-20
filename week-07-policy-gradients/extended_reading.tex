@@ -1,68 +1,76 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
-
 \title{Extended reading --- Week 7: Policy Gradients and REINFORCE}
 \date{\today}
 \begin{document}
 \maketitle
+\section*{Read with a question in mind}
+Start with the week's teaching guide and its small worked example. Then use
+these readings to connect the algorithm to its assumptions and evidence.
+The explanations and investigations below are course commentary, not
+quotations. Read the source before reusing a theorem or a reported result.
+For each paper, record the objective, observation model, claimed result,
+conditions and one condition your local experiment does not reproduce.
 
-\section*{1.\ Williams (1992) --- Simple statistical gradient-following algorithms for connectionist reinforcement learning}
-Ronald J.\ Williams, \emph{Machine Learning}, 8(3--4): 229--256, 1992. (No arXiv ID; pre-arXiv era.)
+\section*{1. Williams (1992): Simple Statistical Gradient-Following Algorithms}
+\textbf{Primary source or book record:} \url{https://doi.org/10.1007/BF00992696}.
 
-\paragraph{Summary.} The paper that named REINFORCE. Williams introduces the family of likelihood-ratio gradient estimators for episodic RL, proves their unbiasedness, and gives convergence results under stepsize conditions. The algorithm is presented with characteristic neural-network framing (units that sample their own outputs from a parametric distribution) and motivates the term ``score function'' in the RL context.
+\paragraph{What to learn.} Likelihood-ratio estimators turn a sampled return into a stochastic policy-gradient direction.
 
-\paragraph{Why it matters for this week.} This is the algorithm we implement. The proof of unbiasedness and the variance discussion are exactly the structure of our notes' Chapter 2. Read \S 2 of the original; the rest is historical context.
+\paragraph{What the result requires.} Interchanging differentiation and expectation needs regularity and integrability. A finite sampled gradient need not improve return, and an unbiased direction is not a global convergence proof.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``If $W_{ij}$ is given an increment proportional to $(r - b_{ij})\, \partial \ln g_i / \partial W_{ij}$, then the expected value of the increment along $W_{ij}$ is proportional to $\partial E\{r\} / \partial W_{ij}$.''}\end{quote}
-This sentence is the policy gradient theorem in dialect: $W_{ij}$ are policy parameters, $g_i$ is the parametric output density of unit $i$, $b_{ij}$ is the per-parameter baseline. Read it twice --- the $b_{ij}$ subscript is doing real work and is more general than the state-baseline we use today.
+\paragraph{Notebook investigation.} Use \texttt{reinforce\_loss}. Check the sign: a positive advantage should increase log probability when the optimiser minimises the negative surrogate.
 
-\section*{2.\ Sutton, McAllester, Singh, Mansour (1999) --- Policy gradient methods for reinforcement learning with function approximation}
-NeurIPS 1999. (No arXiv ID.)
+\section*{2. Sutton et al. (1999): Policy Gradient Methods with Function Approximation}
+\textbf{Primary source or book record:} \url{https://proceedings.neurips.cc/paper/1999/hash/464d828b85b0bed98e80ade0a5c43b0f-Abstract.html}.
 
-\paragraph{Summary.} The companion paper that lifts Williams' result to function approximation and gives the modern statement of the policy gradient theorem: the gradient is an expectation over the state-visitation distribution of $\nabla \log \Policy \cdot \Qfn$, which crucially \emph{does not} require differentiating through the state distribution. Introduces the compatible-function-approximation condition under which a learned $\Qfn_\phi$ can substitute for $\Qfn^\Policy$ without introducing bias.
+\paragraph{What to learn.} Relates performance gradients to policy derivatives and action values under an appropriate state weighting. Compatible approximation supplies a particular relationship between critic fitting and the gradient.
 
-\paragraph{Why it matters for this week.} This paper justifies the use of neural-network policies and value heads. The ``no need to differentiate through $d^\Policy$'' result is what allows our derivation in Chapter 2 to bypass the stationary-distribution gradient.
+\paragraph{What the result requires.} An arbitrary neural critic is not automatically compatible. State the discounted or average-reward objective and its occupancy convention; dropping time discount factors can change the estimator.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``$\partial \rho / \partial \theta = \sum_s d^\pi(s) \sum_a \partial \pi(s,a)/\partial \theta \cdot Q^\pi(s,a)$''}\end{quote}
-That the right-hand side is an expectation w.r.t.\ $d^\pi$ and \emph{not} an expectation that involves $\partial d^\pi/\partial \theta$ is the entire reason PG is practical with deep nets. Compare this with the analogous result for the average-reward formulation in their Theorem 2 --- a useful exercise.
+\paragraph{Notebook investigation.} Derive the score identity from normalisation of the action distribution. Then identify the state weighting needed for the objective used in the local episodic loop.
 
-\section*{3.\ Greensmith, Bartlett, Baxter (2004) --- Variance reduction techniques for gradient estimates in reinforcement learning}
-\emph{Journal of Machine Learning Research}, 5: 1471--1530, 2004.
+\section*{3. Greensmith, Bartlett and Baxter (2004): Variance Reduction Techniques}
+\textbf{Primary source or book record:} \url{https://jmlr.org/papers/v5/greensmith04a.html}.
 
-\paragraph{Summary.} The most thorough treatment of baselines and actor-critic variance. Derives tight bounds on the variance of REINFORCE-style estimators, characterises the optimal state-dependent baseline, and shows when the value function is a good approximation.
+\paragraph{What to learn.} Analyses baselines and variance in gradient estimation. The variance-minimising baseline weights returns by squared score magnitude.
 
-\paragraph{Why it matters for this week.} This is the formal answer to ``how good is the $\Vfn_\phi$ baseline?'' --- a question that the workbook asks empirically. Section 3 gives the closed-form optimal baseline in the form quoted in our Chapter 2.
+\paragraph{What the result requires.} A state value baseline need not equal the variance-minimising baseline, and a poor baseline can increase variance. Baseline independence from the sampled action is central to the simple zero-mean argument.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``The variance-minimising baseline is $b^\star(s) = \E[\|\nabla \log \pi\|^2 G | s] / \E[\|\nabla \log \pi\|^2 | s]$.''}\end{quote}
-Note that $b^\star$ is \emph{not} simply $\Vfn^\Policy$; it is a gradient-weighted version. In practice $\Vfn_\phi$ is close enough --- the residual variance is tiny compared to the variance you remove by introducing any baseline. This is why we do not bother with the exact $b^\star$.
+\paragraph{Notebook investigation.} Use \texttt{optimal\_baseline}. Compute $b^*=\sum_i w_iG_i/\sum_iw_i$ for weights $(1,4)$ and returns $(2,5)$: 4.4, not the ordinary mean 3.5.
 
-\section*{4.\ Chen, Beutel, Covington, Jain, Belletti, Chi (2019) --- Top-K Off-Policy Correction for a REINFORCE Recommender System}
-WSDM 2019. arXiv:1812.02353.
+\section*{4. Chen et al. (2019): Top-K Off-Policy Correction}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1812.02353}.
 
-\paragraph{Summary.} How YouTube serves real-time recommendations using REINFORCE. The paper presents (i) a softmax-over-millions policy parameterisation, (ii) the top-$K$ off-policy correction $\lambda_K(s,a) = K(1-\Policy_\theta(a\given s))^{K-1}$ that accounts for sampling without replacement, (iii) propensity-weighted importance sampling to correct for the gap between behaviour policy (the production logger) and target policy (the model being trained).
+\paragraph{What to learn.} The inclusion probability under $K$ independent draws with replacement followed by deduplication is $1-(1-p)^K$. Differentiating gives the factor $K(1-p)^{K-1}$.
 
-\paragraph{Why it matters for this week.} This is REINFORCE in production at the largest scale that exists, and it is the template for any matching application of policy gradients. Their pipeline is, almost exactly, the system you would build for synthetic ATS candidate-to-role matching.
+\paragraph{What the result requires.} This is not sampling exactly K distinct items without replacement; deduplication can yield fewer items. The expression depends on the sampling mechanism, not specifically on softmax, and is not an exact propensity for a constrained slate.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``Most of the lift in our online A/B tests comes from the top-$K$ correction, not from any architectural improvement.''}\end{quote}
-The takeaway: when you adapt PG to ranking, the off-policy correction is the load-bearing piece. Implementations that skip it leave a lot of value on the table.
+\paragraph{Notebook investigation.} Use \texttt{topk\_offpolicy\_multiplier}. At $p=0.2,K=3$, inclusion probability is 0.488 and its derivative with respect to $p$ is 1.92. Check a finite difference.
 
-\section*{5.\ Gao, Schulman, Hilton (2022) --- Scaling Laws for Reward Model Overoptimization}
-arXiv:2210.10760.
+\section*{5. Gao, Schulman and Hilton (2022): Scaling Laws for Reward Model Overoptimization}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/2210.10760}.
 
-\paragraph{Summary.} Empirical study of how RLHF (which is, at its core, PPO-on-REINFORCE-style policy gradient) over-optimises the proxy reward model. Shows the proxy-vs-true reward gap follows a clean scaling law in KL from the initial policy.
+\paragraph{What to learn.} Studies optimisation of a proxy reward using a synthetic gold reward model as a reference. More proxy optimisation can worsen the reference objective.
 
-\paragraph{Why it matters for this week.} The reward-hacking failure mode we flag in the safety angle has now been quantified. This paper is the citation when explaining why we will spend weeks 18--22 on alignment-aware variants of PG.
+\paragraph{What the result requires.} The gold model is not actual human welfare. The fitted scaling relationships differ between reinforcement learning and best-of-N sampling; there is no universal quadratic law in KL or universal safe KL setting.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``The gold reward $R_{\mathrm{gold}}$ as a function of $\sqrt{\KL}$ is well-fit by $R_{\mathrm{gold}}(\KL) = R_{\mathrm{max}} - \alpha\, d \cdot (\sqrt{\KL} - \sqrt{\KL_0})^2$''}\end{quote}
-This quadratic-in-$\sqrt{\KL}$ form is what motivates the KL constraints in TRPO/PPO that we will derive next week. Without a KL penalty, REINFORCE walks straight off the cliff.
+\paragraph{Notebook investigation.} Sketch proxy and held-out reward against optimisation effort. Mark where their trends separate. Explain why a small training loss alone cannot diagnose reward alignment.
 
-\section*{Sourced from}
-\texttt{research/deeprl\_core\_sota.md} \S 2.1--2.2, \texttt{research/bandits\_matching\_sota.md} (Chen et al.\ 2019), \texttt{research/safety\_rl\_sota.md} \S 5 (Gao et al.\ 2022).
-
+\section*{Synthesis: evidence you should be able to show}
+\begin{enumerate}
+\item Reproduce one numerical calculation before running a long experiment.
+\item Name the precise objective, sampling distribution and terminal convention.
+\item Compare the local implementation with one source: list a shared mechanism
+and one simplification that prevents calling it a full reproduction.
+\item Separate an algebraic identity, an assumption-dependent theorem and an
+empirical result. A plot alone does not prove a theorem.
+\item Save the notebook with seed, parameters, axes, denominators and a short
+explanation of an unexpected result. Keep evaluation data separate from tuning.
+\end{enumerate}
+Return to the teaching guide's notebook investigation for the local function
+names, expected checks and interpretation questions. Source code and notebooks
+are available together in the course repository; the web reader is the entry
+point and the downloaded notebook is the execution workspace.
 \end{document}

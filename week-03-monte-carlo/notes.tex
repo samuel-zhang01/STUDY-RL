@@ -26,8 +26,8 @@ Then use \texttt{workbook.ipynb} to implement and vary the calculations.
 By the end of this week you will be able to:
 \begin{enumerate}\setlength\itemsep{2pt}
   \item Distinguish \emph{first-visit} and \emph{every-visit} Monte Carlo
-        prediction; prove that both are unbiased estimators of $V^\Policy$
-        and that first-visit has lower variance in dependent samples.
+        prediction; explain first-visit unbiasedness, every-visit finite-sample
+        bias and consistency, and why neither has universal variance dominance.
   \item Implement \emph{on-policy MC control with an $\epsilon$-soft policy}
         and reproduce Sutton \& Barto's figure 5.2 on Blackjack.
   \item Derive the \emph{ordinary} and \emph{weighted} importance-sampling
@@ -67,10 +67,11 @@ sparse terminal rewards (e.g.\ Blackjack, or the recruitment funnel later in
 this lecture) MC is often the cleaner choice.
 
 \begin{pitfall}
-\textbf{MC and continuing tasks.} If $\Disc=1$ and episodes do not terminate
-almost surely, the return is undefined and the MC estimator is degenerate.
-Either impose a truncation (with bias) or use a $\Disc<1$ formulation (also
-biased, but in a way you can control). Average-reward MC exists and is
+\textbf{MC and continuing tasks.} For a continuing task, a full episode may never be available. With
+$\Disc=1$, existence of an integrable return requires additional conditions;
+almost-sure termination alone does not ensure finite expectation. Truncating
+a discounted return introduces tail error. Choosing a new discount changes
+the objective rather than biasing an estimator of that new objective. Average-reward MC exists and is
 discussed in Mahadevan (1996) and Bertsekas--Tsitsiklis (1996, Ch.\ 7).
 \end{pitfall}
 
@@ -282,8 +283,11 @@ class BlackjackEnv:
 \end{minted}
 \end{codebox}
 
-The off-policy estimator implementation deliberately keeps the
-trajectory-level $\rho$ explicit so you can inspect it in the workbook:
+The workbook helper below handles one-step rows (the bandit special case).
+For a trajectory, construct the product of action ratios explicitly before
+applying the trajectory-level formula. Its numerical floors avoid division
+errors but do not validate coverage; check support and a positive total
+weight before interpreting a result.
 
 \begin{codebox}
 \begin{minted}{python}
@@ -322,33 +326,36 @@ times lower-variance even with weights bounded by 1.8.}
 \chapter{Safety angle}
 
 \begin{safetyangle}
-\textbf{Off-policy evaluation is the only safe way to roll out a new policy
-in matching.} Three failure modes:
+\textbf{Off-policy evaluation is one source of evidence for a policy change.}
+It does not alone certify safety. Three failure modes:
 
 \begin{enumerate}\setlength\itemsep{2pt}
   \item \emph{Coverage holes.} If the production behaviour policy never
         routed certain lead-types to certain brokers, the OIS / WIS / DR
-        estimates of any policy that \emph{does} route there have infinite
-        variance and you cannot bound the deployment risk.
+        cannot identify the reward of an unsupported action without additional
+        modelling assumptions. This is a missing-information problem, not
+        merely infinite variance.
         Mitigation: \emph{forced exploration budget} (a small $\epsilon$ of
         uniform routing) baked into the production policy so logs cover the
         action space.
   \item \emph{Tail importance weights.} A single huge $\rho_\tau$ dominates
         the OIS estimate. Clip the weights, or use WIS, or use the SWITCH
-        / SNIPS estimators (Swaminathan \& Joachims 2015). The bias you take
-        on is much smaller than the variance you remove.
+        / SNIPS estimators (Swaminathan \& Joachims 2015). Measure the resulting bias and variance in the chosen setting; no
+        universal mean-squared-error improvement follows.
   \item \emph{Reward shaping under delay.} Recruitment outcomes arrive weeks
         later; if your training pipeline drops not-yet-realised rewards as
         zero, you bias the evaluator. Use censored-likelihood models
         (Chapelle 2014; \texttt{deeprl\_core\_sota.md} \S 12).
 \end{enumerate}
 
-\paragraph{Citations.}
-Thomas \& Brunskill, \textsc{Data-Efficient Off-Policy Policy Evaluation for
-Reinforcement Learning} (ICML 2016) --- the canonical reference for
-\emph{high-confidence} off-policy policy evaluation, which gives you
-$1-\delta$ lower bounds on the value of a target policy and is the right
-tool when deploying RL to a high-stakes domain.
+\paragraph{Sources.}
+Thomas \& Brunskill (ICML 2016),
+\url{https://proceedings.mlr.press/v48/thomasa16.html}, develops weighted
+doubly robust evaluation and MAGIC. High-confidence off-policy evaluation is
+a separate problem; see Thomas, Theocharous \& Ghavamzadeh (AAAI 2015),
+\url{https://arxiv.org/abs/1404.3410}. A confidence bound needs its own
+assumptions, including boundedness or tail control and an evaluation design.
+
 \end{safetyangle}
 
 % =============================================================================

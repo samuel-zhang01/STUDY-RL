@@ -32,6 +32,33 @@ The novel room wins the augmented objective, 2 versus 1. The known room wins the
 **Carry it onward:** [RLHF](../week-18-rlhf-ppo-llm/teaching_guide.md) changes the action to a token and the reward source to a response-level judgement.
 
 
+## Choose your explanation depth
+
+Why learning to adapt needs another derivative. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+Ordinary learning chooses parameters that work now. Meta-learning chooses starting parameters that work after an update. To improve that starting point, full MAML accounts for how the update itself changes when the starting point changes.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+Let a task want parameter m = 2, start at θ = 0, and take step size α = 0.5 on loss ½(θ − m)². The adapted parameter is **1**. The outer loss is **0.5**. Its derivative with respect to the original θ is **−0.5**; treating the adapted parameter as the original parameter would incorrectly give −1.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+For $L_m(\theta)=\tfrac12(\theta-m)^2$, $\theta'=\theta-\alpha(\theta-m)=(1-\alpha)\theta+\alpha m$. The chain rule gives $dL_m(\theta')/d\theta=(\theta'-m)(1-\alpha)=(1-\alpha)^2(\theta-m)$. This exact scalar result assumes the same quadratic task loss and one differentiable update. General MAML replaces the scalar factor with $I-\alpha\nabla^2L$; the worked derivation below shows that step.
+
+</details>
+
+**Investigate in Jupyter.** Before [Exercise 6: `inner`](workbook.ipynb#cell-21), reproduce the scalar case with autograd and obtain **−0.5**. Then inspect `exercise_6_inner_adaptation_improves`, which evaluates a stochastic bandit adaptation rather than this quadratic. In [Exercise 2](workbook.ipynb#cell-9), `exercise_2_intrinsic_decreases` should lower the novelty error on repeated observations while the random target stays fixed. Common failures are detaching the inner step unintentionally or training the supposedly fixed RND target.
+
 ## Mechanism at a glance
 
 ```mermaid

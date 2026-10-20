@@ -30,7 +30,7 @@ After this week you will be able to:
   \item Derive the BCQ behaviour-support constraint and the BEAR MMD constraint from the
         Bellman backup.
   \item Reproduce the CQL conservative penalty from a min-max objective and explain its
-        ``learned Q is a lower bound on $V^\pi$'' guarantee.
+        policy-value lower-bound result and its estimation and regularisation assumptions.
   \item Derive the IQL expectile value loss and the AWR/AWAC closed-form policy update.
   \item Implement IQL (tabular) and CQL on a synthetic logged GridWorld and show
         that IQL beats naive Q-learning.
@@ -205,7 +205,7 @@ Given $A(s,a) = Q(s,a) - V(s)$, AWAC solves
 \[
   \pi^\star = \argmax_\pi \E_{(s,a) \sim \mathcal{D}}\!\bigl[ \log \pi(a|s) \cdot \exp(\beta A(s,a))\bigr],
 \]
-which is the closed-form solution of the KL-constrained policy improvement
+which is a weighted maximum-likelihood projection of the non-parametric improvement below. The closed-form distribution, rather than a neural network fit, solves the corresponding KL-penalised problem; a hard constraint additionally requires choosing its multiplier:
 \begin{align*}
   \max_\pi &\; \E_{s \sim \mathcal{D}, a \sim \pi}[A(s,a)] \\
   \text{s.t.}\; & \KL(\pi(\cdot|s) \,\|\, \pi_\beta(\cdot|s)) \le \varepsilon.
@@ -231,10 +231,18 @@ maximum-likelihood policy regression on weighted samples is the same fit.
 
 \section{TD3+BC and ReBRAC}
 
-TD3+BC is a one-line change to TD3: add $\lambda \, \|\pi(s) - a\|_2^2$ to the actor loss,
-with $\lambda$ inversely proportional to $|Q|$. ReBRAC tightens this with a higher
-discount, layer-norm critics, and per-step BC weight tuned via $\E[Q]$ normalisation,
-producing the strongest non-transformer offline scores on D4RL as of 2024.
+TD3+BC minimises the actor loss
+\[
+ L_\pi=\E_{(s,a)\sim\mathcal D}[-\lambda Q(s,\pi(s))+\|\pi(s)-a\|^2],
+ \qquad \lambda=\alpha/\E_{\mathcal D}|Q(s,\pi(s))|.
+\]
+The inverse-Q scale multiplies the \emph{Q term}, with its denominator detached
+from differentiation. Multiplying the whole loss by $1/\lambda$ instead
+puts a proportional-to-$|Q|$ coefficient on imitation. These equivalent
+forms must not be mixed. See \href{https://arxiv.org/abs/2106.06860}{Fujimoto and Gu (2021)}.
+ReBRAC adds implementation choices including deeper networks, critic LayerNorm,
+larger batches and separately controlled actor/critic behaviour penalties.
+Its reported benchmark comparison is not a timeless ranking of algorithms.
 
 \section{Off-policy evaluation (OPE) primer}
 
@@ -244,17 +252,22 @@ Let $\pi$ be a target policy and $\pi_\beta$ the behaviour policy. The
   \hat V^\pi_{\mathrm{IS}} = \frac{1}{n} \sum_{i=1}^n \rho_i \, G_i,
   \qquad \rho_i = \prod_{t=0}^{T_i-1} \frac{\pi(a_t \mid s_t)}{\pi_\beta(a_t \mid s_t)}.
 \]
-The variance scales exponentially with $T$ --- the ``curse of horizon''.
-\textbf{Self-normalised IS (SNIPS)} replaces the $1/n$ by $1/\sum_i \rho_i$, biased but
-much lower variance. \textbf{FQE} (Fitted-Q Evaluation) is the model-based cousin:
-fit $Q^\pi$ by repeated Bellman regression on $\mathcal{D}$. \textbf{DICE} family
-(DualDICE, GenDICE) estimates the stationary density ratio $d^\pi / d^{\pi_\beta}$
-directly via a Fenchel dual, giving stable estimates that do not depend on horizon.
+Trajectory-product weights can have variance that grows rapidly with horizon
+when target and logger differ; this is a risk, not an equality for every MDP.
+\textbf{Self-normalised IS (SNIPS)} uses
+$\sum_i\rho_iG_i/\sum_i\rho_i$ when the denominator is positive. It has
+finite-sample bias and can reduce variance, without universally dominating IS.
+\textbf{FQE} is direct, model-free policy-value regression by repeated Bellman
+backups, not learning a transition model. \textbf{DICE} methods estimate
+occupancy ratios and avoid explicit trajectory products, but still require
+coverage and approximation assumptions; their estimation error does not
+become independent of discount or effective horizon.
 
 \begin{pitfall}
-SNIPS with deterministic target policies is degenerate: $\rho_i$ is either zero or
-$\prod 1/\pi_\beta$, so most episodes get zero weight. Soft (epsilon-mixed) target
-policies are mandatory for IS estimators on offline data.
+A deterministic target is valid for IS when the logger supports its actions.
+It may leave very few nonzero trajectory weights. Smoothing the target changes
+the policy being evaluated and can improve overlap in observed trajectories;
+it cannot create logger support. There is no universal 50-step cutoff.
 \end{pitfall}
 
 \chapter{Algorithms}
@@ -272,8 +285,7 @@ Initialise $V_\psi, Q_\theta, Q_{\hat\theta} \leftarrow Q_\theta, \pi_\phi$\;
   Soft-update $\hat\theta \leftarrow (1-\rho)\hat\theta + \rho\theta$\;
 }
 \end{algorithm}
-\textbf{Complexity:} $O(B \cdot |\theta|)$ per step. Three networks; trains 5--10$\times$
-faster than CQL because no Q-on-OOD sampling.
+\textbf{Complexity:} $O(B \cdot |\theta|)$ per step. Three networks; avoiding explicit Q queries on sampled out-of-data actions removes one source of computation. Actual speed depends on architecture, batch size and implementation.
 
 \section{Worked numerical example}
 
@@ -349,36 +361,30 @@ independent pointwise error comparison or a certified CQL lower bound.}
   \item \textbf{Silent extrapolation.} A naive Q-learner trained on broker--lead logs
         will happily score lead--broker pairs that never co-occurred. There is no
         ``I don't know'' signal; the lift looks plausible until the policy is shipped.
-  \item \textbf{Logger drift.} The behaviour policy in production changes over time
-        (new business rules, new brokers). The IS estimator becomes biased the moment
-        $\pi_\beta$ is non-stationary and the deployment cycle is slow.
-  \item \textbf{Mitigations.}
-        \begin{enumerate}[label=(\alph*)]
-          \item Always run an FQE or SNIPS estimate as a \emph{guard} before shipping;
-                refuse to deploy if the estimate has confidence-interval width
-                $>$ 20\% of the median.
-          \item Constrain the deployment policy to the \emph{support} of $\pi_\beta$
-                via a sample-from-VAE constraint (BCQ) or an explicit KL penalty (AWAC).
-          \item Maintain a fresh ``exploration channel'' (a small $\varepsilon$ of
-                random routing) so the dataset coverage never collapses.
-        \end{enumerate}
+  \item \textbf{Logger drift.} Changing logging policies need not bias IS if
+        each event records its actual conditional propensity. Using one stale
+        propensity model for all events can invalidate the weights.
+  \item \textbf{Evaluation controls.} Specify target support, effective sample
+        size, uncertainty assumptions and independent evaluation data. A narrow
+        interval does not cure missing overlap or unmeasured confounding.
+        Behaviour penalties and new data collection are separate design choices;
+        neither is an automatic deployment certificate.
+
 \end{enumerate}
 Citations: \textsc{Levine et al.\ 2020, arXiv:2005.01643} (tutorial);
 \textsc{Kumar et al.\ 2020, NeurIPS} (CQL).
 \end{safetyangle}
 
 \begin{matching}
-\textbf{Recruitment matching from logs.} An ATS like synthetic ATS accumulates a vast log
-of recruiter--candidate--outcome tuples: $(c_i, j_i, a_i \in \{\mathrm{reject},
-\mathrm{phone},\mathrm{onsite},\mathrm{offer}\}, r_i)$. These were generated by a mixture
-behaviour policy --- a blend of human recruiters using various heuristics. Naive
-training of a ranker on this with online RL would extrapolate to candidates the
-recruiters never advanced. IQL is the right hammer: train $V(c,j)$ on \emph{the
-expectile of recruiter outcomes} and extract a soft ranker via AWR. The conservatism
-of $V$ at $\tau \approx 0.8$ tracks ``best plausible recruiter outcome'' instead of
-``best imagined outcome''. The KL constraint then bounds how aggressively the
-suggested ranking can deviate from what recruiters historically did --- crucial for
-both EEOC explainability and for keeping the change manageable in production.
+\textbf{Synthetic recruitment matching from logs.} Consider recorded candidate,
+job, action and outcome tuples. IQL can illustrate value regression and
+weighted policy extraction on those logged actions. Its expectile is an
+asymmetric summary of fitted Q-values, not a confidence bound, a fairness
+measure or a verified best plausible outcome. A KL penalty controls one
+notion of policy change; it does not establish explainability or legal
+compliance. Historical selection, missing outcomes and support need their
+own analysis.
+
 \end{matching}
 
 \chapter{Exercises}

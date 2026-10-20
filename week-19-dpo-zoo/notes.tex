@@ -86,7 +86,7 @@ that all aim to be \emph{DPO without one of its problems}:
   \item \textbf{IPO} (\textsc{Azar et al.\ 2024}, AISTATS) replaces
         the sigmoid with a squared loss. DPO's sigmoid saturates as
         the implied probability tends to 1; IPO does not, so it
-        cannot push $\beta$ to infinity on deterministic preferences.
+        has a finite isolated-pair margin target at fixed $\beta$; this does not by itself guarantee a unique policy or a hard KL bound.
   \item \textbf{KTO} (\textsc{Ethayarajh et al.\ 2024}) drops the
         \emph{pair} requirement. A Kahneman--Tversky prospect-theory
         utility lets us learn from unpaired ``thumbs-up / thumbs-down''
@@ -100,7 +100,7 @@ that all aim to be \emph{DPO without one of its problems}:
         response.
   \item \textbf{CPO} (\textsc{Xu et al.\ 2024}, MT-focused) does
         contrastive log-ratio + SFT NLL without a reference model.
-        Halves memory.
+        Removing reference-model computation changes one memory component; total memory depends on the full training setup.
   \item \textbf{sDPO / iterative DPO} (week~20) refreshes the
         reference policy along the way.
 \end{itemize}
@@ -221,17 +221,19 @@ by Kahneman--Tversky utility on \emph{unpaired} binary feedback
 $z \in \{+, -\}$:
 \begin{equation}
 \mathcal{L}_{\text{KTO}}(\theta) =
-  \E_{(x, y, z)}\!\left[\lambda_z \cdot v\!\left(\beta\,(\hat r_\theta(x, y) - z_{\text{ref}})\right)\right],
+  \E_{(x, y, z)}\!\left[\lambda_z \left[1-u_z\!\left(\beta\,(\ell_\theta(x, y) - z_{\text{ref}})\right)\right]\right],
 \label{eq:kto}
 \end{equation}
-where $z_{\text{ref}}$ is a prospect-theory \emph{reference point}
-(an estimate of $\E[\KL(\pi_\theta \| \pi_{\text{ref}})]$ on a disjoint
-batch) and $v$ is a concave-on-gains, convex-on-losses utility ---
-in the TRL implementation, $v(u) = 1 - \sigma(u)$ for desirable
-samples and $v(u) = 1 - \sigma(-u)$ for undesirable, with weight
-parameters $\lambda_+$ and $\lambda_-$ separately controlling
-gain-asymmetry. The practical payoff: a thumbs-up / thumbs-down log
-collected in production is now a usable training signal.
+where $\ell_\theta=\log(\pi_\theta/\pi_{\mathrm{ref}})$ is the unscaled log-ratio and $z_{\text{ref}}$ is a prospect-theory \emph{reference point}
+(a KL reference-point estimate). Define desirable utility
+$u_+(t)=\sigma(t)$ and undesirable utility $u_-(t)=\sigma(-t)$.
+The loss is $1-u_z$, not the utility itself; negating the utility reverses
+its curvature. The nonnegative weights $\lambda_+,\lambda_-$ control the
+relative contribution of the two label types. A thumbs-up/down log can
+supply labels when their semantics and exposure process are understood.
+The toy trainer uses a clipped in-batch off-policy log-ratio mean as its
+reference-point proxy. It does not implement the paper's separate
+KL-estimation procedure.
 
 \section{ORPO --- monolithic, reference-free}
 
@@ -239,19 +241,21 @@ ORPO (\textsc{Hong et al.\ 2024}) drops the reference policy and fuses
 preference learning with SFT in a single backward pass:
 \begin{equation}
 \mathcal{L}_{\text{ORPO}}(\theta) =
-  \underbrace{\E[-\log\pi_\theta(y_w \given x)]}_{\text{SFT NLL on winners}}
-  - \beta\,\E\!\left[\log\sigma\!\left(\log\frac{\mathrm{odds}\,\pi_\theta(y_w \given x)}{\mathrm{odds}\,\pi_\theta(y_l \given x)}\right)\right],
+  \underbrace{\E[-\bar\ell_\theta(y_w \given x)]}_{\text{mean-token NLL on winners}}
+  - \beta\,\E\!\left[\log\sigma\!\left(\log\frac{\mathrm{odds}\,p_\theta(y_w \given x)}{\mathrm{odds}\,p_\theta(y_l \given x)}\right)\right],
 \label{eq:orpo}
 \end{equation}
-with $\mathrm{odds}\,p = p/(1 - p)$. The odds-ratio penalty is
-chosen because the gradient of $\log(p/(1-p))$ stays well-behaved
-near $p = 1$ (unlike the plain log-likelihood), and the SFT term
-provides an absolute anchor (winners get more probable, not just
-relatively).
+Here $\bar\ell_\theta(y\mid x)=|y|^{-1}\log\pi_\theta(y\mid x)$,
+$p_\theta(y\mid x)=\exp\bar\ell_\theta(y\mid x)$ and
+$\mathrm{odds}\,p=p/(1-p)$. The odds use the geometric-mean token score,
+not the sequence probability. Equation~\eqref{eq:orpo} therefore uses mean-token quantities in both terms. The implementation
+passes \texttt{-nll\_w} and \texttt{-nll\_l} to \texttt{orpo\_loss}.
+The derivative of $\log(p/(1-p))$ is $1/[p(1-p)]$, so it becomes
+singular near the endpoints; log-space computation is essential.
 
 \begin{remark}[Numerical note]
 Computing $\log\mathrm{odds}$ in log-space requires
-$\log(1 - e^{\log p})$ which underflows for $\log p \in [-10^{-3}, 0]$.
+$\log(1 - e^{\log p})$ which suffers cancellation for $\log p$ close to zero.
 Use the Mächler trick:
 $\log(1 - e^x) = \log(-\mathrm{expm1}(x))$ for $x > \log(1/2)$,
 $= \log_1p(-e^x)$ otherwise.
@@ -274,12 +278,12 @@ $\gamma$ is a target margin (typically $1.0$). Three design
 implications:
 \begin{itemize}[leftmargin=*]
   \item Reference-free: $\pi_{\text{ref}}$ vanishes.
-  \item Length-normalised: long bad sequences and short bad sequences
-        get the \emph{same} loss-per-token penalty --- this is the
-        fix for DPO's length bias.
-  \item Calibrated margin: $\gamma$ provides a non-zero target
-        margin, so SimPO does not push every chosen sequence to
-        probability one.
+  \item Length-normalised: compare average token log probabilities.
+        This changes length weighting but does not guarantee unbiased quality.
+  \item Margin offset: $\gamma$ shifts the logistic comparison threshold.
+        Unlike IPO\textquotesingle s square, it does not create a finite
+        minimising margin for a separable unconstrained pair.
+
 \end{itemize}
 
 \begin{pitfall}
@@ -345,8 +349,7 @@ $\pi_\theta \gets \pi_{\text{ref}}$ \tcp*{warm start from SFT}
 \paragraph{Complexity.} Each preference step requires two forwards
 on $\pi_\theta$ (one for $y_w$, one for $y_l$) and, for
 ref-using variants, two more on $\pi_{\text{ref}}$. No rollouts, no
-critic, no separate reward model: this is the entire reason DPO is
-4--8$\times$ cheaper than PPO in practice.
+critic, or separately fitted reward model in the basic offline DPO step. Runtime comparisons depend on model size, caching, generated tokens and the evaluation protocol; the toy does not establish a universal speedup.
 
 \section{A worked numerical example}
 
@@ -427,37 +430,12 @@ def orpo_loss(logp_w, logp_l, nll_w, beta=0.1):
 \end{minted}
 \end{codebox}
 
-\paragraph{TRL on Qwen-2.5-0.5B (24~GB GPU).} Once you have a
-preference dataset on disk:
-\begin{codebox}
-\begin{minted}{python}
-from trl import DPOTrainer, DPOConfig
-from peft import LoraConfig
-
-trainer = DPOTrainer(
-    model="Qwen/Qwen2.5-0.5B-Instruct",
-    ref_model=None,                       # set to None when loss_type='simpo'
-    args=DPOConfig(
-        loss_type="sigmoid",              # 'sigmoid'=DPO, 'ipo', 'kto_pair',
-                                          # 'simpo', 'cpo', 'orpo'
-        beta=0.1,
-        max_length=512,
-        per_device_train_batch_size=4,
-        gradient_accumulation_steps=8,
-        learning_rate=1e-4,
-        bf16=True,
-        output_dir="runs/dpo",
-    ),
-    train_dataset=ultrafeedback_subset,
-    peft_config=LoraConfig(r=16, lora_alpha=32,
-                            target_modules=["q_proj","k_proj","v_proj","o_proj"]),
-)
-trainer.train()
-\end{minted}
-\end{codebox}
-A 500-step run on $\sim$2 k preference pairs from
-\texttt{trl-lib/ultrafeedback\_binarized} converges in about 30
-minutes on an RTX 4090.
+\paragraph{Use the maintained pretrained-model lab.}
+Follow \href{../llm-lab/README.md}{\texttt{llm-lab/README.md}} and its
+Jupyter workbook for executable SFT/DPO, completion masking and save/reload.
+Different preference methods do not share every trainer configuration key.
+The six-loss toy project is the inspectable mathematical comparison; it does
+not certify an arbitrary current TRL API or a fixed GPU training time.
 
 \chapter{Empirical results}
 
@@ -485,9 +463,7 @@ ranking.}
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.95\linewidth]{figs/fig_margin.pdf}
-\caption{Implicit reward margin (chosen minus rejected). Higher and
-faster-growing is better; IPO targets a finite margin and plateaus,
-DPO grows unboundedly.}
+\caption{Implicit reward margin (chosen minus rejected). Margins have method-specific scales and are not a quality ranking. IPO has a finite isolated-pair target; separable DPO margins can keep growing without improving held-out quality.}
 \label{fig:margin}
 \end{figure}
 
@@ -508,14 +484,11 @@ a fixed target; the hinge is piecewise linear.}
 \label{fig:links2}
 \end{figure}
 
-\paragraph{Notes on the bake-off.} The toy dataset is so easy that
-all six variants reach near-perfect pairwise accuracy. On real data
-(\texttt{ultrafeedback}, \texttt{hh-rlhf}, etc.) the ordering matches
-the literature: SimPO and IPO tend to lead on AlpacaEval-2; ORPO is
-strongest in low-resource one-stage settings; KTO is the only one
-that works when you have no pairs. The toy bake-off here is meant to
-demonstrate \emph{that the losses train at all} and let the student
-inspect implementation details, not to rank methods.
+\paragraph{Notes on the bake-off.} The toy preference set checks that the
+losses can be inspected and trained. Pairwise training accuracy, response
+likelihood and judged response quality are different quantities. Use fresh
+prompts and held-out labels before comparing methods; no fixed leaderboard
+ordering is claimed by this miniature experiment.
 
 \chapter{Theoretical deepening and FAQ}
 
@@ -577,61 +550,26 @@ The policy regularisation strength $\beta$ expresses a reward--drift
 trade-off; it is not determined by reference-policy likelihood differences
 alone. There is no universal value of $\beta$ whose violation proves a bug.
 
-\section{The DPO/SimPO ``win-rate gap'' explained}
+\section{Length normalisation and evaluation answer different questions}
+SimPO trains on mean token log probabilities. A length-controlled judge metric
+statistically adjusts a comparison for response length. These are not the same
+objective, and autoregressive sampling does not generally rank responses by
+perplexity. Compare length distributions, independent quality and likelihood
+separately; a lower preference loss is not proof of better human evaluation.
 
-A persistent empirical observation: SimPO posts higher AlpacaEval-2
-length-controlled win rates than DPO at the same compute. Why?
-
-Decompose AlpacaEval-2's ``length-controlled'' metric into raw
-quality and a length-correlation correction. DPO trains on the
-\emph{sum} log-prob, which has length-$|y|$-times the dynamic
-range; the loss therefore rewards verbose winners more than
-concise winners. SimPO normalises by length \emph{exactly}
-matching the eval metric. So SimPO is, in a sense, ``tuned to the
-benchmark''. The deeper claim --- that SimPO is also better in
-human studies, not just on AlpacaEval --- is supported but not
-ironclad.
-
-\section{Q\&A: ten questions practitioners actually ask}
-
+\section{Questions to ask before training}
 \begin{description}
-  \item[Q1. Do I still need SFT before DPO?]
-    Almost always yes. DPO from base inherits the base model's
-    refusal patterns. Warm-start from SFT.
-  \item[Q2. Do I need to keep $\pi_{\text{ref}}$ in fp32?]
-    bf16 is fine for the reference. Numerical stability is dominated
-    by the log-ratio difference, not the absolute log-probs.
-  \item[Q3. Can I do DPO on completion-only loss (mask out the prompt)?]
-    Yes, and you should. Including prompt tokens in the log-prob
-    sum biases DPO toward long prompts.
-  \item[Q4. Should I normalise the log-prob by completion length?]
-    For DPO: only if you have length bias. For SimPO: that is
-    the whole point. For IPO: not by default, but it helps.
-  \item[Q5. Can I mix preference pairs from different sources?]
-    Yes, but track per-source pairwise accuracy. Sources with
-    contradictory preferences (one annotator pool prefers concise,
-    another prefers verbose) will confuse the model.
-  \item[Q6. How many pairs is ``enough''?]
-    A few thousand for a 0.5--1.5B model; tens of thousands for
-    7B--70B. Quality dominates quantity; \textsc{Tülu-3} uses
-    $\sim$110k carefully curated pairs.
-  \item[Q7. Can I combine DPO with RLVR?]
-    Yes. \textsc{Tülu-3}'s recipe is SFT $\to$ DPO $\to$ RLVR-PPO.
-    DPO does the preference polish; RLVR does the verifiable
-    reasoning push.
-  \item[Q8. Does DPO inherit reward hacking?]
-    Not in the classical sense --- there is no reward model to hack
-    --- but it inherits \emph{likelihood displacement}, which is
-    behaviorally similar.
-  \item[Q9. Why does IPO seem better in some papers and worse in others?]
-    IPO shines when preferences are noisy or partially saturated;
-    DPO shines when preferences are clean and the model has room
-    to grow. The community consensus in 2026 is ``try both, IPO
-    is more robust''.
-  \item[Q10. Should I use iterative DPO?]
-    For production, yes --- distribution shift is real and the
-    single-shot DPO loss does not see it. Two or three iterations
-    typically capture most of the benefit.
+\item[Which tokens enter the loss?] Use the completion probability conditioned
+on the prompt. Prompt terms cancel algebraically in a perfectly matched pair,
+but masking makes the intended objective explicit and avoids accidental
+length-dependent reductions.
+\item[What is fixed?] Record reference checkpoint, log-probability reduction,
+$\beta$, optimiser and preference-data source. Reference-free methods still
+need explicit normalisation and evaluation choices.
+\item[What does a good margin prove?] Agreement with the comparison labels on
+those inputs. It does not establish absolute response quality or calibration.
+\item[Should data be refreshed?] New policy samples can expose coverage gaps.
+Relabelling and reference refresh are distinct changes that need ablations.
 \end{description}
 
 \section{A second worked numerical example: SimPO step}
@@ -807,7 +745,7 @@ $\mathcal{L} \gets (d - 1/(2\beta))^2$ \;
 
 \begin{algorithm}[H]
 \SetAlgoLined\DontPrintSemicolon
-\KwIn{batch $(x, y, z)$ with $z \in \{+, -\}$; $\pi_\theta$, $\pi_{\text{ref}}$;
+\KwIn{batch $(x, y, z)$ with $z \in \{0,1\}$ (1 means desirable); $\pi_\theta$, $\pi_{\text{ref}}$;
        $\beta$, $\lambda_+$, $\lambda_-$, running estimate $z_{\text{ref}}$}
 $\ell \gets \log\pi_\theta(y \given x);\quad \ell^{\text{ref}} \gets \log\pi_{\text{ref}}(y \given x)$ \;
 $d \gets \beta\cdot((\ell - \ell^{\text{ref}}) - z_{\text{ref}})$ \;
@@ -819,7 +757,7 @@ $\mathcal{L} \gets z \cdot \lambda_+ (1 - \sigma(d)) + (1 - z) \cdot \lambda_- (
 \begin{algorithm}[H]
 \SetAlgoLined\DontPrintSemicolon
 \KwIn{batch $(x, y_w, y_l)$; $\pi_\theta$; $\beta$}
-$\ell_w, \ell_l \gets \log\pi_\theta(y_w, y_l \given x)$ \;
+$\ell_w \gets |y_w|^{-1}\log\pi_\theta(y_w\given x)$; $\ell_l \gets |y_l|^{-1}\log\pi_\theta(y_l\given x)$ \;
 $\mathrm{lo}_w \gets \ell_w - \log(1 - e^{\ell_w})$ \tcp*{stable via log1mexp}
 $\mathrm{lo}_l \gets \ell_l - \log(1 - e^{\ell_l})$ \;
 $\mathcal{L} \gets -\ell_w - \beta \log\sigma(\mathrm{lo}_w - \mathrm{lo}_l)$ \tcp*{NLL + odds-ratio}
@@ -922,25 +860,13 @@ Jul 2024 & sDPO   & stepwise reference refresh \\
 \end{tabular}
 \end{center}
 
-By late 2024 the field had converged on a stable hierarchy:
-\textbf{SimPO} as the strongest reference-free single-stage baseline,
-\textbf{DPO} as the reference for theoretical analysis, \textbf{KTO}
-for the practical case of unpaired signal, and \textbf{iterative
-DPO / sDPO} for closing the distribution-shift gap.
-
-\section{Where DPO did not win}
-
-DPO's reign was contested on one major front: reasoning. By 2025,
-verifiable-reward RL (GRPO, RLOO, DAPO --- week 20) had emerged as
-the dominant paradigm for math and code, with DPO relegated to a
-``preference polish'' step at the start or end of the recipe.
-Tülu-3 and DeepSeek-R1's training pipelines both use DPO once and
-then dive into RLVR.
-
-The lesson: DPO is fantastic for \emph{style, helpfulness, tone,
-refusal} --- the genuinely subjective dimensions where pairwise
-human preferences are the gold standard. It is the wrong tool when
-you can write a verifier.
+These methods address different supervision and normalisation choices;
+there is no permanent ranking independent of model, data and evaluation.
+T\"ulu 3 combines SFT, preference optimisation and RL with verifiable rewards.
+DeepSeek-R1 has a different multi-stage recipe; it should not be described
+as using DPO merely because both systems use post-training. A verifier can
+supply pair labels as well as online rewards, so DPO is not categorically
+invalid when a verifier exists.
 
 \chapter{Further reading}
 

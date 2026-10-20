@@ -47,8 +47,7 @@ By the end of this lecture you will be able to:
 
 \section{When constraints don't go far enough}
 
-Week 22's Lagrangian methods give us asymptotic constraint satisfaction --- in
-the limit, $J_c(\pi^\star) \leq d$. But the policy is allowed to violate the
+Week 22's ideal constrained optimum satisfies $J_c(\pi^\star)\leq d$. An iterative Lagrangian learner approaches such an optimum only under additional feasibility, estimation and optimisation assumptions. But the policy is allowed to violate the
 constraint along the way. For aerial vehicles, surgical robots, and
 re-ranking systems with hard fairness mandates, ``asymptotic'' isn't enough.
 We need to prevent unsafe transitions \emph{during training, including the
@@ -160,9 +159,7 @@ $\varphi$.
 For stochastic dynamics a robust shield must check every possible successor
 and keep the next state in a controllable safe set. For learned $M$,
 additional coverage assumptions are required; soundness is not automatic: the shield is correct on the support of $M$, and
-mis-modelling drives a violation probability. Learning-based shields
-(\textsc{arXiv:2410.07359}, Oct 2024) bound this probability via concentration
-inequalities on the learned model.
+mis-modelling drives a violation probability. Reed and Lahijanian (arXiv:2410.07359) combine deep-kernel learning with interval-MDP abstractions; their probabilistic assurance depends on the learned uncertainty bounds and synthesis assumptions.
 \end{remark}
 
 \begin{pitfall}
@@ -175,17 +172,22 @@ expand the spec to include a recovery clause; (iii) fail-safe by stopping.
 
 \section{Safety layer (Dalal et al.\ 2018)}
 
-For continuous actions and a single linear constraint $g(s) + \nabla g(s)^\top a \leq 0$,
-the safety layer solves
+For a continuous action $a\in\Real^m$, write a local affine constraint as
+$b(s)+w(s)^\top a\leq0$, where $w(s)\in\Real^m$ is the derivative with
+respect to the \emph{action}. It need not equal a gradient with respect to
+state. The safety layer solves
 \[
-   a^\star = \argmin_a \|a - a_\pi\|^2 \quad\text{s.t.}\quad g(s) + \nabla g(s)^\top a \leq 0.
+ a^\star=\argmin_a\|a-a_\pi\|^2\quad\text{s.t.}\quad b+w^\top a\leq0.
 \]
-For a single linear constraint the closed-form projection is
+For $w\ne0$, its projection is
 \begin{equation}\label{eq:dalal-projection}
-   a^\star = a_\pi - \max\!\left(0, \frac{g(s) + \nabla g(s)^\top a_\pi}{\|\nabla g(s)\|^2}\right) \nabla g(s).
+ a^\star=a_\pi-\frac{\max(0,b+w^\top a_\pi)}{\|w\|^2}w.
 \end{equation}
-For multiple constraints, OptNet-style differentiable QPs (Amos \& Kolter
-2017) make $\partial a^\star/\partial \theta$ usable as a backward layer.
+If $w=0$, every action is feasible when $b\leq0$ and none is feasible when
+$b>0$; dividing by a tiny epsilon does not fix the latter problem. Additional
+action bounds or multiple constraints require a feasible joint projection.
+A linearisation or learned constraint provides only the assurance justified
+by its approximation error.
 
 \section{Control Barrier Functions}
 
@@ -199,7 +201,7 @@ there exists a class-$\mathcal{K}$ function $\alpha$ such that
 \end{definition}
 
 \begin{theorem}[Forward invariance]\label{thm:cbf-invariance}
-If $a(t)$ is any control law that for all $t$ satisfies
+Assume locally Lipschitz dynamics and a well-posed, forward-complete closed-loop trajectory, a feasible admissible control, and the regularity needed for the comparison argument. If that control law for all continuous times satisfies
 $\nabla h(s)^\top f(s) + \nabla h(s)^\top g(s)\, a \geq -\alpha(h(s))$, then
 $h(s(t)) \geq 0$ for all $t \geq 0$ provided $h(s(0)) \geq 0$.
 \end{theorem}
@@ -216,15 +218,18 @@ The runtime safety filter is a per-step QP:
    a^\star(s) = \argmin_a \|a - a_\pi(s)\|^2
    \quad\text{s.t.}\quad \nabla h(s)^\top g(s) a \geq -\alpha(h(s)) - \nabla h(s)^\top f(s).
 \end{equation}
-For a 1-D constraint this is again the closed-form projection of
-\cref{eq:dalal-projection}, with $g(s) := \nabla h(s)^\top g(s)$ and
-$b := -\alpha(h(s)) - \nabla h(s)^\top f(s)$.
+For a single scalar inequality, set $w=-g(s)^\top\nabla h(s)$ and
+$b=-\alpha(h(s))-\nabla h(s)^\top f(s)$ in
+\cref{eq:dalal-projection}. This converts the lower-bound CBF inequality
+to $b+w^\top a\leq0$. Actuator limits may make it infeasible.
+Continuous-time invariance is not automatically preserved by a discrete,
+sampled controller or an inaccurate model.
 
 \begin{remark}
-HJ-reachability and CBF are duals: HJ gives the largest CBF-like function
-analytically by solving an HJI PDE; CBF chooses a simpler analytic $h$ and
-checks the inequality. \textsc{arXiv:2204.12507} (2022, extended 2024)
-iteratively refines $h$ using HJ.
+HJ reachability can construct safe sets and value functions related to
+barrier certificates under suitable formulations. It is not a universal
+identity between every HJ value function and every CBF. A chosen analytic
+barrier still requires its own feasibility and invariance checks.
 \end{remark}
 
 \section{Robust RL: domain randomisation and adversarial training}
@@ -243,11 +248,12 @@ $(s, a)$) the robust Bellman operator $T_{\text{rob}}$ is a $\gamma$-contraction
 so robust value iteration converges (\textsc{Iyengar 2005}; \textsc{Nilim \&
 El Ghaoui 2005}).
 
-\textbf{Domain randomisation} (DR; \textsc{Tobin et al.\ 2017}, arXiv:1703.06907)
-side-steps the inner $\inf_P$ by sampling $P \sim \mathcal{D}$ during training
-and maximising the \emph{average} return. This is robust-on-average rather
-than robust-worst-case, but in practice frequently outperforms more careful
-robust algorithms for sim-to-real.
+\textbf{Domain randomisation} samples simulation parameters during training
+and optimises average return under that sampling distribution. This differs
+from the worst-case objective above. Tobin et al.\ (2017,
+arXiv:1703.06907) demonstrate visual randomisation for object localisation;
+the pendulum exercise instead randomises physical dynamics. Either transfer
+claim needs evaluation on held-out shifts, not just training performance.
 
 \textbf{ADR} (Automatic Domain Randomisation; OpenAI 2019, arXiv:1910.07113)
 expands $\mathcal{D}$'s support whenever the agent's performance on the
@@ -271,20 +277,31 @@ $\mathrm{unsafe}(s, a)$.
     \item Build $\epsilon$-greedy preference list $\sigma$ over actions.
     \item Filter: $a \leftarrow \text{first}\, a \in \sigma$ with $\neg\mathrm{unsafe}(s, a)$.
     \item Step env: $(s', r, \text{done}) = \mathcal{M}.\text{step}(a)$.
-    \item Update: $Q(s, a) \leftarrow Q(s, a) + \alpha (r + \gamma \max_{a'} Q(s', a') - Q(s, a))$.
+    \item Update: $Q(s, a) \leftarrow Q(s, a) + \alpha (r + \gamma(1-\mathbb{1}_{\mathrm{terminal}})\max_{a'\in\mathrm{safe}(s')} Q(s', a') - Q(s, a))$.
     \item $s \leftarrow s'$.
   \end{enumerate}
 \end{enumerate}
 \textbf{Invariant:} the trace never visits a danger cell (\cref{thm:shield-sound}).
 \end{tcolorbox}
 
+\paragraph{Implementation boundary.}
+The pseudocode above uses the Bellman maximum over safe next actions.
+The shipped \texttt{project/q\_learn.py} instead masks executed actions and
+uses an unrestricted next-action maximum in \texttt{QLearner.update}.
+Unsafe actions can therefore retain optimistic values that distort the
+bootstrap, even while the exact execution shield prevents their use.
+Compare both targets in the workbook; do not claim the unmasked learner
+solves the constrained Bellman equation. Its terminal mask is present.
+The filter also chooses the first admissible action in a preference order;
+this is not generally identical to sampling a renormalised masked policy.
+
 \section{Safety-layer pseudocode (continuous control)}
 
 \begin{tcolorbox}[colback=mintedbg, colframe=rlgray!50, title=\textbf{Algorithm: Safety layer wrapper}]
 \begin{enumerate}[leftmargin=*]
   \item Forward through actor: $a_\pi = \pi_\theta(s)$.
-  \item Compute $g(s)$ (constraint value) and $\nabla g(s)$ (its gradient).
-  \item Project: $a = a_\pi - \max(0, (g + \nabla g^\top a_\pi)/\|\nabla g\|^2) \nabla g$.
+  \item Compute the affine action-constraint coefficients $b(s),w(s)$ and check feasibility.
+  \item For $w\ne0$, project: $a=a_\pi-\max(0,b+w^\top a_\pi)w/\|w\|^2$; handle $w=0$ explicitly.
   \item Step env with $a$; record $(s, a, r, s')$; backprop through the
         projection.
 \end{enumerate}
@@ -435,14 +452,15 @@ operating as a post-filter on the ranking policy's top-$K$ output. The
 the safety automaton is the verbalised hiring policy compiled into a
 checker.
 
-For synthetic insurance lead-matching, a CBF-style filter caps a single broker's daily
-allocation: $h(s) = q_{max} - n_{assigned}(s) \geq 0$. The runtime QP enforces
-the cap in real time, no matter what the underlying ranking model wants.
+For synthetic insurance lead routing, a discrete capacity shield checks
+$n_{\mathrm{assigned}}+a\leq q_{\max}$ before assigning $a\in\{0,1\}$.
+This elementary discrete invariant is not an application of a continuous-time
+CBF theorem. Correct counts and atomic updates matter if decisions overlap.
 
-Domain randomisation generalises to \emph{population shift}: train the
-re-ranker on a randomised mix of recruiter-quality profiles, candidate-supply
-shapes, and seasonal cohorts. The resulting policy is robust to month-to-month
-distribution drift in the live system without retraining.
+Randomising population mix can be a useful stress test. Robustness to
+month-to-month shifts must be evaluated on held-out distributions; training
+on randomised cohorts does not guarantee it.
+
 \end{matching}
 
 \chapter{Exercises}

@@ -32,6 +32,33 @@ A supported reward estimate still needs valid logging assumptions; measured aver
 **Carry it onward:** [Week 25](../week-25-synthetic-ats-rl-audit/teaching_guide.md) turns this evidence table into a bounded application audit.
 
 
+## Choose your explanation depth
+
+Why a fairness number needs a denominator and an owner. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+A batch probability gap measures what the policy expects to recommend on those contexts. A realised window gap measures sampled decisions. A share among selected applicants measures something else again. Their differences are part of the interpretation, not rounding errors.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+Suppose group 0 has **50** eligible people and group 1 has **100**. Selecting **40 from each** creates equal selected counts, but conditional selection rates are **0.8** and **0.4**, a parity gap of **0.4**. The equal 50/50 shares among selected people conceal that difference.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+For batch recommendation probabilities $p_i=\pi_\theta(1\mid x_i)$ and positive group counts $n_g$, define $\bar p_g=\sum_{i:g_i=g}p_i/n_g$ and $C(\theta)=|\bar p_0-\bar p_1|$. Its gradient away from equality differentiates these probabilities, not sampled actions. The shipped actor penalty and dual update use this same batch surrogate. Missing a group makes a conditional rate unidentifiable in that batch; a finite-batch gap is not a population guarantee.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 6: end-to-end audit](workbook.ipynb#cell-21) and `project.solutions.exercise_6`. Before running it, hand-check the **0.4** rate gap above and label every returned metric by policy, population and denominator. Inspect `expected_parity_gap` in `project/online_ppo_lag.py` and compare it with the realised window statistic. [Exercise 7](workbook.ipynb#cell-24) is a protected-feature sensitivity probe; flipping a feature is not automatically a valid causal intervention or a proof of fairness.
+
 ## Mechanism at a glance
 
 ```mermaid

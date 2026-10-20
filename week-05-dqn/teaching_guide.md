@@ -178,6 +178,33 @@ $1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
 flag for this mask and either flag to reset the environment.
 See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
 
+## Choose your explanation depth: Why a DQN target is held fixed during its update
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+The online network is being asked to predict a target. If the optimiser also moves the target through the same gradient, it is solving a different problem. Replay selects the examples; the target network supplies a slower-moving continuation estimate.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+For reward 1, discount 0.9 and maximum target-network value 4, a nonterminal target is 4.6. If the online selected-action prediction is 2, the prediction error is 2.6. For the same reward at a true terminal transition, the target is 1 regardless of the next-state network output.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+With $y=r+\gamma(1-d)\max_aQ_{\bar\theta}(s\prime,a)$ and half-squared loss $L=(Q_\theta(s,a)-y)^2/2$, the semi-gradient is $(Q_\theta-y)\nabla_\theta Q_\theta$ when $y$ is detached. The target parameters $\bar\theta$ are held fixed for that optimiser step. Huber loss changes the influence of large residuals. This setup does not turn nonlinear off-policy learning into a contraction theorem; replay and target updates are stabilising design choices with empirical limits.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_2_dqn_target` in the workbook](workbook.ipynb#cell-11), then run the setup cells above it. Expect 4.6 and 1 for nonterminal and terminal cases. Check selected Q has shape `[batch]`; broadcasting it against `[batch,1]` can produce an unintended pairwise loss.
+
 ## Notebook investigation: make a batch-shape bug visible
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 6**.

@@ -179,10 +179,10 @@ landscapes, large $\Disc$ with sparse reward) still need extra care.
 
 \begin{pitfall}
 Sampling uniformly from $\mathcal{D}$ is not actually i.i.d.\ in the statistical sense:
-the buffer's distribution shifts as the policy improves and old transitions evict. A
-buffer that is too small produces stale targets; too large makes it slow to react to
-on-policy improvements. The Sutton/Barto rule of thumb of $10^5$ on small tasks and
-$10^6$ on Atari has held up.
+the buffer's distribution shifts as the policy improves and old transitions evict. A small buffer provides less diversity and retains transitions for fewer
+updates; a large buffer includes older-policy data. Target staleness depends
+on target-update timing. Buffer size is an empirical choice, not a universal
+textbook rule.
 \end{pitfall}
 
 \section{Q-value drift and overestimation}
@@ -224,8 +224,10 @@ Initialise $\theta$; copy $\theta^- \leftarrow \theta$; $\mathcal{D} \leftarrow 
 \paragraph{Complexity.} Per env step: one forward pass on the policy net (for $a$), one
 batch forward-backward on the policy net + one forward on the target net for learning.
 Memory: $|\mathcal D| \cdot (2 \cdot \dim(\States) + 3)$ floats for the buffer, plus
-network params. On LunarLander (8-D obs) a $10^5$ buffer is roughly 6.5 MB; on Atari (84
-x 84 x 4 uint8 frames) the same is roughly 7 GB and requires stacking and frame skipping.
+network params. Under this float32 layout, an 8-D observation and $10^5$ entries use
+$10^5(2\cdot8+3)4=7.6$ MB before container overhead. Storing both
+current and next $84\times84\times4$ uint8 stacks naively uses about
+5.64 GB; frame-sharing layouts can reduce that duplication.
 
 \begin{example}[A worked DQN step on LunarLander]
 $s = (1.2, 0.5, 0.0, 0.0, -0.1, 0.0, 0, 0)$ (centred, mid-air). $a = 2$ (main engine).
@@ -292,7 +294,8 @@ Two implementation traps cost most beginners a day each:
 \textbf{(i)} forgetting to put $\theta^-$ in \texttt{torch.no\_grad()} and watching memory
 balloon as autograd builds a graph through the target;
 \textbf{(ii)} using \texttt{.gather(1, a)} without first \texttt{.unsqueeze(1)} on the
-action tensor, silently picking $\Qfn(s,a_0)$ for all batch elements.
+action tensor, causing a rank mismatch error; also verify action dtype and each row
+index explicitly.
 \end{pitfall}
 
 \chapter{Empirical results}
@@ -309,9 +312,9 @@ trainer retains bootstrapping at external time-limit truncations.}
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.95\linewidth]{figs/fig_dqn_loss.pdf}
-\caption{Huber loss over training. Note the spikes: each one corresponds to the agent
-discovering a new high-reward region of state-action space where the existing $\Qfn$ is
-maximally wrong. Such spikes are normal --- the long-run trend matters.}
+\caption{Huber loss over training. Spikes can reflect changed samples, target updates, reward scale or
+newly visited states. The loss alone cannot identify their cause; compare
+with return, TD-error and Q-value diagnostics.}
 \end{figure}
 
 \begin{figure}[h]
@@ -337,13 +340,13 @@ are exactly the failure modes that bite in a deployed safety-critical agent:
     (capstone) develop in full.
   \item \textbf{Divergence on distribution shift.} Off-policy + function approximation is
     exactly the regime where a new operating mode (a new lead segment, a new robot
-    payload) silently violates the i.i.d.\ replay assumption. Conservative Q-learning
-    (CQL, Kumar 2020) and IQL (Kostrikov 2022) penalise out-of-distribution actions
-    explicitly to bound this.
+    payload) silently violates the i.i.d.\ replay assumption. Conservative Q-learning (CQL) explicitly regularises values; implicit
+    Q-learning (IQL) instead avoids querying unseen actions in its value
+    learning construction. Neither removes all deployment shift.
   \item \textbf{Optimism near catastrophes.} The max-bias of vanilla Q-learning is a
     one-way error: it overestimates. In a high-cost-asymmetric environment (cliff, robot
-    arm, dose-response) this means the agent's miscalibration always pushes it toward
-    the catastrophe. Distributional value heads (C51, IQN; Week 6) let you read out the
+    arm, dose-response) this can favour an overestimated risky action; it does not imply every value
+    error is positive or every error favours a catastrophe. Distributional value heads (C51, IQN; Week 6) let you read out the
     lower CVaR of the return distribution and pick risk-averse policies; CMDPs (Week 22)
     install hard budgets.
 \end{enumerate}

@@ -1,175 +1,63 @@
 \documentclass[11pt]{scrartcl}
-\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage[a4paper,margin=2.4cm]{geometry}
 \usepackage{../common/rlstudy}
-
-\title{Extended reading --- Week 25: synthetic ATS RL Enhancement Audit}
-\date{\today}
+\title{Week 25 --- Extended Reading: Public synthetic audit: evidence and boundaries}
+\author{STUDY-RL}
+\date{Source audit: 20 October 2026}
 \begin{document}
 \maketitle
+\section*{Read for a claim, an assumption and a test}
+Read the teaching guide first, then use this pack alongside the lecture.
+The annotations below are course-written paraphrases and investigation prompts,
+not quotations from the papers. Each source link identifies a primary paper
+or official guidance. Benchmark results do not transfer automatically to our
+small exercises. For each reading, write the mathematical object, the needed
+assumptions and one observation that would challenge your interpretation.
 
-\section*{Six papers to read this week}
+\section{Joachims, Swaminathan and de Rijke (2018): BanditNet}
+\noindent\textbf{Primary source.} \url{https://www.cs.cornell.edu/~tj/publications/joachims_etal_18a.pdf}
 
-The six papers below are the spine of the audit's argument: counterfactual
-learning to rank, fair re-ranking in talent search, the LinTS analysis
-that justifies our Phase-1 algorithm choice, DPO for the LLM components,
-PPO-Lagrangian for the constrained variant, and the EU AI Act
-high-risk-system obligations as they bear on recruitment platforms.
+\paragraph{Mechanism and scope.} Deep Learning with Logged Bandit Feedback studies learning from partial feedback with logged propensities. The author-hosted paper is the correct source; arXiv:1707.07875 is an unrelated mathematics paper and must not be used for this citation.
 
-\subsection*{1. Joachims, Swaminathan, de Rijke --- \emph{Deep Learning with Logged Bandit Feedback} (ICLR 2018, arXiv:1707.07875)}
+\paragraph{Read, derive, investigate.} Explain the difference between a logged randomised display action and a later human decision. Which probability belongs in the weight? A neural policy trained from bandit logs is not automatically a sequential RL system.
 
-Introduces \textbf{BanditNet}, a counterfactual-risk-minimisation
-estimator that lets neural networks be trained directly from logged
-bandit feedback without an interaction loop. The key insight is the
-self-normalised IPS objective with a variance-regularisation term.
+\section{Geyik, Ambler and Kenthapadi (2019): Fair ranking}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1905.01989}
 
-\textbf{Why it matters this week.} The Phase-1 reranker is exactly this
-setting --- we have logged ranking decisions and propensities, we want
-to train a model offline without re-running the recruiter loop. The
-SNIPS variant we use in \texttt{project/ope.py} is the same estimator
-BanditNet builds its loss around.
+\paragraph{Mechanism and scope.} The paper studies ranking fairness with representation requirements and an application to talent search. Its definition and evaluation population are part of the result; they are not interchangeable with every employment fairness measure.
 
-\begin{quote}
-``We propose Counterfactual Risk Minimization (CRM) for training deep
-networks using batch logged bandit feedback. Our experiments show that
-the proposed CRM objective with the self-normalised estimator and a
-variance regulariser significantly outperforms approaches that maximise
-predictive likelihood or use the naive IPS estimator.''
-\end{quote}
+\paragraph{Read, derive, investigate.} Compare a share among the top ten with a group-conditional selection rate among eligible candidates. Use unequal eligible group sizes to show that equal selected counts can still produce different rates. Our constrained toy reports selected shares and should be labelled accordingly.
 
-\emph{Commentary.} The variance regularisation is the practical bit.
-A pure SNIPS objective will happily converge to a deterministic policy
-even on tiny data, with absurd importance weights. The CRM regulariser
-penalises high-variance solutions and is the reason BanditNet works
-out-of-the-box on real logs. Carry this into any production OPE work.
+\section{Agrawal and Goyal (2013): Linear Thompson sampling}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1209.3352}
 
-\subsection*{2. Geyik, Ambler, Kenthapadi --- \emph{Fairness-Aware Ranking in Search \& Recommendation Systems with Application to LinkedIn Talent Search} (KDD 2019, arXiv:1905.01989)}
+\paragraph{Mechanism and scope.} The paper provides a Thompson-sampling analysis under linear-payoff and noise assumptions. A bandit reduction removes action-dependent future transitions; it does not supply these statistical assumptions for an arbitrary recruiting outcome.
 
-LinkedIn's deployed post-processing reranker that enforces a target
-demographic distribution on the top-$k$. Three algorithms (DetGreedy,
-DetCons, DetRelaxed) trading utility against constraint tightness; the
-authors deployed DetGreedy at scale.
+\paragraph{Read, derive, investigate.} Recompute the four-dimensional posterior example in the lecture. Unobserved coordinates have zero mean but retain prior variance. Separate rank-one update cost from fresh matrix factorisation and candidate scoring cost.
 
-\textbf{Why it matters this week.} This is the closest published
-production reference for what we propose at D1 + the CMDP constraint.
-The audit borrows two of their tricks verbatim: (i) measure parity at
-the top-$k$ slate, not at the full ranking; (ii) treat the
-fairness-utility trade-off as a frontier, not a single point.
+\section{Rafailov et al. (2023): DPO in a larger workflow}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2305.18290}
 
-\begin{quote}
-``We propose a measurement framework for assessing fairness of ranked
-results, [...] and a re-ranking framework that ensures fairness while
-having no significant impact on business metrics.''
-\end{quote}
+\paragraph{Mechanism and scope.} Preference tuning is a possible component of a text-generation workflow. It still needs a defined preference population, supported reference and an independent evaluation of the desired behaviour.
 
-\emph{Commentary.} The ``no significant impact on business metrics''
-clause is the policy-deployment language we need for the Phase-2 go/no-go
-gate. Without an explicit business-metric guarantee, fairness work
-loses internal champions fast. Bake the dual evaluation into the
-roadmap.
+\paragraph{Read, derive, investigate.} At policy equals reference, ordinary DPO gives $\log2$. Does that remain true after adding a nonzero length margin? A preferred outreach message is not necessarily truthful, accessible or effective; list separate tests for those outcomes.
 
-\subsection*{3. Agrawal \& Goyal --- \emph{Thompson Sampling for Contextual Bandits with Linear Payoffs} (ICML 2013, arXiv:1209.3352)}
+\section{Stooke et al. (2020): Constraint feedback}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2007.03964}
 
-Frequentist regret analysis of LinTS. Bounds the probability that a
-sub-optimal arm's posterior dominates the optimal arm's, and yields
-$\tilde O(d^{3/2} \sqrt{T})$ regret.
+\paragraph{Mechanism and scope.} Multiplier feedback is useful for understanding the direction of responses to cost violations. It does not guarantee that every parameterisation, stochastic estimate or infeasible constraint converges.
 
-\textbf{Why it matters this week.} The Phase-1 algorithm. The
-$d^{3/2}$ scaling matters because the candidate-job feature vector is
-$d = 16$ in our demo and would be $d \approx 60{-}100$ in production
-(skill embeddings + agent scores + confidence). LinTS scales gracefully;
-LinUCB needs more care with the confidence ellipsoid radius at large
-$d$.
+\paragraph{Read, derive, investigate.} Explain why an arbitrary fixed penalty does not specify a chosen budget, and why an optimal fixed multiplier can nevertheless recover an ideal constrained optimum. Inspect the actual toy update: it is a heuristic score adjustment, not PPO or a complete PID controller.
 
-\begin{quote}
-``At each time step, the algorithm picks an action by drawing a sample
-from the current posterior distribution over the parameter and choosing
-the action that maximises the expected reward given that sample.''
-\end{quote}
+\section{Official guidance: classification, review and denominators}
+\noindent\textbf{Primary source.} \url{https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai}
 
-\emph{Commentary.} The deceptively simple sample-then-greedy mechanism
-has two industrial virtues that drove its adoption at Yahoo!\ and
-Microsoft: (a) it parallelises trivially (every shard samples its own
-$\tilde\theta$); (b) it remains well-calibrated even when the posterior
-is approximate (e.g.\ Laplace approximation), unlike UCB whose
-confidence ellipsoid degrades sharply.
+\paragraph{Mechanism and scope.} Use official current sources rather than a purported recruitment-specific policy brief. The lecture links the Commission AI Act overview, EDPB-endorsed automated-decision guidance and EEOC selection-procedure guidance, checked 20 October 2026.
 
-\subsection*{4. Rafailov, Sharma, Mitchell, Manning, Ermon, Finn --- \emph{Direct Preference Optimization: Your Language Model is Secretly a Reward Model} (NeurIPS 2023, arXiv:2305.18290)}
+\paragraph{Read, derive, investigate.} Find the exact intended use, jurisdiction, role, application date and denominator before drawing a conclusion. An optimiser's metric is not a legal determination. No private platform, customer log, or former repository history was accessed for this public synthetic case study.
 
-DPO. The paper that replaced RLHF's two-step (reward model $\to$ PPO)
-with a single closed-form preference loss. Eliminates the reward-model
-overfitting failure mode and is far cheaper to train.
+\section*{Connect the reading to your workbook}
+The central audit experiment is identification, not a rollout timetable. For $k=10$ and $\varepsilon=0.05$, derive the exploration floor $0.005$ and maximum deterministic-target weight $200$. Then construct a target action outside the eligible set: more data from the same logger cannot recover its unobserved outcome without additional assumptions. Keep that distinction visible in every OPE report.
 
-\textbf{Why it matters this week.} D5 (outreach copy) and D11 (JD
-polishing) are exactly the regime DPO was designed for: we have logged
-recruiter preferences over pairs of LLM drafts, we want to update the
-draft model to align with those preferences, and we cannot afford a
-full RLHF stack. DPO is the Phase-4 recipe.
-
-\begin{quote}
-``Our experiments show that DPO is at least as good or better than
-existing methods, including PPO-based RLHF, while being substantially
-simpler to implement and train.''
-\end{quote}
-
-\emph{Commentary.} The under-discussed risk with DPO is length bias
-(week 19, week 21): the closed-form solution can drift to longer
-responses regardless of preference content. The mitigation
-(length-controlled DPO; Park et al.\ 2024, arXiv:2403.19159) is the
-single must-cite extension when arguing the production case.
-
-\subsection*{5. Stooke, Achiam, Abbeel --- \emph{Responsive Safety in Reinforcement Learning by PID Lagrangian Methods} (ICML 2020, arXiv:2007.03964)}
-
-PID-controlled Lagrange multiplier for CMDPs --- the practical recipe
-that makes PPO-Lagrangian actually work. Plain Lagrangian methods
-oscillate; PID damping converges.
-
-\textbf{Why it matters this week.} The Phase-3 constrained learner is a
-PPO-Lagrangian. The cost in our case is a fairness metric; the PID
-machinery is what keeps the multiplier from oscillating around the
-constraint boundary as the applicant pool drifts.
-
-\begin{quote}
-``We treat the Lagrange multiplier update as a control problem and
-apply PID control to it, achieving improved stability and final
-performance over standard Lagrangian methods.''
-\end{quote}
-
-\emph{Commentary.} The PID gains are the new hyperparameters you have
-to tune. Stooke et al.\ provide a small grid; we recommend starting
-with their reported values for the Safety Gym suite and re-tuning
-against the simulated parity drift in our \texttt{constrained.py} demo.
-
-\subsection*{6. Future of Life Institute (eds.) --- \emph{The EU AI Act: A Practical Guide for Recruitment AI} (FLI policy brief, 2024--2025)}
-
-Walks through Annex III point 4 (recruitment), Articles 9 (risk
-management), 13--15 (transparency / accuracy / oversight), and 26
-(deployer obligations) as they apply concretely to ATS platforms.
-Recommends operating models, audit cadences, and documentation
-templates.
-
-\textbf{Why it matters this week.} Chapter 7 of the notes leans on the
-Act. The brief is the most concise compliance-grade reference for
-defending the audit's roadmap to a legal review board.
-
-\begin{quote}
-``Providers of high-risk AI systems used for recruitment or selection
-of natural persons must implement a quality management system,
-maintain technical documentation, log decision events with sufficient
-detail to support audits, and ensure that affected persons can request
-human review.''
-\end{quote}
-
-\emph{Commentary.} The Act does not prescribe an algorithm. It
-prescribes a process. The audit's Phase 0 (instrument logging,
-introduce $\varepsilon$-soft exploration) is the cheapest, fastest
-route to Act compliance --- without it, no later phase can be
-defensibly deployed in the EU. Even teams outside the EU should treat
-this as the de-facto standard; UK and US regulators (ICO, EEOC) are
-converging on similar requirements.
-
-\bigskip
-\emph{Sourced from} \texttt{research/bandits\_matching\_sota.md},
-\texttt{research/safety\_rl\_sota.md}, and
-\texttt{research/llm\_rl\_sota.md} in this repository.
-
+\noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
 \end{document}

@@ -32,6 +32,33 @@ It chooses proxy 10 despite delivering 0. This counterexample calls for a better
 **Carry it onward:** [Constrained RL](../week-22-cmdp-cpo-lagrangian/teaching_guide.md) adds a separately defined cost budget rather than hoping one scalar proxy captures every requirement.
 
 
+## Choose your explanation depth
+
+How a repair can leave the original incentive intact. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+A proxy can reward a visible cue that is only loosely related to quality. Penalising one cue may leave another profitable cue untouched. Test a repair with a counterexample instead of judging it only on the examples that suggested it.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+In the shipped keyword proxy, adding the four-character word `good` contributes **0.8** from the keyword plus **0.08** from length. A penalty of **0.01 per character** removes only **0.04**, leaving a **0.84** gain. A coefficient **0.22** cancels that particular four-character increment; it does not establish a globally reliable reward.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+For this local uncapped increment, $\Delta R_{\mathrm{proxy}}=0.8+0.02\times4=0.88$. A linear length penalty gives $\Delta(R-\lambda L)=0.88-4\lambda$, so the zero occurs at $\lambda=0.22$. This calculation assumes the exact token-counting rule and unchanged keyword-counting behaviour. The conditional-Gaussian Goodhart derivation below addresses a different statistical model; do not treat either toy as a universal law.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 2](workbook.ipynb#cell-10) and [Exercise 4](workbook.ipynb#cell-16): use `exercise_2` to inspect proxy and true-quality outputs, and `exercise_4` to subtract the length penalty. Compare texts that differ by a single `good` insertion without adding a separator. Record the actual added characters, including spaces. The common failure is choosing λ to defeat one string and declaring the whole reward repaired; try a new keyword or change the surrounding text next.
+
 ## Mechanism at a glance
 
 ```mermaid

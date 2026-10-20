@@ -29,13 +29,17 @@ By the end of this week you will be able to:
   \item Implement the tanh-squashed Gaussian policy, including the Jacobian correction to its log-density, and explain why the correction is essential.
   \item Train SAC on Pendulum-v1 (or MuJoCo Hopper) with automatic temperature tuning; plot return and entropy.
   \item Specify TD3 (twin critics, target policy smoothing, delayed updates) and explain its role as the deterministic-policy counterpart to SAC.
-  \item Summarise CrossQ (2024) and the SimBa block (2025) as the off-policy continuous-control SOTA, including why CrossQ drops target networks.
+  \item Summarise CrossQ (2024) and the SimBa block (2025) as published architecture and training alternatives, including why CrossQ drops target networks.
 \end{enumerate}
 \end{keyidea}
 
 \chapter{Motivation and intuition}
 
-PPO is on-policy: it reuses each rollout for several optimisation epochs, then normally replaces it with fresh data. For continuous control with expensive simulators (or robots), this is a luxury. \marginnote{Throughput rule of thumb: SAC at UTD=1 sees the same data 8--16 times via the replay buffer; CrossQ at UTD=2 amortises each transition $\sim$32 times. On a single GPU you can typically get 10--50$\times$ more sample-efficient learning out of off-policy than on-policy methods.} Off-policy methods --- SAC, TD3, and the modern ensemble variants --- amortise every transition across many gradient updates through a replay buffer, and they exploit the reparameterisation trick (week 7) to compute low-variance pathwise gradients for the actor.
+PPO is on-policy: it reuses each rollout for several optimisation epochs, then normally replaces it with fresh data. For continuous control with expensive simulators (or robots), this is a luxury. \marginnote{Replay ratio counts gradient updates per environment step.
+It is not the expected number of uses of each transition; batch size and
+buffer residence also matter.}
+
+ Off-policy methods --- SAC, TD3, and the modern ensemble variants --- amortise every transition across many gradient updates through a replay buffer, and they exploit the reparameterisation trick (week 7) to compute low-variance pathwise gradients for the actor.
 
 \begin{intuition}
 SAC and TD3 are duals.
@@ -67,10 +71,18 @@ For a deterministic policy $a = \mu_\theta(s)$ and a state distribution $d^\mu$,
 \end{theorem}
 
 \begin{proof}[Sketch]
-Apply the chain rule to $J(\mu_\theta) = \E_{s\sim d^\mu}[\Qfn^{\mu_\theta}(s,\mu_\theta(s))]$. The expectation is over a parameter-dependent $d^\mu$, but the same Bellman-flow trick as in the stochastic PG theorem cancels the implicit $\partial d^\mu/\partial \theta$ contribution; the surviving term is exactly the chain rule applied to the inner $\Qfn(s,\mu_\theta(s))$.
+Start from the start-state return $J=\E_{s_0\sim\rho_0}V^\mu(s_0)$,
+differentiate its Bellman recursion, and unroll the future-state derivative.
+The resulting discounted occupancy weights the direct actor--critic chain
+rule. If $d^\mu=(1-\gamma)\sum_t\gamma^t P(S_t=\cdot)$ is normalised,
+the displayed expectation needs a factor $1/(1-\gamma)$; it is exact as
+written with the unnormalised occupancy measure. Replay states instead
+produce a practical off-policy surrogate, not automatically the same gradient.
+See \url{https://proceedings.mlr.press/v32/silver14.html}.
 \end{proof}
-
-The deterministic gradient has lower variance (it averages out the exploration noise of the stochastic version) but requires the action space to be continuous and the critic to be differentiable in $a$.
+Deterministic policy gradients require action differentiability and remove
+explicit action sampling in this expression. There is no universal variance
+ordering against every stochastic-policy estimator.
 
 \section{Maximum entropy RL}
 
@@ -82,7 +94,9 @@ with $\alpha \ge 0$ the temperature. The optimal policy is no longer determinist
 
 \begin{theorem}[Soft Bellman equations, Haarnoja 2018a]
 \label{thm:soft}
-For the entropy-regularised MDP, the soft value function $\Vfn^\Policy(s) = \E_{a\sim\Policy}[\Qfn^\Policy(s,a) - \alpha \log \Policy(a\given s)]$, and the soft Bellman backup
+Assume $\alpha>0$, bounded rewards, $\gamma<1$, and a finite
+partition integral relative to the chosen action measure. For this
+entropy-regularised MDP, the soft value function $\Vfn^\Policy(s) = \E_{a\sim\Policy}[\Qfn^\Policy(s,a) - \alpha \log \Policy(a\given s)]$, and the soft Bellman backup
 \[
   \mathcal{T}^\Policy \Qfn(s, a) \;=\; r(s, a) + \Disc\, \E_{s'}\!\left[\E_{a'\sim\Policy}\!\big[\Qfn(s', a') - \alpha \log \Policy(a'\given s')\big]\right].
 \]
@@ -105,7 +119,7 @@ Functional derivative: $\delta\mathcal{L}/\delta \Policy = \Qfn(s,a) - \alpha (\
 
 We need a stochastic policy that:
 \begin{enumerate}[leftmargin=*]
-  \item samples in a bounded box $[-1, 1]^{|\Actions|}$ (continuous-control envs require this);
+  \item samples $d_a$ action coordinates in a bounded box $[-1, 1]^{d_a}$ (continuous-control envs require this);
   \item is differentiable through the sample (reparameterisable);
   \item has a tractable density.
 \end{enumerate}
@@ -116,7 +130,7 @@ The standard recipe: $u \sim \mathcal{N}(\mu_\theta(s), \sigma_\theta(s)^2)$, th
 \]
 Since $u=\tanh^{-1}(a)$, $du/da=1/(1-a^2)$, while $da/du=1-\tanh^2(u)$. Taking logarithms gives
 \[
-  \log \Policy(a\given s) = \log \mathcal{N}(u; \mu, \sigma^2) - \sum_{i=1}^{|\Actions|} \log(1 - a_i^2).
+  \log \Policy(a\given s) = \log \mathcal{N}(u; \mu, \sigma^2) - \sum_{i=1}^{d_a} \log(1 - a_i^2).
 \]
 Numerically, $\log(1-\tanh^2 u) = 2(\log 2 - u - \mathrm{softplus}(-2u))$ is stable.
 
@@ -128,13 +142,14 @@ Drop the Jacobian and your policy will report $\log\Policy$ that is artificially
 
 Haarnoja 2018b makes $\alpha$ a learned parameter by enforcing the constraint
 \[
-  \E_{a \sim \Policy_\theta}[-\log \Policy_\theta(a\given s)] \ge \mathcal{H}_\text{target} = -|\Actions|.
+  \E_{a \sim \Policy_\theta}[-\log \Policy_\theta(a\given s)] \ge \mathcal{H}_\text{target} = -d_a.
 \]
 The dual update is
 \[
   \alpha \leftarrow \alpha - \eta_\alpha \nabla_\alpha\, \alpha \cdot \big(-\log \Policy_\theta(a\given s) - \mathcal{H}_\text{target}\big),
 \]
-implemented by storing $\log\alpha$ unconstrained and computing $\alpha = \exp(\log\alpha)$. This removes the brittle $\alpha$ hyperparameter and is the single biggest reason SAC is the default off-policy baseline.
+implemented by storing $\log\alpha$ unconstrained and computing $\alpha = \exp(\log\alpha)$. This adapts temperature but retains a target-entropy choice, optimiser
+settings, and action-coordinate convention. It is not tuning-free.
 
 \section{TD3}
 
@@ -147,17 +162,25 @@ Twin Delayed DDPG (Fujimoto 2018) fixes three pathologies of DDPG:
 
 The TD3 target is
 \[
-  y = r + \Disc \min_{i=1,2} \Qfn_{\phi_i'}(s', a'), \quad a' = \mu_{\theta'}(s') + \mathrm{clip}(\epsilon, -c, c).
+  y = r + \Disc(1-d) \min_{i=1,2} \Qfn_{\phi_i'}(s', a'), \quad
+  a'=\mathrm{clip}(\mu_{\theta'}(s')+\mathrm{clip}(\epsilon,-c,c),a_{\min},a_{\max}).
 \]
 
-\section{CrossQ (2024) --- target nets considered harmful}
-
-Bhatt et al.\ (ICLR 2024) show that with careful BatchNorm placement (BN after every Linear, both critics, train mode during the target computation too), the polyak-averaged target nets can be dropped without instability. Practical gain: $\sim$25\% wall-clock improvement and one fewer hyperparameter. The SimBa block (Lee et al.\ ICLR 2025) builds on this with residual + LayerNorm + RMSNorm and pushes the SOTA further on DMC.
+\section{CrossQ and SimBa: distinct design choices}
+CrossQ uses batch normalisation with current and successor critic inputs
+processed together, while stopping gradients through the target and omitting
+target networks. Its experiments use a low update-to-data ratio; this does
+not establish that arbitrary BatchNorm placement stabilises TD learning.
+See \url{https://arxiv.org/abs/1902.05605}.
+SimBa is a separate scalable architecture: running observation normalisation,
+residual feedforward blocks and layer normalisation. RMS normalisation and
+resets are not a definition of the original SimBa architecture.
+See \url{https://arxiv.org/abs/2410.09754}.
 
 \chapter{Algorithms}
 
 \begin{tcolorbox}[colback=rlbg, colframe=rlblue, title=\textbf{SAC with automatic temperature}]
-\textbf{Hyper-params:} replay buffer $D$ of size $10^6$, batch $B=256$, $\Disc=0.99$, polyak $\tau=5\times 10^{-3}$, actor/critic lr $=3\times 10^{-4}$, $\alpha$-lr $=3\times 10^{-4}$, $\mathcal{H}_\text{target} = -|\Actions|$.\\
+\textbf{Hyper-params:} replay buffer $D$ of size $10^6$, batch $B=256$, $\Disc=0.99$, polyak $\tau=5\times 10^{-3}$, actor/critic lr $=3\times 10^{-4}$, $\alpha$-lr $=3\times 10^{-4}$, $\mathcal{H}_\text{target} = -d_a$.\\
 \textbf{Init:} actor $\Policy_\theta$, critics $\Qfn_{\phi_1}, \Qfn_{\phi_2}$ and their polyak copies $\Qfn_{\phi_1'}, \Qfn_{\phi_2'}$.\\
 \textbf{For each env step:}
 \begin{enumerate}[leftmargin=*]
@@ -179,7 +202,8 @@ Bhatt et al.\ (ICLR 2024) show that with careful BatchNorm placement (BN after e
 \textbf{For each env step:}
 \begin{enumerate}[leftmargin=*]
   \item Roll out with $a = \mu_\theta(s) + \mathcal{N}(0, \sigma^2)$.
-  \item Critic step (twin): target $y = r + \Disc \min_i \Qfn_{\phi_i'}(s', \mu_{\theta'}(s') + \mathrm{clip}(\epsilon, -c, c))$.
+  \item Critic step (twin): use the terminal-masked target above, with noisy next actions clipped
+        to the environment bounds.
   \item Every $d$ steps: actor step ($\nabla_\theta \E[\Qfn_{\phi_1}(s, \mu_\theta(s))]$), then polyak update of all targets.
 \end{enumerate}
 \end{tcolorbox}
@@ -233,7 +257,7 @@ def critic_update(batch, actor, q1, q2, q1_tgt, q2_tgt, log_alpha,
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/sac_pendulum.pdf}
-\caption{SAC on Pendulum-v1. Three seeds; return (top) and policy entropy (bottom). Note that the entropy decreases during training as the policy becomes more confident; with automatic temperature tuning, it stabilises near the target $-|\Actions| = -1$.}
+\caption{SAC on Pendulum-v1. Three seeds; return (top) and policy entropy (bottom). Note that the entropy decreases during training as the policy becomes more confident; with automatic temperature tuning, it stabilises near the target $-d_a = -1$.}
 \label{fig:sac-pendulum}
 \end{figure}
 
@@ -244,8 +268,8 @@ def critic_update(batch, actor, q1, q2, q1_tgt, q2_tgt, log_alpha,
 
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Q-function over-estimation cascade.} A single mis-fit batch can push $\Qfn(s,a)$ several units too high; the next policy update will increase the probability of that action, generating more high-$\Qfn$ data, generating more upward bias. The twin-critic min trick of TD3/SAC is the structural fix. \emph{Watch the empirical $\min_i \Qfn_i$ during training}; a runaway uptrend is the failure signature.
-  \item \textbf{Stuck entropy.} If the automatic temperature update is mis-coded (most commonly: forgetting that the temperature loss should be a function of $\log\alpha$ not $\alpha$), the policy entropy either explodes or collapses. Mitigation: clamp $\log\alpha \in [-5, 2]$ and assert the gradient sign is correct in unit tests.
-  \item \textbf{Replay-buffer drift.} On long runs ($> 10^6$ steps) the buffer contains transitions from radically different past policies. The Q-targets become biased. This is exactly the setting where \emph{constrained safe RL} (week 16) needs explicit safety filters; the off-policy bias compounds with reward mis-specification to produce non-monotone training.
+  \item \textbf{Stuck entropy.} If the automatic temperature update is mis-coded (most commonly: mixing the entropy-target sign or differentiating through the actor during a temperature step), the policy entropy either explodes or collapses. Mitigation: clamp $\log\alpha \in [-5, 2]$ and assert the gradient sign is correct in unit tests.
+  \item \textbf{Replay-buffer drift.} On long runs ($> 10^6$ steps) the buffer contains transitions from radically different past policies. The Q-targets become biased. This is exactly the setting where \emph{constrained safe RL} (week 22) needs explicit safety filters; the off-policy bias compounds with reward mis-specification to produce non-monotone training.
 \end{enumerate}
 
 \paragraph{Matching context.}
@@ -260,16 +284,17 @@ For an off-policy matching system retrained nightly on the day's logs, the entro
 The matching setting in production usually has continuous-valued match-quality features and is too high-dimensional for tabular methods. SAC fits naturally:
 \begin{itemize}
   \item \textbf{State $s$:} candidate embedding (768-dim), job-pool snapshot (256-dim).
-  \item \textbf{Action $a \in \Real^d$:} score adjustments over the top-100 candidates (so $|\Actions|=100$, then we softmax-sample the top-K).
+  \item \textbf{Action $a \in \Real^d$:} score adjustments over the top-100 candidates (so $d_a=100$, then we softmax-sample the top-K).
   \item \textbf{Reward $r$:} hire-conversion within 30 days, possibly normalised by base rate.
   \item \textbf{Replay buffer $D$:} 90 days of logged $(s, a, r, s')$.
 \end{itemize}
 
-The automatic temperature tuning is particularly valuable here: it removes the need to manually trade off exploration (showing new candidates) vs.\ exploitation (showing the model's favourites). The maximum-entropy objective keeps the candidate-shortlisting policy diverse, which encourages diversity but provides no individual or group fairness guarantee; an entropy bonus can coexist with severe exposure disparities.
+The automatic temperature tuning is particularly valuable here: it adapts the temperature around a chosen entropy target, while that target
+and learning settings still influence exploration. The maximum-entropy objective keeps the candidate-shortlisting policy diverse, which encourages diversity but provides no individual or group fairness guarantee; an entropy bonus can coexist with severe exposure disparities.
 
 \paragraph{Operational caveats.}
 \begin{itemize}
-  \item Production deployment requires a CMDP layer (week 16) to enforce hard fairness constraints (e.g.\ minimum exposure per demographic group). SAC alone is the optimiser; it does not provide guarantees.
+  \item Production deployment requires a CMDP formulation (week 22) for expected-cost constraints (e.g.\ minimum exposure per demographic group). SAC alone is the optimiser; it does not provide guarantees.
   \item Replay-buffer drift over the 90-day window is a real concern; in practice we re-fit the value head weekly from scratch on the most recent two weeks to combat this.
 \end{itemize}
 \end{matching}
@@ -284,7 +309,9 @@ The automatic temperature tuning is particularly valuable here: it removes the n
   \item \textbf{E5} ($\star\star$) Implement automatic temperature tuning; show that $\alpha$ converges to a value that yields $\mathcal{H} \approx \mathcal{H}_\text{target}$.
   \item \textbf{E6} ($\star\star$) Train SAC on Pendulum-v1 to a smoothed return $\ge -200$ within 8000 env steps.
   \item \textbf{E7} ($\star\star\star$) Code TD3 in $\sim$100 lines; compare wall-clock to SAC on Pendulum.
-  \item \textbf{E8} ($\star\star\star$, meaningful objective) For a logged-bandit matching dataset, run an off-policy SAC variant: load the logs into the replay buffer and train without env interaction. Verify that the resulting policy beats the behaviour policy in SNIPS-estimated value.
+  \item \textbf{E8} ($\star\star\star$, meaningful objective) For a logged-bandit matching dataset, run an off-policy SAC variant: load the logs into the replay buffer and train without env interaction. compare held-out estimates, support and uncertainty with the behaviour
+policy. Vanilla offline SAC can extrapolate unsupported actions; an apparent
+SNIPS gain on the training log is not a reliable improvement certificate.
 \end{enumerate}
 
 \chapter{Further reading}

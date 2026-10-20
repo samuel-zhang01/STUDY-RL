@@ -31,6 +31,33 @@ It chooses the unlogged action with predicted value 10. No logged outcome valida
 **Carry it onward:** [Sequence policies](../week-15-decision-transformer-diffusion/teaching_guide.md) learn from the same fixed-data limitation with a different training target.
 
 
+## Choose your explanation depth
+
+Why an upper expectile is not a confidence bound. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+An offline learner has a fixed record of what happened. It can prefer good recorded actions, but optimism about an unrecorded action is not new evidence. IQL tilts a value fit toward higher targets; it does not measure how certain those targets are.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+With equally frequent targets 0 and 1 and expectile level τ = 0.8, a value between them pays 0.2 for squared overshoot of 0 and 0.8 for squared undershoot of 1. The balancing value is **0.8**. At τ = 0.5 it is **0.5**. Neither number is an 80% probability of success.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+For a fixed target distribution, minimize $E[|\tau-\mathbf{1}\{Q-v<0\}|(Q-v)^2]$. Away from atoms at $v$, stationarity gives $\tau E[(Q-v)_+]=(1-\tau)E[(v-Q)_+]$. With equal mass at 0 and 1, $\tau(1-v)=(1-\tau)v$, so $v=\tau$. Assume $0<\tau<1$ and finite second moments. The longer derivation below keeps target frequencies separate from asymmetric weights.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 1: `expectile_loss`](workbook.ipynb#cell-6), then compare with `project.solutions.exercise_1_expectile`. Evaluate the losses at values 0.5, 0.8 and 0.9 for equal targets `[0, 1]`; the means are **0.125, 0.08 and 0.085**. Repeat at τ = 0.5. A common failure is reversing the residual sign while keeping the same weights. In [Exercise 3](workbook.ipynb#cell-12), confirm `exercise_3_cql_penalty(np.zeros(4), 0) = log(4)` and explain why this positive penalty does not mean every Q value must decrease.
+
 ## Mechanism at a glance
 
 ```mermaid

@@ -20,6 +20,7 @@ const route=d=>{
 };
 const byPath=new Map(docs.map(d=>[d.path,{...d,id:idFor(d.path),route:route(d)}]));
 const assets=new Set(snapshot.assets);
+function visibleText(element){const copy=element.cloneNode(true);for(const hidden of copy.querySelectorAll('annotation,.katex-html,.section-actions'))hidden.remove();return copy.textContent.replace(/\s+/g,' ').trim();}
 const hasAnchor=(d,id)=>d.body?.includes(`id="${id}"`)||d.body?.includes(`\\label{${id}}`);
 const unresolved=[], mathErrors=[];
 function sectionRoute(base,anchor){return base+(base.includes('?')?'&':'?')+'section='+encodeURIComponent(decodeURIComponent(anchor));}
@@ -70,7 +71,7 @@ function cleanGuide(s){
 function render(doc){
  let input=doc.body||'';let html='';
  if(doc.format==='code')html=`<pre class="code-file"><code>${escape(input)}</code></pre>`;
- else if(doc.format==='notebook')html='<div class="workbook-notice">Read every exercise and code cell here. Download the weekly bundle to run this notebook with its project files in Jupyter. Supplied reference cells demonstrate an implementation; attempt the exercises before comparing.</div>'+doc.cells.map(c=>`<section class="notebook-cell" data-cell="${c.index}"><p class="cell-label">Cell ${c.index} · ${c.type==='code'?'Python':'Explanation'}</p>${c.type==='code'?`<pre><code class="language-python">${escape(c.source)}</code></pre>`:markdown(c.source)}</section>`).join('');
+ else if(doc.format==='notebook')html='<div class="workbook-notice">Read every exercise and code cell here. Download the weekly bundle to run this notebook with its project files in Jupyter. Supplied reference cells demonstrate an implementation; attempt the exercises before comparing.</div>'+doc.cells.map(c=>`<section class="notebook-cell" id="cell-${c.index}" data-cell="${c.index}"><p class="cell-label">Cell ${c.index} · ${c.type==='code'?'Python':'Explanation'}</p>${c.type==='code'?`<pre><code class="language-python">${escape(c.source)}</code></pre>`:markdown(c.source)}</section>`).join('');
  else if(doc.format==='html')html=input;
  else {if(doc.kind==='guide')input=cleanGuide(input);html=markdown(input);}
  html=sanitizeHtml(html,{allowedTags:sanitizeHtml.defaults.allowedTags.concat(['img','figure','figcaption','details','summary','span','embed','input','section']),allowedAttributes:{'*':['class','id','title','data-cell','data-reference','data-reference-type','aria-hidden','tabindex'],a:['href','title'],img:['src','alt','width','height'],embed:['src'],input:['type','checked','disabled']},allowedSchemes:['http','https','mailto'],allowProtocolRelative:false});
@@ -118,8 +119,15 @@ function render(doc){
  }
  linkCitations(article);
  for(const table of article.querySelectorAll('table')){const div=document.createElement('div');div.className='table-scroll';div.setAttribute('tabindex','0');div.setAttribute('role','region');div.setAttribute('aria-label','Scrollable lesson table');table.replaceWith(div);div.appendChild(table);}
- const text=article.textContent.replace(/\s+/g,' ').trim();
- const toc=[...article.querySelectorAll('h2,h3')].map(h=>({id:h.id,title:h.textContent,level:Number(h.tagName[1])}));
+ // Pandoc maps paragraph headings to h6 even without intervening levels.
+ // Keep the source hierarchy and IDs while removing skipped HTML levels.
+ const outline=[];for(const heading of [...article.querySelectorAll('h2,h3,h4,h5,h6')]){
+  const sourceLevel=Number(heading.tagName[1]);while(outline.length&&outline.at(-1).sourceLevel>=sourceLevel)outline.pop();
+  const level=outline.length?outline.at(-1).level+1:2;outline.push({sourceLevel,level});
+  if(level!==sourceLevel){const replacement=document.createElement('h'+level);for(const attribute of heading.attributes)replacement.setAttribute(attribute.name,attribute.value);replacement.innerHTML=heading.innerHTML;heading.replaceWith(replacement);}
+ }
+ const text=visibleText(article);
+ const toc=[...article.querySelectorAll('h2,h3')].map(h=>({id:h.id,title:visibleText(h),level:Number(h.tagName[1])}));
  return {html:article.innerHTML,text,toc,words:text.split(/\s+/).length};
 }
 fs.rmSync(OUT,{recursive:true,force:true});fs.mkdirSync(path.join(OUT,'content'),{recursive:true});

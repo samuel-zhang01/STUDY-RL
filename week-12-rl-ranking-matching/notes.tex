@@ -55,7 +55,7 @@ this week you will be able to:
 % =============================================================================
 \chapter{Motivation and intuition}
 
-This is where the curriculum's two domains --- synthetic insurance insurance lead matching
+This is where the curriculum's two domains --- synthetic insurance lead matching
 and synthetic ATS candidate ranking --- collide with the bandit + OPE machinery
 of Week 11. The change of scenery: \emph{the action space is ordered}. We
 do not pick one broker or one candidate; we present a ranked list and the
@@ -209,35 +209,33 @@ user model: at each step the user picks exactly one item from the slate
 according to a known choice rule $P(a \mid \mathbf{A}, s)$ (e.g., softmax,
 multinomial logit). Then
 
-\begin{theorem}[SlateQ decomposition, Ie et al.\ 2019]
-Under the single-choice user model,
+\begin{proposition}[SlateQ decomposition: assumptions matter]
+Assume at most one selected item, allow a null-selection outcome, and
+assume reward and next-state dynamics depend on the slate only through
+that selected item. Then
 \[
-Q(s, \mathbf{A}) = \sum_{a \in \mathbf{A}} P(a \mid \mathbf{A}, s) \cdot Q(s, a),
+Q^\pi(s,\mathbf A)=\sum_{a\in\mathbf A\cup\{\varnothing\}}
+P(a\mid\mathbf A,s)\,\bar Q^\pi(s,a).
 \]
-where $Q(s, a)$ is the standard per-item Q-value (no slate dependence).
-The optimisation $\max_{\mathbf{A}} Q(s, \mathbf{A})$ reduces to a fractional
-knapsack problem, polynomial in $|\Actions|$.
-\end{theorem}
-
-\begin{proof}
-By the single-choice assumption, the slate's reward is the user-chosen
-item's reward, so $\E[r \mid s, \mathbf{A}] = \sum_a P(a \mid \mathbf{A}, s) r(s, a)$.
-The recursion for $Q$ on the next state follows the same decomposition.
-Inducting along the trajectory gives the result. $\square$
-\end{proof}
+The item value conditions on selection, with future slates following $\pi$.
+This follows by total expectation. A tractable representation does not
+make arbitrary slate optimisation easy; the paper's efficient optimisation
+results need additional choice-model structure.
+\end{proposition}
+Source: \url{https://arxiv.org/abs/1905.12767}.
 
 \begin{remark}
 The single-choice assumption fails when users browse multiple items in a
 slate (e.g., a recruiter scrolling through 10 CVs before contacting any).
-The SlateQ extensions (Mehrotra et al.\ 2020) relax this; in practice, the
-single-choice model is a good first approximation when the slate size is
-small.
+Choose or validate a multi-choice model if several displayed items
+can affect reward or continuation. Small slate size alone does not make
+the single-choice assumptions true.
 \end{remark}
 
 \section{REINFORCE-Top-K with off-policy correction}
 
-YouTube's WSDM 2019 paper (Chen, Beutel, Covington, Jain, Chen, Chi) is the
-most cited industrial RL-recsys deployment. The setup: a softmax policy
+The WSDM 2019 paper by Chen, Beutel, Covington, Jain, Belletti and
+Chi describes an industrial REINFORCE recommender. The setup: a softmax policy
 $\pi_\theta(a \mid s) \propto \exp f_\theta(s, a)$ over millions of videos;
 log a slate of $K$ (e.g.\ 50) recommendations; observe which one was
 played; train.
@@ -252,12 +250,16 @@ $\pi(a \mid s)$ is what we are training. The off-policy policy gradient is
 \nabla_\theta J(\pi) \approx \E_{(s, a, r) \sim \beta}\Big[\frac{\pi_\theta(a \mid s)}{\beta(a \mid s)} \nabla_\theta \log \pi_\theta(a \mid s) \cdot R(s, a)\Big].
 \]
 
-\textbf{(2) Clipping.} The importance ratio is clipped to $[\rho_{\min},
-\rho_{\max}]$ to bound variance (the same idea as PPO's ratio clip).
+\textbf{(2) Clipping.} Capping importance weights limits individual weighted contributions
+when rewards and scores are bounded, but introduces bias. This differs
+from PPO's minimum of clipped and unclipped surrogates: PPO does not
+simply substitute capped weights in every gradient term.
 
 \textbf{(3) Top-K correction.}
 The behaviour policy presents a slate of $K$ items, not 1. The probability
-that item $a$ is in the slate sampled by $\pi$ is approximately $1 - (1 - \pi(a \mid s))^K$.
+that item $a$ appears after $K$ independent with-replacement draws
+is exactly $1-(1-\pi(a\mid s))^K$. Deduplication can give fewer than $K$
+items; another slate sampler needs its own inclusion probability.
 The gradient correction factor is the derivative w.r.t.\ $\pi(a \mid s)$:
 
 \begin{theorem}[Top-K correction, Chen et al.\ WSDM 2019]
@@ -272,13 +274,15 @@ and the top-K policy gradient is
 \end{theorem}
 
 \begin{proof}
-The slate is a size-$K$ sample without replacement from $\pi$ (or an
-$\varepsilon$-corrected approximation thereof). The probability that $a$ is
-in the slate is
-$\alpha_K(a \mid s) = 1 - \prod_{k=1}^K (1 - \pi(a \mid s)) = 1 - (1 - \pi(a \mid s))^K$.
-The expected reward is then $\E_{a \sim \beta}[\alpha_K(a \mid s) R(s, a)]$;
-differentiating w.r.t.\ $\theta$ via the policy-gradient identity gives the
-$\lambda_K$ factor. $\square$
+Independently draw $K$ items \emph{with replacement}, then deduplicate.
+The probability of never drawing $a$ is $(1-\pi(a\mid s))^K$.
+For an item-additive inclusion objective
+$J_K=\sum_a\alpha_K(a\mid s)R(s,a)$, differentiate:
+$\nabla J_K=\sum_a\lambda_K(a\mid s)R(s,a)\nabla\pi(a\mid s)$.
+Reweight this sum by a supported logger to obtain the displayed gradient.
+The final set may have fewer than $K$ items. A fixed-size without-replacement
+sampler needs its own inclusion probability. See Chen et al., Section 4.3,
+\url{https://arxiv.org/abs/1812.02353}.
 \end{proof}
 
 \begin{intuition}
@@ -326,12 +330,14 @@ qualification label. Exposure fairness is the dominant production criterion
 for two-sided markets because it directly maps to the unit of value:
 attention.
 
-\begin{theorem}[FairCo controller, Morik, Singh, Hong, Joachims SIGIR 2020]
-A linear-program post-processing of the ranker scores enforces an
-exposure-fairness constraint
-$|\sum_a w_a^G \mathrm{exp}(a) - \sum_a w_a^{G'} \mathrm{exp}(a)| \leq \epsilon$
-with at most $O(\epsilon)$ NDCG@k loss.
-\end{theorem}
+\begin{remark}[FairCo is a feedback controller]
+Morik et al. (SIGIR 2020) use a proportional correction based on accumulated
+merit-normalised exposure or impact disparity. FairCo is not the linear-program
+baseline it is compared against. Its convergence statement needs the paper's
+feasibility and estimation assumptions; there is no general $O(\epsilon)$
+NDCG-loss guarantee for every fairness tolerance.
+Source: \url{https://arxiv.org/abs/2005.14713}.
+\end{remark}
 
 \section{Calibration}
 
@@ -357,24 +363,23 @@ score) and is the most-used calibration baseline.
 \begin{theorem}[Isotonic regression, Zadrozny \& Elkan 2002]
 Fit a monotone non-decreasing piecewise-constant function $g: [0,1] \to [0,1]$
 minimising $\sum_i (g(f(x_i)) - y_i)^2$, by the pool-adjacent-violators
-algorithm in $O(n)$. Non-parametric; needs at least $\sim 1000$ samples;
-exact on the training set.
+algorithm in $O(n)$ after scores are sorted. This fits monotone block
+averages, not every individual binary label. Held-out behaviour depends on
+sample size and distribution; there is no universal 1000-row threshold.
 \end{theorem}
 
-\begin{theorem}[Beta calibration, Kull, Filho, Flach 2017]
-The Beta family $f_{\mathrm{cal}}(s) = \sigma(a \log s - b \log(1 - s) + c)$
-with $a, b \geq 0$ is strictly more expressive than Platt while remaining
-three-parametric. It is the recommended default for binary classifiers
-in 2024+.
-\end{theorem}
-
-\begin{proof}[Why Beta dominates Platt on most binary tasks]
-Platt is the special case $a = b$; freeing the two parameters allows the
-calibrator to handle skewed score distributions (long right tail vs.\ long
-left tail) where Platt forces a single symmetric s-shape. Empirically,
-Kull et al.\ 2017 show Beta-calibration outperforms Platt on $\sim$60--70\%
-of UCI binary tasks with negligible variance penalty. $\square$
-\end{proof}
+\begin{definition}[Beta calibration, Kull, Filho, Flach 2017]
+For $s\in(0,1)$, use
+$f_{\mathrm{cal}}(s)=\sigma(a\log s-b\log(1-s)+c)$.
+Nonnegative $a,b$ yield a non-decreasing map, and $a=b=1,c=0$
+recovers the identity. If $a=b$, the map is logistic in the \emph{logit}
+of $s$, not Platt scaling on the raw probability $s$.
+\end{definition}
+The local logistic-regression fit does not constrain its coefficients,
+so check monotonicity when that property is required. Fit on a calibration
+split and compare held-out Brier score, log loss and reliability curves;
+no calibrator universally dominates another.
+Source: \url{https://proceedings.mlr.press/v54/kull17a.html}.
 
 \section{Cold-start and meta-learning bandits}
 
@@ -389,12 +394,13 @@ and the category distribution itself has a hyper-prior. New requisitions
 inherit the category posterior; over time the per-requisition posterior
 overrides it.
 
-\begin{theorem}[Meta-Thompson regret, Kveton et al.\ 2021]
-For a hierarchical Bayesian bandit with $M$ tasks of horizon $T$ each, the
-total Bayesian regret of Meta-TS scales as $\tilde O(M \sqrt{T} + \sqrt{MT})$,
-versus $\tilde O(M\sqrt{T})$ for independent TS. The cross-task term
-$\sqrt{MT}$ dominates when $M$ is large --- which is the production regime.
-\end{theorem}
+\begin{remark}[What meta-learning can establish]
+MetaTS learns a prior across related bandit tasks. Its Gaussian-bandit
+Bayes-regret analysis depends on the task prior and learning protocol.
+Do not compare invented dimension-free rates or infer improvement merely
+by adding a cross-task term to an independent-task bound.
+Source: \url{https://proceedings.mlr.press/v139/kveton21a.html}.
+\end{remark}
 
 \section{Calibration under distribution shift}
 
@@ -407,18 +413,23 @@ distribution shifts:
   \item Calibration set staleness (last week's labels are not this week's).
 \end{itemize}
 
-\begin{theorem}[Calibration is non-conservative under shift, Ovadia et al.\ 2019]
-A calibrator fit on $(X_{\text{src}}, Y_{\text{src}})$ can be arbitrarily
-miscalibrated on $(X_{\text{tgt}}, Y_{\text{tgt}})$ if $P_{Y|X}$ shifts. Only
-covariate shift (same $P_{Y|X}$, different $P_X$) is recoverable by
-reweighting.
-\end{theorem}
+\begin{remark}[Calibration under distribution shift]
+Calibration on a source population need not survive a changed population.
+Importance weighting can identify target expectations under covariate
+shift with unchanged $P(Y\mid X)$ and appropriate density-ratio support.
+It does not repair arbitrary conditional-label changes. Even with the same
+$P(Y\mid X)$, a coarse score's calibration can change when the mixture
+of inputs within score bins changes. This is a scope warning, not a
+universal theorem that one reweighting recipe fixes every shift.
+\end{remark}
+
+
 
 \textbf{Mitigations:}
 \begin{itemize}\setlength\itemsep{1pt}
   \item \emph{Stratified calibration}: fit a separate calibrator per slice
         (per locale, per requisition family). Reduces capacity per slice
-        but eliminates intra-slice shift.
+        but does not eliminate shift within a slice.
   \item \emph{Online recalibration}: refit Beta / isotonic on a
         sliding-window calibration set; bound the drift in ECE by a target.
   \item \emph{Drift monitors}: KL divergence of this-week's score
@@ -435,18 +446,14 @@ algorithm produces a stable matching in $O(nm)$ time and is
 candidate-optimal when candidates propose.
 \end{definition}
 
-\begin{theorem}[Liu--Mania--Jordan, AISTATS 2020]
-In a two-sided matching market where both sides explore (UCB), the
-``stable regret'' --- the gap to the optimal stable matching --- grows as
-$\tilde O(K \sqrt{T})$, dominated by the loss from the worst-served side.
-\end{theorem}
-
-\begin{remark}
-The practical implication: a unilateral ranker (one that only optimises
-the recruiter's side) will, in equilibrium, be undermined by the candidate
-side (no-shows, withdrawals, late-stage rejection). A two-sided ranker
-respects both sides' rankings during exploration; the algorithm of Liu et
-al.\ is the simplest version that retains the stable-matching guarantee.
+\begin{remark}[Learning preferences in a matching market]
+Liu, Mania and Jordan (AISTATS 2020) study players learning their reward
+preferences while arms have preferences over players. Only one side's
+preferences are learned in this model. Stable-regret results depend on
+centralised versus decentralised matching and on the stable comparator;
+they are not a generic $\widetilde O(K\sqrt T)$ guarantee when both
+sides learn arbitrary strategies. Source:
+\url{https://proceedings.mlr.press/v108/liu20c.html}.
 \end{remark}
 
 \section{Incentive compatibility and Myerson}
@@ -456,18 +463,20 @@ A mechanism is DSIC if reporting truthful preferences is a dominant
 strategy for every agent, regardless of others' reports.
 \end{definition}
 
-\begin{theorem}[Revelation principle, Gibbard 1973; Myerson 1981]
-Any outcome implementable by any mechanism is also implementable by a DSIC
-direct mechanism. Without loss of generality we can restrict attention to
-DSIC mechanisms.
-\end{theorem}
-
-\begin{theorem}[Myerson's optimal auction, Myerson 1981]
-For a single-item auction with $n$ bidders and bid distributions $F_i$, the
-revenue-optimal DSIC mechanism allocates to the bidder maximising the
-\emph{virtual value} $\phi_i(b_i) = b_i - (1 - F_i(b_i))/f_i(b_i)$ and
-charges them the threshold bid; this generalises the second-price auction.
-\end{theorem}
+\begin{remark}[Revelation principle]
+An outcome implementable in a specified equilibrium concept can be
+represented by a truthful direct mechanism with the corresponding incentive
+constraints. Dominant-strategy implementation gives a DSIC direct mechanism;
+Bayesian implementation gives Bayesian incentive compatibility. Arbitrary
+implementability does not imply DSIC.
+\end{remark}
+\begin{remark}[Myerson allocation: scope]
+For independent private values and regular value distributions in a
+single-item auction, allocate to the highest nonnegative virtual value
+$\phi_i(v)=v-(1-F_i(v))/f_i(v)$ and use the corresponding payments.
+The seller may withhold the item. Irregular distributions require ironing;
+correlated values or externalities change the problem.
+\end{remark}
 
 \textbf{Why this matters for synthetic insurance / ATS.} If brokers bid (or set
 referral fees) and the platform allocates leads, the platform is running an
@@ -478,14 +487,13 @@ mechanism-design constraints --- otherwise brokers learn to game it
 
 \section{The supply-side equilibrium hazard}
 
-\begin{theorem}[Supply-side equilibria, Jagadeesan, Garg, Steinhardt NeurIPS 2024]
-In a long-run recommender system with strategic producers (e.g., brokers
-adapting their books of business to what the platform rewards), the
-fixed-point equilibrium of producer strategies depends on the
-recommender's objective. A short-term-CTR maximiser drives producers to
-narrow specialisation; a diversity-aware recommender preserves a wider
-producer mix.
-\end{theorem}
+\paragraph{Modelling question.}
+When producers adapt to the platform's objective, evaluation should include
+that response. A static ranking result alone does not establish the existence,
+uniqueness or welfare of a strategic equilibrium. Analyse a specified game
+before claiming a particular objective preserves producer diversity.
+
+
 
 This is the formal version of ``you get what you measure''. A synthetic insurance
 allocator that rewards bind rate pushes brokers to specialise in easy
@@ -536,9 +544,9 @@ clicks ``next candidate'' once per second). The breakdown:
   \item Calibrator: $<$1\,ms (parametric Beta / isotonic lookup).
 \end{itemize}
 
-The cross-encoder is the latency-dominant layer. Production tricks: KV-cache
-the JD-side tokens (the JD is fixed across all candidates for a given
-requisition), quantise to INT8, and batch over candidates.
+The cross-encoder is the latency-dominant layer. Production tricks: batch candidates, validate quantisation and reduce the candidate set.
+In a bidirectional cross-encoder, JD representations attend to the candidate;
+an ordinary autoregressive prefix KV cache cannot be reused unchanged.
 
 \section{Failure modes and tests}
 
@@ -562,8 +570,8 @@ alert when it falls below a floor.
 
 \textbf{Fairness LP.} Infeasibility: an over-constrained LP returns no
 solution; the production fallback is the un-constrained bandit; the audit
-is silently violated. Test: track LP-feasibility rate; alert when it
-exceeds 5\%; auto-relax the looser constraint.
+is silently violated. Test: track LP-feasibility rate; track infeasibility explicitly and invoke a pre-specified fallback.
+Do not silently relax a required constraint or substitute an unconstrained ranking.
 
 \textbf{Calibrator.} Distribution drift: the calibration set is from last
 month, this month is different, ECE quietly creeps up. Test: daily
@@ -582,9 +590,9 @@ Every decision logs the tuple
 \end{aligned}
 \]
 in JSONL, partitioned by day. The version vector $v = (\text{tt}, \text{ce},
-\text{rerank}, \text{fair}, \text{cal})$ is critical for OPE: never compute
-an OPE estimate across a version boundary unless you have a careful
-re-weighting plan.
+\text{rerank}, \text{fair}, \text{cal})$ is critical for OPE: record the actual conditional probability after every layer. Multiple
+logger versions can be combined when row propensities and the evaluation
+estimand remain valid; adaptive sampling needs suitable uncertainty analysis.
 
 % =============================================================================
 \chapter{Two-tower retrieval: the dense-encoder revolution}
@@ -632,34 +640,39 @@ loss is
 \end{definition}
 
 \begin{theorem}[Lower bound on mutual information, van den Oord et al.\ 2018]
-$\E[-\mathcal{L}] \leq \log B - I(X; A)$, where $I(X; A)$ is the mutual
-information between the query and the item under the data distribution.
-Minimising InfoNCE maximises a lower bound on $I(X; A)$.
+$I(X;A)\ge\log B-\E[\mathcal L]$, under the contrastive sampling
+assumptions: a positive from the joint distribution and independent negatives
+from the marginal. Symmetric losses average the two directional bounds.
+Hard-mined or dependent negatives need a new argument. Minimising the loss
+raises this lower bound, not a guarantee of recovering every semantic feature.
+Source: \url{https://arxiv.org/abs/1807.03748}.
 \end{theorem}
 
 \begin{intuition}
-Two-tower training is information-theoretically maximising the mutual
-information between query and item embeddings. The temperature $\tau$
-scales the gradient: small $\tau$ (sharp softmax) gives strong attractive
-forces between positives but is hard to optimise; large $\tau$ (soft
-softmax) gives smoother gradients but slower convergence. Industry default:
-$\tau \in [0.05, 0.1]$.
+Under the stated negative-sampling model, InfoNCE supplies a lower bound
+on mutual information. Improving that bound need not maximise the true
+mutual information or identify every useful semantic feature. Temperature
+changes the logits and gradient scale; compare values under a fixed
+sampling and evaluation protocol rather than assume a universal default.
 \end{intuition}
+
+
 
 \subsection{In-batch vs.\ mined negatives}
 
 In-batch negatives are free but weak: most items in a random batch are
 trivially negative. Hard-negative mining (ANCE, Xiong et al.\ 2021) periodically
 re-scores the corpus and selects \emph{difficult} negatives (items the model
-currently mis-scores). Empirically, hard-negative mining is the single
-biggest improvement over vanilla in-batch negatives on dense-retrieval
-benchmarks (MS-MARCO, BEIR).
+currently mis-scores). Hard-negative mining can improve retrieval in studied settings, but
+its benefit depends on the task, encoder, candidate pool and false-negative
+rate. It is not a universal largest improvement.
 
 \begin{pitfall}
 With small batches and hard-negative mining, the model can collapse: every
-item embeds to the same point. The fix is a learning-rate warm-up, gradient
-clipping, and a stop-gradient on the negative branch (the same trick that
-saves BYOL, SimSiam).
+item embeds to the same point. Check false negatives, duplicated positives, temperature, optimisation
+and feature collapse. Stop-gradient methods such as BYOL/SimSiam use
+different objectives and architectures; detaching InfoNCE negatives is not
+a general correction for these problems.
 \end{pitfall}
 
 \section{Domain adaptation}
@@ -672,8 +685,8 @@ endpoint. The dominant pattern is:
   \item Domain-adapt with LoRA / adapter layers on \emph{(CV, JD, label)}
         triples from the hiring domain. Labels come from past hire decisions.
   \item Optionally distil a cross-encoder teacher into the bi-encoder
-        student (Reimers \& Gurevych 2019); the bi-encoder retains the
-        accuracy advantage of the cross-encoder without the latency penalty.
+        student (Reimers \& Gurevych 2019); the student may retain part of the teacher's ranking quality;
+measure the remaining accuracy/latency trade-off.
   \item Periodically re-mine hard negatives and re-train.
 \end{enumerate}
 
@@ -718,11 +731,11 @@ theorem. Compare models on the same held-out queries, labels, retrieval
 candidate set, and latency budget; results depend on training and evaluation.
 \end{remark}
 
-In 2024--2025 the cross-encoder is increasingly an LLM: RankGPT (Sun et al.\ 2023),
-RankZephyr (Pradeep et al.\ 2023), RankVicuna --- LLMs prompted to compare two
-items at a time, then aggregated via permutation sorting. LLM-as-judge with
-listwise prompts (rank 20 items at once) is state-of-the-art on MSMARCO,
-BEIR, and reproduces human preferences within 5--10\% on hire-decision data.
+Listwise language-model rankers are another design option. A prompted
+listwise ranker and a scalar cross-encoder have different input/output and
+cost contracts. Validate retrieval recall, ranking quality, prompt sensitivity
+and latency on the intended data. This synthetic course does not provide a
+measured hire-decision agreement rate for such models.
 
 \section{Why we still need the bandit on top}
 
@@ -755,9 +768,10 @@ cross-encoder under-scores), (ii) adapt to per-requisition idiosyncrasies
 \KwIn{Two-tower scores $s_{tt}(c, j)$, per-job Bayesian linear head $\theta_j$.}
 \For{each requisition $j$}{
   $\mathrm{topN} \leftarrow \mathrm{argsort}_c(-s_{tt}(c, j))[:N]$\;
+  sample one $\tilde\theta_j \sim\mathcal N(\hat\theta_j,v^2A_j^{-1})$\;
   \For{$c \in \mathrm{topN}$}{
     feature $x_{cj} \leftarrow [\phi(c); s_{tt}(c, j); 1]$\;
-    sample $\tilde\theta_j \sim \mathcal{N}(\hat\theta_j, v^2 A_j^{-1})$\;
+    score candidates using the same job-level posterior draw $\tilde\theta_j$\;
     score $\tilde s_{cj} \leftarrow x_{cj}^\top \tilde\theta_j$\;
   }
   expose ranking by $\tilde s_{cj}$; observe $r \in \{0, 1\}$ for the candidate the recruiter contacts.\;
@@ -811,8 +825,9 @@ of $A_j$). Cache the Cholesky factor.
 In-batch-negative training implicitly assumes that other-row jobs are
 non-positive for this row's candidate. With a tiny dataset (200 cand x 50
 jobs) and a strong relevance prior (skill-Jaccard), most ``negatives'' are
-genuinely negative; on a noisier production dataset, you must mine hard
-negatives explicitly (Xiong et al.\ ANCE 2021).
+negative under the synthetic label rule. In a new dataset, audit
+false negatives and compare random, in-batch and mined sampling; explicit
+hard-negative mining is an option, not a universal requirement.
 \end{pitfall}
 
 % =============================================================================
@@ -980,16 +995,18 @@ stated form (after absorbing $\sigma^2$ into the regulariser). $\square$
 \section{Posterior sampling}
 
 To sample $\tilde\theta_j \sim \mathcal{N}(\hat\theta_j, v^2 A_j^{-1})$:
-factor $A_j^{-1} = L L^\top$ by Cholesky on $A_j$ (then $L = U^{-1}$ for
-$A_j = U U^\top$), draw $\xi \sim \mathcal{N}(0, I_d)$, and set
-$\tilde\theta_j = \hat\theta_j + v\, L \xi$.
+factor $A_j=UU^\top$ with lower-triangular $U$, draw
+$\xi\sim\mathcal N(0,I_d)$, solve $U^Tz=\xi$, and set
+$\tilde\theta_j=\hat\theta_j+vz$. Then
+$\operatorname{Cov}(z)=U^{-T}U^{-1}=A_j^{-1}$. Solving $Uz=\xi$
+generally gives the wrong covariance.
 
 \begin{pitfall}
 $A_j$ is positive-definite by construction (sum of $\lambda I$ and a
 positive-semidefinite outer-product sum). Numerically, after many updates
 $A_j$ can develop small negative eigenvalues from floating-point error;
-add a tiny $\epsilon I$ ($\epsilon = 10^{-6}$) before the Cholesky to
-guarantee feasibility.
+check symmetry and conditioning; a fixed $10^{-6}I$ perturbation
+is not guaranteed to repair an arbitrary numerical or construction error.
 \end{pitfall}
 
 \section{Online posterior updates}
@@ -1008,13 +1025,11 @@ without recomputing the inverse from scratch:
 
 LinUCB acts on $\hat\theta + \alpha\sqrt{x^\top A^{-1} x}$ where the bonus
 is the width of the confidence ellipsoid in direction $x$. LinTS instead
-samples $\tilde\theta$ and acts on $x^\top \tilde\theta$. The two
-constructions differ in their treatment of \emph{correlated arms}: LinTS
-samples one $\tilde\theta_a$ per arm independently, while LinUCB's bonus is
-arm-wise too but ignores cross-arm covariance. In a shared-parameter
-``hybrid'' bandit (one $\theta$ shared across arms), only sampling-based
-methods correctly account for the cross-arm posterior structure --- one
-more reason LinTS is the production default.
+samples $\tilde\theta$ and acts on $x^\top \tilde\theta$. In a shared-parameter model, LinTS uses one draw for all candidate
+features, preserving their posterior dependence. LinUCB can also use a shared
+confidence ellipsoid or a hybrid model; it does not inherently ignore every
+cross-arm structure. Independent per-arm draws describe a different model.
+
 
 \section{Pitfalls when scaling to deep features}
 
@@ -1078,28 +1093,25 @@ fact that ``a click at position 5'' is much more informative than
 Suppose we fit Beta calibration on a calibration set and recover
 parameters $a = 2.0$, $b = 1.0$, $c = -0.5$. The calibrator is
 $p_{\mathrm{cal}}(s) = \sigma(2 \log s - \log(1 - s) - 0.5)$.
-For raw score $s = 0.6$:
+For raw score $s=0.6$,
 \[
-\log s = -0.51,\ -\log(1 - s) = 0.92,\ \text{logit} = 2(-0.51) - 0.92 - 0.5 = -2.43,
+2\log(0.6)-\log(0.4)-0.5=-0.6053605,
+\qquad p_{\mathrm{cal}}=\sigma(-0.6053605)\approx0.3531183.
 \]
-\[
-p_{\mathrm{cal}} = \sigma(-2.43) = 0.081.
-\]
-The model's raw score of 0.6 is mapped to a calibrated probability of 0.08
---- a heavy correction downward, consistent with the model being severely
-over-confident. Beta calibration handled this with three parameters; Platt
-would have needed five-parameter capacity to match (and would still be
-biased on tails).
+The minus sign multiplies a negative logarithm, so that term contributes
+$+0.9162907$. This is a worked map evaluation, not evidence that these
+parameters improve held-out calibration.
 
 % =============================================================================
+
 \chapter{Empirical results}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_tt_loss.pdf}
 \caption{Two-tower contrastive loss over 60 epochs on the 200x50 ATS
-dataset. The symmetric InfoNCE loss saturates near $-\log(1/B) \approx 3.5$ above
-which most embedding pairs are already well-separated.}
+dataset. Uniform logits give loss $\log B$; a loss near that level is
+a chance-level contrastive classifier, not evidence of well-separated positives.}
 \label{fig:ttloss}
 \end{figure}
 
@@ -1140,9 +1152,12 @@ Right: position-bias-weighted exposure by group, averaged across jobs.}
 
 \Cref{fig:cal} is the calibration plot --- reliability diagrams of the raw
 score, Platt, isotonic, and Beta calibrators on a synthetic over-confident
-score distribution ($P(y=1) = s^2$). Raw ECE is 0.30. Beta drops it to
-0.07; isotonic to 0.04. Beta is the right default; isotonic wins on
-large calibration sets because it can fit the empirical curve exactly.
+score distribution ($P(y=1)=s^2$). These are finite synthetic results;
+read exact ECE values from the generated output and compare on held-out
+labels. Isotonic fitting produces monotone blocks, not a fit to every
+binary label, and no calibrator is a universally best default.
+
+
 
 \begin{figure}[h]
 \centering
@@ -1155,7 +1170,7 @@ indistinguishable on this $n=4000$ synthetic test.}
 \end{figure}
 
 \Cref{fig:posbias} shows the position-bias prior for three values of
-$\eta$. Larger $\eta$ produces steeper drop-off --- users scan deeper. For
+$\eta$. Larger $\eta$ produces steeper drop-off --- users are less likely to scan deeply. For
 recruiters scanning a candidate shortlist, $\eta \approx 1$ is the standard
 prior; for general web search, $\eta \approx 0.7$.
 
@@ -1167,125 +1182,55 @@ prior; for general web search, $\eta \approx 0.7$.
 \end{figure}
 
 % =============================================================================
-\chapter{Industry case studies}
+\chapter{Reading published deployments critically}
+\section{LinkedIn ranking constraints}
+Geyik, Ambler and Kenthapadi (KDD 2019) study representation constraints
+relative to a chosen qualified reference population. The paper describes
+several reranking algorithms, not a generic FairCo LP. A representation
+metric is not an individual-treatment guarantee or legal certification.
+Source: \url{https://arxiv.org/abs/1905.01989}.
 
-\section{LinkedIn Talent Search (Geyik et al.\ KDD 2019)}
+\section{YouTube policy learning and slate values}
+Chen et al. study top-$K$ off-policy correction; Ie et al. study a slate-value
+decomposition. These answer different questions. Check the sampler and choice
+model before transferring either expression to a recruiter browsing several
+candidates. The reading companion links both original papers.
 
-LinkedIn's published recruiter-search architecture has three layers:
-(i) a federated retrieval over the economic graph, (ii) a learned ranker
-on the retrieved set, (iii) a fairness post-processor enforcing gender
-representation within each requisition's shortlist.
-
-The fairness post-processor is the most-studied part. The constraint: for
-each requisition, the gender distribution of the top-$k$ shortlist must
-match (within $\pm 5\%$) the gender distribution of the qualified
-applicant pool. Implementation: a $k$-th-order interval-fairness LP that
-adjusts ranks while preserving NDCG above a deploy threshold.
-
-\textbf{What works.} The fairness constraint produces measurable shifts in
-shortlist composition without significant NDCG degradation. Geyik et al.\
-report a 10--15\% increase in female representation in shortlists with
-$<2\%$ NDCG loss --- the kind of trade-off that is unambiguously positive
-under the EU AI Act.
-
-\textbf{What is hard.} Defining ``qualified applicant pool'' is the
-research problem. Use the global LinkedIn talent pool? The applicant pool
-who already engaged with this recruiter? The pool of past hires for
-similar requisitions? The answer changes the fairness target and so the
-shortlist; LinkedIn ran extensive ablations.
-
-\section{Indeed two-tower for job-search (2020)}
-
-Indeed's published job-search architecture is a two-tower over (resume,
-job-posting) trained with a labeled-pair dataset of millions of past
-applications. Two-tower NDCG significantly outperforms BM25 on resume-to-job
-matching; the cross-encoder layer adds a further few percentage points on
-top.
-
-\textbf{The novel piece.} Indeed's calibration is per-locale and
-per-job-family, with a fallback hierarchy: if the per-locale calibrator
-has too few samples, fall back to per-region; if even that is sparse, fall
-back to global. The hierarchy is essential for cold-start markets (new
-countries, new niche job families).
-
-\section{Netflix artwork personalisation (Chandrashekar et al.\ 2017)}
-
-Not strictly a matching system, but the canonical published contextual
-bandit deployment. Picks an artwork (thumbnail) for each (user, title)
-pair from a small panel of candidates; the reward is play.
-
-\textbf{What translates to ATS.} The architecture --- LinTS per
-(user-segment, item) pair --- is the exact analogue of the
-per-requisition LinTS reranker in this week's project. The biggest
-production engineering effort was logging: every artwork shown had to
-record the bandit's propensity sample, so that downstream OPE could
-compute counterfactuals.
-
-\section{YouTube REINFORCE-Top-K (Chen et al.\ WSDM 2019)}
-
-Already cited in the Algorithms chapter; the live-deployed version is the
-most public industrial RL-recsys system. The takeaways:
-\begin{itemize}\setlength\itemsep{1pt}
-  \item Off-policy correction is mandatory; without it the policy
-        gradient is dominated by the behaviour policy's bias.
-  \item The top-$K$ correction (the $\lambda_K$ factor) is the single
-        biggest empirical improvement over vanilla off-policy REINFORCE.
-  \item Variance reduction via clipping is the second-biggest improvement;
-        without clipping the gradient is dominated by a few high-weight
-        samples.
-\end{itemize}
-
-\section{Spotify slate-RL (McInerney et al.\ RecSys 2018)}
-
-Spotify's published RecSys 2018 paper applies SlateQ (or rather a
-predecessor: ListwiseRL with off-policy correction) to home-page
-personalisation. The single-choice user model is a poor fit for music
-(users often listen to multiple items in a slate); Spotify's extension is
-a multi-choice user model where the reward is the sum of chosen-item
-rewards weighted by listen duration.
-
-\textbf{Pattern to emulate.} Spotify logs every (user, slate, choice,
-listen-duration) tuple, not just the final ``listen-to-completion''
-outcome. The fine-grained log enables OPE on multiple alternative reward
-shapings (raw clicks, weighted listen, satisfaction survey) without
-re-logging.
-
-\section{Bottou et al.\ adCenter (JMLR 2013)}
-
-The single most important paper for anyone building counterfactual
-pipelines in production. Specific lessons that apply directly to synthetic insurance /
-ATS:
-\begin{itemize}\setlength\itemsep{1pt}
-  \item Randomise enough to log propensities, no more --- adCenter
-        randomised 5\% of traffic at the auction-cap level, not at the
-        ad-shown level, to bound revenue loss while preserving overlap.
-  \item Build the OPE-vs-A/B dashboard side-by-side; when they
-        disagree, the OPE estimator is usually right (less variance) and
-        the A/B test is usually under-powered.
-  \item Audit propensity overlap weekly; the production policy changes
-        and overlap silently degrades.
-\end{itemize}
+\section{A reproducible transfer exercise}
+Choose one published result. Record its outcome, comparator, sampling unit,
+interaction budget and evaluation population. Then mark which assumptions
+hold in the synthetic notebook. Do not replace missing evidence with an
+invented company uplift, latency figure, logging recipe or legal conclusion.
+When an offline estimate and an online experiment disagree, inspect estimands,
+randomisation, interference, delays, overlap and uncertainty; neither method
+is automatically right.
 
 % =============================================================================
+
 \chapter{Safety angle}
 
 \begin{safetyangle}
-ATS systems are high-risk under the EU AI Act (Annex III, August 2024). The
-failure modes that matter:
+Employment decision tools can affect people materially. The synthetic
+metrics below are teaching diagnostics; they are not legal approval criteria.
+For the legal classification, scope and application dates, consult the
+current regulation, including Article 6 and Annex III:
+\url{https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng}.
+The technical failure modes are:
 
-\textbf{F1 --- Proxy discrimination.} The model never sees gender, but
-skill bags are gender-correlated; the top-10 is disproportionately one
-gender; the regulator notices. \emph{Mitigation:} run a DP-gap audit on
-every model push; gate deploys on a $\leq 0.05$ gap threshold; document
-the audit in the AI-Act technical file.
+\textbf{F1 --- Proxy discrimination.} Correlated features can produce
+unequal selection outcomes even without an explicit group feature.
+Report group counts, the precise selection or exposure metric and its
+uncertainty. Any course threshold such as $0.05$ is a chosen diagnostic,
+not a legal criterion or proof of acceptable individual treatment.
 
-\textbf{F2 --- Calibration drift.} Yesterday's calibrator was fit on
-yesterday's logs; today's candidates are from a different sub-population
-(new locale, new requisition type); the calibrated probability is wrong;
-auto-reject thresholds become miscalibrated; qualified candidates are
-silently rejected. \emph{Mitigation:} daily calibration-drift monitor
-(KL divergence between this-week's reliability curve and last-week's);
-fall back to isotonic on a sliding-window calibration set.
+\textbf{F2 --- Calibration drift.} Evaluate calibration and proper scoring
+rules on mature held-out outcomes for the relevant population. A reliability
+curve is not itself a probability distribution on which arbitrary KL
+computations are meaningful. Refit and compare candidate calibrators under
+a documented validation protocol; switching automatically to isotonic
+does not solve every distribution shift.
+
+
 
 \textbf{F3 --- Echo chamber via bandit feedback.} The bandit only sees
 candidates the retriever surfaces; the retriever was trained on past
@@ -1296,8 +1241,8 @@ top-N slate is sampled from the LinTS posterior tail); a regular
 ``cold-start refresh'' that re-introduces tail candidates.
 
 \textbf{F4 --- Position-bias mis-modelling.} If $\eta$ is mis-estimated
-(typically too low), IPS-LTR over-corrects deep clicks and under-corrects
-shallow clicks. The trained ranker drifts toward random. \emph{Mitigation:}
+(too low for the true examination decay), inverse-examination weights
+under-correct deep clicks; too high an estimate over-corrects them. The trained ranker drifts toward random. \emph{Mitigation:}
 joint estimation of $\eta$ and the ranker via the Dual Learning Algorithm
 (Ai et al.\ SIGIR 2018); audit estimated $\eta$ against direct
 intervention experiments (RandTopN; Joachims et al.\ 2017).
@@ -1339,7 +1284,7 @@ non-textual signals (years of experience, geographic match, availability).
 The bandit explores actively in the LinTS posterior tail --- this is the
 layer that closes the production-vs-offline gap.
 
-\textbf{Layer 4 (fairness + exposure constraints).} A FairCo-style
+\textbf{Layer 4 (fairness + exposure constraints).} A separately specified exposure-constrained
 linear program post-processes the LinTS scores to enforce
 demographic-parity, equalised-opportunity, or exposure-by-group bounds.
 Constraints are loaded from the regulator-facing config file and audited
@@ -1354,7 +1299,7 @@ control point under the AI Act) and the recruiter-facing confidence band.
 \begin{itemize}\setlength\itemsep{0pt}
   \item the candidate features (skill vector, embedding hash),
   \item the requisition features,
-  \item the LinTS posterior sample at decision time (for propensity reconstruction),
+  \item the LinTS draw as a diagnostic (it is not a marginal action propensity),
   \item the propensity $\pi_b(c \mid j)$,
   \item the sensitive-attribute vector (for the fairness dashboard, stored separately),
   \item the model version hashes (two-tower, cross-encoder, calibrator),
@@ -1382,7 +1327,7 @@ could include:
   \item Cross-encoder (monoT5 or RankZephyr-quantised) on the top-1000.
   \item Per-requisition LinTS reranker on top of the cross-encoder, with
         hierarchical category prior (Meta-Thompson) for cold-start.
-  \item FairCo linear program enforcing demographic-parity and
+  \item Exposure-constrained linear program enforcing demographic-parity and
         equalised-opportunity bounds drawn from regulator policy.
   \item Per-requisition Beta calibrator on the LP-adjusted scores; daily
         sliding-window recalibration; stratified by requisition family.
@@ -1445,7 +1390,8 @@ arrow is a typed contract; each box is a versioned model.}
   \item Each artefact ships with a model card (inputs, outputs, training
         data summary, known failure modes, intended deployment scope).
   \item Reproducibility check: re-running the training pipeline with the
-        same seed produces a bit-identical artefact.
+        same supported software/hardware setup meets stated numerical tolerances;
+record deterministic settings and assess seed-to-seed variability.
 \end{itemize}
 
 \section{Online infrastructure}

@@ -180,6 +180,33 @@ For the original per-decision correction and its temporal structure, see
 This changes weights on each reward to include only the actions preceding it;
 it does not repair absent coverage.
 
+## Choose your explanation depth: Why self-normalisation changes an estimator
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+Importance weights make rare logged choices count more when those choices are common under the target policy. Ordinary IS divides by the number of observations. Weighted IS divides by their total importance mass, so a random denominator changes both stability and finite-sample bias.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+With rewards (1,0) and weights (2,1), ordinary IS is (2×1+1×0)/2 = 1. Weighted IS is 2/3. If every weight is multiplied by ten, the weighted answer stays 2/3 while the ordinary answer becomes 10. Real probability ratios cannot be rescaled arbitrarily when claiming unbiased ordinary IS.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+Under support and the correct behaviour probabilities, $E_\mu[wR]=E_\pi[R]$ and $E_\mu[w]=1$. With suitable laws of large numbers, $(\sum_iw_iR_i)/(\sum_iw_i)$ converges to the target mean. At finite sample size, $E[X/Y]$ generally differs from $E[X]/E[Y]$: this is why ratio consistency does not prove unbiasedness. When the total weight is zero, the logged sample supplies no empirical target-support mass; a denominator floor does not create that information.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_5_weighted_is` in the workbook](workbook.ipynb#cell-22), then run the setup cells above it. Expected answers are 1 and 2/3 for the two estimators. A result of zero from an all-zero-weight sample must be labelled a missing-information convention, not a measured policy value.
+
 ## Notebook investigation: separate visit order from return computation
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 4 and 5**.

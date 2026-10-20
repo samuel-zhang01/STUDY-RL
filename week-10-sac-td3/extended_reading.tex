@@ -1,68 +1,76 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.6cm]{geometry}
 \usepackage{../common/rlstudy}
-
 \title{Extended reading --- Week 10: SAC, TD3, CrossQ}
 \date{\today}
 \begin{document}
 \maketitle
+\section*{Read with a question in mind}
+Start with the week's teaching guide and its small worked example. Then use
+these readings to connect the algorithm to its assumptions and evidence.
+The explanations and investigations below are course commentary, not
+quotations. Read the source before reusing a theorem or a reported result.
+For each paper, record the objective, observation model, claimed result,
+conditions and one condition your local experiment does not reproduce.
 
-\section*{1.\ Lillicrap, Hunt, Pritzel, Heess, Erez, Tassa, Silver, Wierstra (2015) --- Continuous Control with Deep Reinforcement Learning (DDPG)}
-ICLR 2016. arXiv:1509.02971.
+\section*{1. Lillicrap et al. (2015/2016): Continuous Control with Deep Reinforcement Learning}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1509.02971}.
 
-\paragraph{Summary.} The first deep RL paper for continuous control. Combines DPG (Silver 2014) with DQN's target networks and replay buffer. The result is a deterministic actor and a Q-critic, both deep nets, trained off-policy.
+\paragraph{What to learn.} DDPG combines a deterministic actor-critic with replay and slowly changing targets for continuous actions.
 
-\paragraph{Why it matters for this week.} DDPG is the algorithmic parent of TD3 and (with stochastic policy) of SAC. The replay buffer + polyak-averaged targets + off-policy actor update are all introduced here. Reading this paper makes the structure of TD3 (twin critics, delays) feel like obvious fixes rather than arbitrary tricks.
+\paragraph{What the result requires.} It is not the first possible deep continuous-control method, and its components have prior histories. Replay-distribution actor updates require care when comparing them with an exact start-state objective.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``The fundamental challenge is that the use of large, non-linear function approximators for value learning typically leads to overestimation of the value function.''}\end{quote}
-This is the observation that motivates everything in TD3. Once you see overestimation as the central problem, every subsequent design (twin critics, target smoothing, conservative-Q in offline RL) makes sense.
+\paragraph{Notebook investigation.} Trace the actor derivative through Q with respect to action, while keeping critic parameters fixed for that actor update. Distinguish this derivative from the critic regression gradient.
 
-\section*{2.\ Fujimoto, van Hoof, Meger (2018) --- Addressing Function Approximation Error in Actor-Critic Methods (TD3)}
-ICML 2018. arXiv:1802.09477.
+\section*{2. Fujimoto, van Hoof and Meger (2018): Addressing Function Approximation Error in Actor-Critic Methods}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1802.09477}.
 
-\paragraph{Summary.} TD3. Identifies three pathologies of DDPG (overestimation bias, function-approximation error accumulation, deterministic-policy target sharpness) and provides three fixes (twin critics with min target, delayed actor updates, target policy smoothing). The empirical gain over DDPG is enormous: $\sim$2$\times$ final return on every MuJoCo benchmark.
+\paragraph{What to learn.} TD3 combines clipped double critics, delayed actor updates and target-policy smoothing.
 
-\paragraph{Why it matters for this week.} TD3 is the cleanest exposition of the bias-aware actor-critic recipe. Even modern off-policy methods (REDQ, CrossQ, BRO) keep TD3's twin-critic min target as their default.
+\paragraph{What the result requires.} The minimum can introduce pessimism; it is not universally a low-variance unbiased estimate. Published gains depend on task and protocol, not a twofold improvement on every benchmark.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``Taking the minimum of the two Q-functions provides a low-variance estimator of the true Q-function, but with an additional pessimism bias.''}\end{quote}
-The min trick is a pessimism prior: ``trust the more conservative of the two Q estimates''. This pessimism is also the principle behind CQL in offline RL (week 14). The trade-off (slightly lower true returns, but no over-estimation cascade) is one of the cleanest in modern RL.
+\paragraph{Notebook investigation.} Use \texttt{td3\_target}. Apply noise clipping, action-bound clipping and a terminal mask in that order before comparing the two critic values.
 
-\section*{3.\ Haarnoja, Zhou, Abbeel, Levine (2018a) --- Soft Actor-Critic + Haarnoja et al.\ (2018b) --- Automatic Temperature}
-ICML 2018 / arXiv:1801.01290 + arXiv:1812.05905.
+\section*{3. Haarnoja et al. (2018): Soft Actor-Critic and Algorithms and Applications}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1812.05905}.
 
-\paragraph{Summary.} Two papers, one algorithm. 2018a derives SAC from the maximum-entropy MDP framework, with hand-tuned temperature $\alpha$. 2018b drops the hyperparameter by introducing the dual variable trick: maintain $\log\alpha$ and update it by gradient descent on a constraint that the policy entropy stays above a target.
+\paragraph{What to learn.} SAC optimises an entropy-regularised objective. The later formulation adapts temperature through a target-entropy constraint; the original paper is at arXiv:1801.01290.
 
-\paragraph{Why it matters for this week.} The algorithm we implement. Read 2018b end to end; the dual derivation in Appendix C is the cleanest explanation of automatic temperature in the literature.
+\paragraph{What the result requires.} Automatic temperature leaves a target entropy and optimisation choices. Entropy depends on action coordinates and, for a continuous distribution, need not be positive. The tanh Jacobian is part of the action density.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``We propose to optimize this constraint problem via dual gradient descent... the dual update on $\alpha$ becomes $\alpha \leftarrow \alpha - \eta_\alpha \nabla_\alpha \alpha (-\log \pi(a|s) - \mathcal{H}_0)$, leading to a smooth, automatic schedule of the temperature.''}\end{quote}
-The dual interpretation is the key. Once you accept that ``$\alpha$ is a Lagrange multiplier for an entropy constraint'', the update rule writes itself --- and the resulting algorithm requires no hyperparameter tuning for $\alpha$.
+\paragraph{Notebook investigation.} Use \texttt{tanh\_gaussian\_log\_prob} and \texttt{auto\_temperature\_loss}. Keep sampled actions fixed when checking the intended direction of a temperature update.
 
-\section*{4.\ Bhatt, Palenicek, Kuhn, Belousov, Peters (2024) --- CrossQ: Batch Normalization in Deep Reinforcement Learning for Greater Sample Efficiency}
-ICLR 2024. arXiv:1902.05605 (extended in 2023/2024).
+\section*{4. Bhatt et al. (2024): CrossQ}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/1902.05605}.
 
-\paragraph{Summary.} CrossQ. Removes the polyak-averaged target networks of SAC/TD3 by carefully placing BatchNorm: BN after every Linear in both the actor and the critic, with the BN running statistics shared across both the current and next-step Q estimates. The result: $\sim$25\% wall-clock improvement and one fewer hyperparameter (the polyak coefficient $\tau$ no longer exists).
+\paragraph{What to learn.} Examines batch normalisation and joint processing of current and successor critic inputs, achieving strong sample efficiency without target networks in the studied setting.
 
-\paragraph{Why it matters for this week.} The most-cited 2024 update to the SAC recipe. Two reasons to read it: (i) target networks are conceptually the most awkward part of SAC, and CrossQ shows they are dispensable; (ii) the BN placement details are non-obvious and the paper is a model of how to do careful empirical ablation.
+\paragraph{What the result requires.} The mechanism is more specific than adding batch norm after every linear layer. Successor targets still require the intended gradient stopping. Neither a fixed speedup nor a universal replacement guarantee follows.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``We find that the stability provided by target networks in SAC and TD3 can be replicated by Batch Normalisation alone, provided the BN layers are placed after every Linear in both actor and critic and the running statistics are updated even when computing target Q-values.''}\end{quote}
-A simple, almost mundane sentence that encodes a major simplification of modern RL. The mechanism (BN-induced effective learning-rate decay over the recent past) is closely related to the variance-reduction story of GAE; both stabilise by exponentially-weighted smoothing of an internal statistic.
+\paragraph{Notebook investigation.} Inspect the primary implementation before designing an ablation: which samples share normalisation statistics, and which gradients stop? The local \texttt{polyak\_update} exercise teaches a different target-network mechanism.
 
-\section*{5.\ Lee, Hwang, Ahn (2025) --- SimBa: Simplicity Bias for Scaling Up Reinforcement Learning}
-ICLR 2025. arXiv:2410.09754.
+\section*{5. Lee et al. (2025): SimBa: Simplicity Bias for Scaling Up Parameters in Deep Reinforcement Learning}
+\textbf{Primary source or book record:} \url{https://arxiv.org/abs/2410.09754}.
 
-\paragraph{Summary.} SimBa. A drop-in residual + LayerNorm + RMSNorm block that scales SAC/TD3 critics to $\sim$5M parameters without instability. Pairs with periodic resets, distributional value heads (two-hot/HL-Gauss), and high replay ratios (UTD=10). Beats CrossQ on DMC Dog and Humanoid.
+\paragraph{What to learn.} Studies an architecture using observation normalisation, residual feed-forward blocks and layer normalisation to improve parameter scaling.
 
-\paragraph{Why it matters for this week.} SimBa is the current SOTA off-policy continuous-control baseline. The block construction (Eq.\ 2 of the paper) is exactly what you would build for synthetic ATS or synthetic insurance if you needed to scale beyond 1M params.
+\paragraph{What the result requires.} Do not mix this original architecture with later variants involving additional normalisations, resets or distributional losses. Its published benchmark evidence is not a universal current-best claim.
 
-\paragraph{Annotated key passage.}
-\begin{quote}\emph{``A simple residual block with PreNorm (RMSNorm before each MLP, LayerNorm at the residual sum) suffices to enable stable training of critics with up to 5M parameters and a replay ratio of 10.''}\end{quote}
-The recipe is no more exotic than that of a small transformer block, applied to actor-critic. It is striking how late it took the RL community to absorb the depth + normalisation lessons that NLP had internalised by 2018.
+\paragraph{Notebook investigation.} Draw the original residual block from the paper. Identify the normalisation axis and where observations are standardised; then describe a controlled architecture-only comparison.
 
-\section*{Sourced from}
-\texttt{research/deeprl\_core\_sota.md} \S 3.1--3.7 (SAC, TD3, CrossQ, SimBa, REDQ, DroQ).
-
+\section*{Synthesis: evidence you should be able to show}
+\begin{enumerate}
+\item Reproduce one numerical calculation before running a long experiment.
+\item Name the precise objective, sampling distribution and terminal convention.
+\item Compare the local implementation with one source: list a shared mechanism
+and one simplification that prevents calling it a full reproduction.
+\item Separate an algebraic identity, an assumption-dependent theorem and an
+empirical result. A plot alone does not prove a theorem.
+\item Save the notebook with seed, parameters, axes, denominators and a short
+explanation of an unexpected result. Keep evaluation data separate from tuning.
+\end{enumerate}
+Return to the teaching guide's notebook investigation for the local function
+names, expected checks and interpretation questions. Source code and notebooks
+are available together in the course repository; the web reader is the entry
+point and the downloaded notebook is the execution workspace.
 \end{document}

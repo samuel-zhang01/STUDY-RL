@@ -198,6 +198,33 @@ or compare **pull-count** coefficients $8/\Delta_a^2$ and $1/\mathrm{KL}$.
 The original proof must union-bound over possible adaptive sample counts.
 See [Auer, Cesa-Bianchi and Fischer, Theorem 1 and its proof](https://homes.di.unimi.it/~cesabian/Pubblicazioni/ml-02.pdf).
 
+## Choose your explanation depth: Why uncertainty shrinks with observations
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+An estimated mean and confidence in that mean are different quantities. Two actions can have the same average reward while the less-tested action has a larger exploration bonus. UCB gives that uncertain action a chance to collect evidence; it does not claim its true reward is larger.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+At a fixed round, compare counts 1, 4 and 16. The UCB bonus is proportional to one over the square root of the count, so their bonuses have ratio 4:2:1. A lucky reward increases the mean estimate; another observation also shrinks the uncertainty term. These are separate effects.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+For independent rewards in $[0,1]$, Hoeffding gives $P(\bar R_n-\mu\ge b)\le e^{-2nb^2}$. Setting $b=\sqrt{2\log t/n}$ makes this fixed-count probability at most $t^{-4}$. A bandit chooses sample counts adaptively, so the full regret proof must also account for possible counts and rounds. Stationarity and boundedness are assumptions, not conclusions of a shrinking bonus. See the earlier regret section for the gap-dependent pull bound.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_3_ucb1_bonus` in the workbook](workbook.ipynb#cell-14), then run the setup cells above it. Hold `t` fixed while changing counts; otherwise time and count effects are mixed. Expected bonus ratios are exact up to floating-point rounding, whereas a one-seed regret ranking is not guaranteed.
+
 ## Notebook investigation: track uncertainty separately from reward
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 3 and 6**.

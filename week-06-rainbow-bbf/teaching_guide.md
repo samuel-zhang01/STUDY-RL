@@ -183,6 +183,33 @@ $1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
 flag for this mask and either flag to reset the environment.
 See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
 
+## Choose your explanation depth: Why a categorical projection must conserve probability mass
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+A distributional target can land between the fixed atoms used by the network. Projection shares that probability between neighbouring atoms. It moves probability mass, rather than rounding every return to the nearest label.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+On atoms (0,1,2), a target return of 0.5 becomes masses (0.5,0.5,0). A return exactly 1 becomes (0,1,0). If an implementation applies only the usual lower/upper interpolation formula when both indices are equal, it can incorrectly assign zero mass to that exact atom.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+For support spacing $\Delta z$, clipped target $y$ has coordinate $b=(y-z_{\min})/\Delta z$, lower index $l=\lfloor b\rfloor$ and upper index $u=\lceil b\rceil$. If $l<u$, split mass $p$ as $p(u-b)$ and $p(b-l)$; they sum to $p$. If $l=u$, deposit all $p$ at that atom. Apply this to each transformed atom $r+\gamma(1-d)z_j$. Clipping conserves mass but can change the mean when targets lie outside the support. Return-distribution modelling does not alone guarantee a low-risk policy.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_6_categorical_project` in the workbook](workbook.ipynb#cell-23), then run the setup cells above it. Expect row sums of one and nonnegative entries, including exact-atom and terminal cases. Check both mass conservation and the mean; one passing invariant does not imply the other.
+
 ## Notebook investigation: distinguish a distribution from a confidence interval
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 3 and 6**.

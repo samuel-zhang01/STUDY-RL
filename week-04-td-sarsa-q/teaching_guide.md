@@ -182,6 +182,33 @@ $1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
 flag for this mask and either flag to reset the environment.
 See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
 
+## Choose your explanation depth: Which randomness Expected SARSA removes
+
+Open the first layer for the idea, the second to calculate, and the third to check the assumptions. The worked examples above and investigation below provide the longer route.
+
+<details class="learning-layer">
+<summary>1 · Intuition</summary>
+
+SARSA samples the next action and uses its estimated value. Expected SARSA averages over possible next actions before updating. It removes that action draw while retaining randomness in the reward, successor state and learned estimates.
+
+</details>
+
+<details class="learning-layer">
+<summary>2 · Work a numerical case</summary>
+
+For successor-action values (2,4) and probabilities (0.25,0.75), the sampled continuation mean is 3.5. Its variance is 0.25(2−3.5)²+0.75(4−3.5)² = 0.75. Expected SARSA substitutes 3.5 directly, so the conditional variance from this action draw is zero. If both values were 2, both methods would already have zero conditional variance.
+
+</details>
+
+<details class="learning-layer">
+<summary>3 · Derive it and state the limits</summary>
+
+Let $Y=R+\gamma Q(S\prime,A\prime)$, conditioning on fixed estimates and the observed transition. The expected target is $E[Y\mid R,S\prime]$. The law of total variance gives $\operatorname{Var}(Y)=E[\operatorname{Var}(Y\mid R,S\prime)]+\operatorname{Var}(E[Y\mid R,S\prime])$. Thus this conditional averaging cannot increase that target variance. It says nothing universal about final control error after many changing updates. A true terminal state has no continuation; a continuing-task time limit needs its final-state bootstrap.
+
+</details>
+
+**Try it in Jupyter:** jump to [`exercise_5_expected_sarsa_target` in the workbook](workbook.ipynb#cell-20), then run the setup cells above it. With epsilon 0.5, expect continuation 3.5 before reward and discount. Use the actual next-action distribution, including exploration; a uniform mean silently changes the target policy.
+
 ## Notebook investigation: use one transition to compare three algorithms
 
 Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 3, 4 and 5**.

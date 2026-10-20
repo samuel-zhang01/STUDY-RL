@@ -209,25 +209,19 @@ means approach the boundaries. KL-UCB can attain the Bernoulli asymptotic
 lower-bound coefficient under its stated assumptions.
 \end{remark}
 
-\begin{theorem}[Thompson sampling for Bernoulli arms, Agrawal--Goyal 2012]
-\label{thm:ts}
-With Beta(1,1) priors and posterior update $\alpha_a\gets\alpha_a+R_t$,
-$\beta_a\gets\beta_a+1-R_t$ after observing arm $a$, the Thompson policy
-$A_{t+1}=\argmax_a \tilde\mu_a$ where $\tilde\mu_a\sim\mathrm{Beta}(\alpha_a,\beta_a)$
-achieves
-\[
-R_T \le O\!\left(\sum_{a:\Delta_a>0}\frac{\log T}{\Delta_a}\right).
-\]
+\begin{theorem}[Thompson sampling: scope of the original bound]
+With independent stationary Bernoulli arms, interior means, a unique best arm
+and independent Beta$(1,1)$ priors, Agrawal--Goyal (COLT 2012) prove logarithmic
+expected regret. For two arms their bound is
+$O(\log T/\Delta+1/\Delta^3)$; their general-$K$ result has a looser gap dependence.
+Later analyses improve the gap dependence. Do not attribute the later
+$\sum_a\log T/\Delta_a$ bound to the original general-$K$ theorem.
 \end{theorem}
-
-\begin{proof}[Idea]
-At each round the posterior concentration around the true means happens at the
-Bernstein rate. The probability that a suboptimal posterior beats the optimal
-posterior is bounded by an integral over the gap in beta-CDFs, which is
-$O(1/t^{1+\epsilon})$ once $N_a(t)\ge \tfrac{c\log t}{\Delta_a^2}$. Russo--Van
-Roy's \emph{information ratio} argument gives the cleanest unified proof.
-\qedhere
-\end{proof}
+\paragraph{Proof roadmap.} Control both suboptimal posterior samples and
+waiting for an optimistic sample from the optimal arm. Concentration of
+only the suboptimal posterior is insufficient. Bayesian information-ratio
+bounds average over a prior and are a different guarantee from fixed-instance
+frequentist regret. See \url{https://proceedings.mlr.press/v23/agrawal12.html}.
 
 \paragraph{Boltzmann / softmax exploration.}
 $\Prb(A_t=a) = \exp(\hat\mu_a/\tau) / \sum_b \exp(\hat\mu_b/\tau)$. Temperature
@@ -304,9 +298,9 @@ literature:
         \emph{differential} value $h(s)$ and the bias-optimality theory is more
         delicate (Puterman 1994, Ch.\ 8).
 \end{itemize}
-For synthetic insurance, where the time horizon between a lead arriving and a policy bind
-is days to weeks, $\Disc\in[0.95, 0.99]$ at a daily step gives sensible
-behaviour; for ATS, with weeks-to-hire, $\Disc\approx 0.99$ at a weekly step.
+Discounts in a synthetic experiment are design choices. State the time step
+and outcome horizon, then compare policies under several discounts; no fixed
+number is justified merely by naming an application.
 
 \begin{pitfall}
 \textbf{Don't confuse $\gamma$ with a regulariser.} Lowering $\gamma$ does not
@@ -505,8 +499,9 @@ low-value leads with bounded downside. \textbf{(ii)} Use \emph{shielded
 exploration}: a hard rules layer rejects any action a regulator would flag,
 applied \emph{after} the bandit chooses (see Alshiekh et al., AAAI
 2018; Achiam et al., CPO, ICML 2017). \textbf{(iii)} Log
-$\pi_b(a\mid x)$, not just $a$ --- without propensities, every downstream OPE
-estimate is biased and you cannot audit anything.
+the probability of the final executed action, including any filtering and
+renormalisation, not just the proposed action. Missing propensities prevent
+straightforward IPS; model-based evaluation then needs separate assumptions.
 
 \paragraph{Citations.}
 \textsc{Alshiekh, Bloem, Ehlers, K\"onighofer, Niekum, Topcu --- Safe RL via

@@ -1,123 +1,63 @@
 \documentclass[11pt]{scrartcl}
 \usepackage[a4paper,margin=2.4cm]{geometry}
 \usepackage{../common/rlstudy}
-
-\title{Week 14 --- Extended Reading: Offline RL}
+\title{Week 14 --- Extended Reading: Offline reinforcement learning}
 \author{STUDY-RL}
-\date{\today}
-
+\date{Source audit: 20 October 2026}
 \begin{document}
 \maketitle
+\section*{Read for a claim, an assumption and a test}
+Read the teaching guide first, then use this pack alongside the lecture.
+The annotations below are course-written paraphrases and investigation prompts,
+not quotations from the papers. Each source link identifies a primary paper
+or official guidance. Benchmark results do not transfer automatically to our
+small exercises. For each reading, write the mathematical object, the needed
+assumptions and one observation that would challenge your interpretation.
 
-This companion reads alongside \texttt{notes.pdf}. Each entry: full citation,
-one-paragraph summary, ``Why it matters for this week'', and an annotated key
-passage.
+\section{Levine et al. (2020): Offline RL tutorial}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2005.01643}
 
-\section{Levine, Kumar, Tucker, Fu (2020) --- Offline RL Tutorial}
-\textsc{S.\ Levine, A.\ Kumar, G.\ Tucker, J.\ Fu.} \emph{Offline Reinforcement
-Learning: Tutorial, Review, and Perspectives on Open Problems.} arXiv:2005.01643, 2020.
+\paragraph{Mechanism and scope.} The survey organises the offline problem around distribution shift and limited feedback. A fixed log prevents the learner from correcting arbitrary errors by gathering new transitions. Read the policy-constraint, conservative-value and evaluation discussions as different responses to that problem.
 
-\noindent\textbf{Summary.} The canonical reference for the field. Formalises the
-problem; surveys distribution shift, importance sampling, BCQ/BEAR/CQL/AWR;
-proposes a taxonomy of methods by where they place the constraint (policy vs.\
-critic vs.\ density). Long but dense; chapters 4 and 6 are mandatory.
+\paragraph{Read, derive, investigate.} Draw the dataset distribution and the distribution induced by an improved policy. Which expectation appears in the Bellman loss, and which one matters at deployment? Construct a missing-action example in which an arbitrarily large critic prediction is consistent with the observed data.
 
-\noindent\textbf{Why it matters for this week.} It is the canonical mental model:
-all subsequent papers are positioned with respect to this taxonomy.
+\section{Kumar et al. (2020): Conservative Q-Learning}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2006.04779}
 
-\begin{quote}
-``The fundamental challenge in offline RL is one of distributional shift: while we
-optimise the policy under one distribution (the dataset $\mathcal{D}$), the policy
-will visit a different distribution at evaluation time.''
-\end{quote}
-\emph{Commentary.} This one sentence is the entire field. Every algorithm in the
-literature is a different answer to: \emph{which divergence between $d^\pi$ and
-$d^{\pi_\beta}$ are we bounding, and how?}
+\paragraph{Mechanism and scope.} CQL adds a conservative critic regulariser to Bellman fitting. The discrete log-sum-exp term pushes down actions relative to dataset actions. Lower-bound results have statistical and optimisation conditions; a trained neural critic is not a universal pointwise lower bound.
 
-\section{Kumar et al.\ (2020) --- Conservative Q-Learning}
-\textsc{A.\ Kumar, A.\ Zhou, G.\ Tucker, S.\ Levine.} \emph{Conservative Q-Learning
-for Offline RL.} NeurIPS 2020, arXiv:2006.04779.
+\paragraph{Read, derive, investigate.} At a state with four zero-valued actions and only action 0 in the dataset, differentiate $\log\sum_a e^{Q_a}-Q_0$. Why is its gradient $(-3/4,1/4,1/4,1/4)$? Explain what a large penalty can sacrifice when the data omit useful behaviour.
 
-\noindent\textbf{Summary.} Introduce the now-standard ``learned $Q$ should be a
-lower bound on $V^\pi$'' criterion. The CQL penalty
-$\log \sum_a \exp Q(s,a) - \E_{\pi_\beta} Q(s,a)$ added to Bellman regression
-yields a lower-bound estimator under mild assumptions on the data coverage.
-Strong on D4RL-MuJoCo.
+\section{Kostrikov et al. (2021): Implicit Q-Learning}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2110.06169}
 
-\noindent\textbf{Why it matters.} It moved the field from ``policy constraint''
-to ``value constraint''. Cleaner objective, fewer moving parts than BCQ/BEAR.
+\paragraph{Mechanism and scope.} IQL uses asymmetric squared-error regression for the state value, then Bellman fits and advantage-weighted policy extraction. Its value update avoids maximising over arbitrary newly sampled actions. Neural policy extraction can still generalise beyond observed actions.
 
-\begin{quote}
-``By learning a conservative value function, CQL prevents the policy from
-exploiting overestimation errors during the policy improvement step.''
-\end{quote}
-\emph{Commentary.} ``Prevents'' is overselling: it dampens. Tuning $\alpha$ is
-where production bites; in practice we use the Lagrangian variant.
+\paragraph{Read, derive, investigate.} For equal-probability targets 0 and 1, solve the expectile stationarity equation and obtain $v=\tau$. Why is this an expectile rather than a quantile? Trace which network is held fixed at each update; a high expectile is not an uncertainty estimate.
 
-\section{Kostrikov et al.\ (2021) --- Implicit Q-Learning}
-\textsc{I.\ Kostrikov, A.\ Nair, S.\ Levine.} \emph{Offline RL with Implicit
-Q-Learning.} arXiv:2110.06169, 2021.
+\section{Fujimoto and Gu (2021): TD3+BC}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2106.06860}
 
-\noindent\textbf{Summary.} Replace explicit Q-on-out-of-support sampling with an
-\emph{expectile} regression on the value: $V$ regresses to the upper expectile
-of $Q(s, a \sim \pi_\beta)$, so it estimates ``best in-support'' without ever
-naming the out-of-support action. Pairs with AWR/AWAC for policy extraction.
-Faster, simpler, competitive with CQL.
+\paragraph{Mechanism and scope.} TD3+BC combines an actor value objective with behaviour cloning and state normalisation. The published implementation uses $\lambda=\alpha/\operatorname{mean}|Q|$ in the loss $-\lambda Q+\mathrm{BC}$, with the scale detached.
 
-\noindent\textbf{Why it matters.} IQL is the current default in many real-world
-deployments precisely because there are no OOD samples needed at training time
---- the action space can be arbitrary.
+\paragraph{Read, derive, investigate.} Multiply critic values by 10 and recompute $\lambda$. Which part of the actor objective is approximately scale-invariant? Compare against incorrectly multiplying the BC term by the inverse-value scale. Locate the exact actor loss in the author code before changing the convention.
 
-\begin{quote}
-``Our key insight is that we can perform the policy improvement step implicitly
-by treating the value function as the upper expectile of the action-value
-function under the data distribution.''
-\end{quote}
-\emph{Commentary.} The word ``implicitly'' carries the whole idea: the policy
-is never used to query Q at unseen actions. Compare to AWAC, which still samples
-actions from $\pi$.
+\section{Tarasov et al. (2023): ReBRAC}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/2305.09836}
 
-\section{Tarasov et al.\ (2023) --- ReBRAC}
-\textsc{D.\ Tarasov, V.\ Kurenkov, A.\ Nikulin, S.\ Kolesnikov.} \emph{Revisiting
-the Minimalist Approach to Offline RL.} arXiv:2305.09836.
+\paragraph{Mechanism and scope.} ReBRAC revisits a regularised actor--critic with design changes including deeper networks, LayerNorm, larger batches and decoupled penalties. Its ablations study particular datasets and evaluation protocols; the paper is not a timeless ranking of offline algorithms.
 
-\noindent\textbf{Summary.} A careful re-engineering of TD3+BC: higher discount,
-layer-norm in critics, per-step BC weight tuned to $\E[Q]$. No new ideas, just
-correct execution. Sets the strongest non-transformer scores on D4RL as of late 2023.
+\paragraph{Read, derive, investigate.} Create an ablation table with one changed design choice per row. Which comparisons require equal environment data, tuning budget and seeds? The workbook illustrates losses and extraction; it does not reproduce the complete ReBRAC benchmark.
 
-\noindent\textbf{Why it matters.} Lesson: many offline RL ``algorithmic'' gains were
-hyperparameter gains. Useful sanity check before reaching for the heavy tools.
+\section{Voloshin et al.: Empirical OPE study}
+\noindent\textbf{Primary source.} \url{https://arxiv.org/abs/1911.06854}
 
-\begin{quote}
-``Many of the recent advances in offline RL can be attributed to a few well-chosen
-implementation details rather than to the algorithmic novelty.''
-\end{quote}
-\emph{Commentary.} A polite rebuke of the field. Cite this paper whenever a new
-SOTA claim arrives without ablations.
+\paragraph{Mechanism and scope.} The study compares off-policy estimators across experimental settings. Fitted Q Evaluation performs Bellman regression for a fixed policy without learning a transition model. Importance weighting instead relies directly on support and correctly aligned probabilities.
 
-\section{Voloshin et al.\ (2021) --- OPE Empirical Study}
-\textsc{C.\ Voloshin, H.\ Le, N.\ Jiang, Y.\ Yue.} \emph{Empirical Study of Off-Policy
-Policy Evaluation.} NeurIPS Datasets and Benchmarks, 2021, arXiv:1911.06854.
+\paragraph{Read, derive, investigate.} Separate finite-sample bias, variance and model error. A deterministic target does not itself invalidate OPE; missing behaviour support does. The course log experiment is an estimator diagnostic, not evidence that one method dominates in every task.
 
-\noindent\textbf{Summary.} A systematic comparison of IS, weighted-IS, doubly robust,
-FQE, MAGIC, DICE estimators across a portfolio of MDPs. Verdict: \textbf{FQE} is the
-single most reliable estimator when a function approximator is available; SNIPS is
-the best ``no model'' baseline; doubly-robust requires careful nuisance tuning.
+\section*{Connect the reading to your workbook}
+Use the workbook's expectile and CQL exercises first, then perturb the dataset coverage while keeping the evaluation task fixed. Report the estimate, support diagnostic and uncertainty together. For policy extraction, distinguish the exact nonparametric KL-constrained solution from its weighted maximum-likelihood projection into a neural family.
 
-\noindent\textbf{Why it matters.} OPE is what stands between an offline-trained
-policy and a production deployment. This paper is the ``which estimator should I use''
-cheat-sheet.
-
-\begin{quote}
-``No single OPE method dominates across all settings; the choice depends on
-horizon length, state-space dimensionality, and how well the behaviour policy is
-known.''
-\end{quote}
-\emph{Commentary.} The horizon-length collapse is the key practical point: above
-roughly 50 steps, IS-family estimators are useless; FQE or DICE is mandatory.
-
-\vfill
-\noindent\emph{Sourced from} \texttt{research/offline\_modelbased\_sota.md}
-(track A, sections A.1--A.5, A.15--A.16).
-
+\noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
 \end{document}

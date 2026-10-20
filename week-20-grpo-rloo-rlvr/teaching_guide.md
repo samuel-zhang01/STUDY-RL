@@ -36,6 +36,33 @@ The advantages are (1,−1): each reward is compared with the other attempt. The
 **Carry it onward:** [Reward hacking](../week-21-reward-hacking-oversight/teaching_guide.md) tests whether optimizing that signal still improves the intended outcome.
 
 
+## Choose your explanation depth
+
+What leaving one response out actually changes. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+To judge one sampled answer, RLOO compares its reward with the other answers to the same prompt. Leaving the current answer out matters for the baseline argument. Group standardisation adds another change: it scales prompts by their observed reward spread.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+For rewards **[1, 0, 1, 0]**, the group mean is **0.5**. Centred rewards are **[0.5, −0.5, 0.5, −0.5]**; leave-one-out advantages are **[2/3, −2/3, 2/3, −2/3]**. Population-standard-deviation GRPO gives approximately **[1, −1, 1, −1]**, with the exact value depending on epsilon.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+For $G>1$, $b_{-i}=(G\bar r-r_i)/(G-1)$, so $r_i-b_{-i}=G(r_i-\bar r)/(G-1)$. The coefficients sum to zero exactly. Conditional independent sampling and a score-function identity justify an action-independent leave-one-out baseline. This algebra alone says nothing about which full gradient estimator has lower variance: the score vectors also matter.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 2](workbook.ipynb#cell-11) and [Exercise 3](workbook.ipynb#cell-14), referencing `project.solutions.exercise_2` and `exercise_3`. Verify the arrays above, then use **[1, 1, 1, 1]** and expect all-zero relative advantages. Keep each prompt on its own row; centring across unrelated prompts changes the estimator. In [Exercise 4](workbook.ipynb#cell-17), remember that its output is coefficient variance, not variance of the complete policy gradient.
+
 ## Mechanism at a glance
 
 ```mermaid

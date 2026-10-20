@@ -33,6 +33,33 @@ No. It supports a result under this synthetic reward function and shortlist proc
 **Carry it onward:** [Causal biology](../week-26-causal-discovery-biological-data/teaching_guide.md) carries over overlap and audit discipline, then asks what observational evidence identifies about an intervention.
 
 
+## Choose your explanation depth
+
+Why five percent exploration can create weights of two hundred. Open the layer you need, then continue to the complete derivation and examples below.
+
+<details class="explanation-layer">
+<summary>1 · Intuition</summary>
+
+An exploration probability is spread across eligible actions. The probability of one particular action can be much smaller than the overall exploration fraction. Off-policy evaluation needs the probability of the action actually taken.
+
+</details>
+
+<details class="explanation-layer">
+<summary>2 · A numerical case</summary>
+
+With **k = 10** and ε = **0.05**, each non-greedy action has probability **0.005**. A deterministic target that selects that action gives importance weight **1 / 0.005 = 200**. The greedy action has probability **0.955**. An action outside the eligible ten still has probability **0**, regardless of how many logs you collect.
+
+</details>
+
+<details class="explanation-layer">
+<summary>3 · Derivation and assumptions</summary>
+
+The mixture is $p_B(a\mid x)=(1-\varepsilon)\mathbf1\{a=a_0(x)\}+\varepsilon/k$. Under correct logging and support, $E_B[(\pi/p_B)R\mid x]=\sum_a\pi(a\mid x)E[R\mid x,a]$. A zero behaviour probability where the target has mass breaks this identity's observable-data calculation. SNIPS divides weighted reward by total weight; it cannot manufacture support and is generally biased in finite samples.
+
+</details>
+
+**Investigate in Jupyter.** Open [Exercise 4: SNIPS interval](workbook.ipynb#cell-16), backed by `exercise_4_snips_ci`. First print the realised weight range and ESS, then interpret the interval for the **deterministic LinTS-argmax policy actually evaluated**. In [Exercise 10](workbook.ipynb#cell-34), follow the audited action array rather than assuming a result key names a different policy. Also run [Exercise 8](workbook.ipynb#cell-28) and expect **log(2)** for ordinary DPO at equal policy/reference. A common failure is treating the later human override probability as the known display propensity.
+
 ## Mechanism at a glance
 
 ```mermaid
