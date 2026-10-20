@@ -1,5 +1,17 @@
 # Week 20 teaching guide: what a group baseline does and does not cancel
 
+**Course navigation:** [Week 19](../week-19-dpo-zoo/teaching_guide.md) ← **Week 20 / 26** → [Week 21](../week-21-reward-hacking-oversight/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** What information does a within-prompt baseline remove?
+
+**Recall first:** [Week 07](../week-07-policy-gradients/teaching_guide.md), [Week 18](../week-18-rlhf-ppo-llm/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#llm-training-keep-four-roles-separate). Use it to explain the mechanism before the derivation.
+
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 All numerical cases below are finite examples whose expectations can be enumerated.
 
@@ -22,6 +34,19 @@ The advantages are (1,−1): each reward is compared with the other attempt. The
 </details>
 
 **Carry it onward:** [Reward hacking](../week-21-reward-hacking-oversight/teaching_guide.md) tests whether optimizing that signal still improves the intended outcome.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    P["One prompt"] --> G["Independent sampled completions"]
+    G --> R["Verifier rewards"]
+    R --> B["Group-relative coefficients"]
+    B --> S["Coefficients times sequence scores"]
+```
+
+**Read the diagram:** Zero-sum coefficients need not produce a zero gradient because sequence score gradients differ. If rewards all tie, centred reward coefficients are zero.
 
 ## Before starting
 
@@ -153,6 +178,33 @@ is one component. Fixed normalisation and averaging over all valid batch tokens 
 See [the Dr.GRPO analysis](https://arxiv.org/abs/2503.20783) for the length and difficulty distinction.
 The toy's evaluation samples new draws from the same finite prompt set as SFT
 and RL. A new RNG seed does not make those prompts a disjoint held-out test set.
+
+## Notebook investigation: make the grouping axis and verifier visible
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2, 3 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-20-grpo-rloo-rlvr)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Start with two prompt rows: rewards `(1,0,0,0)` and `(1,1,1,1)`.
+Compute means within each row. The second row must have zero centred reward coefficients;
+flattening both rows before centring would falsely create a comparison between prompts.
+Plot three bars per completion for inclusive centring, RLOO and GRPO, with a separate panel for
+each prompt. Explain that coefficient magnitude is not yet a parameter-gradient magnitude.
+
+For exercise 1, test a valid final answer, extra trailing text, multiple numbers and no number.
+Read the parser's acceptance rule before labelling any string verified. Exercise 5's k3 values
+are nonnegative, but unbiased KL estimation depends on the sampling distribution. Enumerate both
+actions of the guide's `(0.8,0.2)` distribution with their probability weights; a uniform average
+of the two k3 values evaluates a different sampling experiment.
+
+<details>
+<summary>Check your interpretation: If every answer in a group is wrong, will dividing by a smaller standard deviation help?</summary>
+
+No. Identical rewards give a zero centred numerator. Sampling or task design must supply reward differences; scaling cannot create them. A separate KL term can still move the policy.
+
+</details>
 
 ## Retrieve and transfer
 

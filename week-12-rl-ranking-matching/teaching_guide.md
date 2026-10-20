@@ -1,5 +1,17 @@
 # Week 12 teaching guide — distinguish relevance, exposure, and selection
 
+**Course navigation:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md) ← **Week 12 / 26** → [Week 13](../week-13-multi-agent-alphazero/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** How do relevance, exposure, and observed clicks differ?
+
+**Recall first:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#logged-data-and-support). Use it to explain the mechanism before the derivation.
+
 Use this guide alongside exercises 4 and 6–9, then apply the distinctions in the recommendation memo.
 
 ## Learning bridge
@@ -17,6 +29,18 @@ The relevance probabilities are 0.4 and 0.1. Identical observed click rates need
 </details>
 
 **Carry it onward:** [Multi-agent learning](../week-13-multi-agent-alphazero/teaching_guide.md) adds other decision-makers whose choices affect your outcomes.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    R["Ranking assigns position"] --> E["Position affects examination"]
+    E --> C["Observed click"]
+    V["Relevance"] --> C
+```
+
+**Read the diagram:** A click depends on both relevance and examination. Position exposure, selection rates and relevance predictions have different denominators and meanings.
 
 ## Connect to what you know
 
@@ -148,6 +172,33 @@ A two-example Brier calculation is illustrative; estimating calibration needs mo
 For the memo, report one concrete metric with its numerator, denominator, cutoff, and data split.
 Replace “the model is fair” with the actual audited property and which groups/jobs the evidence covers.
 This is an interpretation exercise; the synthetic examples do not settle real deployment policy.
+
+## Notebook investigation: put the denominator in the figure
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 4, 6 and 9**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-12-rl-ranking-matching)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Use two items with relevance `(0.2,0.8)` and examination `(1,0.5)`. Draw separate bars for relevance,
+examination and expected clicks before swapping their positions. Expected total clicks changes
+from 0.6 to 0.9; the item's relevance stays fixed under this click model.
+In exercise 4, trace each item's target-to-logged examination ratio instead of attaching a weight
+only to a position number.
+
+For exercise 6, annotate the group pool sizes directly on the chart. With pools 2 and 8 and one
+selection from each, shares are `(0.5,0.5)` but selection rates are `(0.5,0.125)`.
+The legacy helper computes selected-share disparity. Do not title its plot demographic-parity
+selection-rate gap. For exposure, state whether the denominator is candidates, jobs or displayed
+positions and whether the whole ranking or only top-k contributes.
+
+<details>
+<summary>Check your interpretation: Why can reordering improve clicks while leaving each relevance estimate unchanged?</summary>
+
+The examination factor changed. In the position model, relevance belongs to the item/query and examination belongs to its position; their product predicts observed clicks.
+
+</details>
 
 ## Retrieval and transfer
 

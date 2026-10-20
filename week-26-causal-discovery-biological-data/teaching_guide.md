@@ -1,5 +1,17 @@
 # Week 26: causal discovery across biological environments
 
+**Course navigation:** [Week 25](../week-25-synthetic-ats-rl-audit/teaching_guide.md) ← **Week 26 / 26** → [Review your progress](../docs/PROGRESS.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which assumptions turn observational patterns into intervention claims, and does enhancement preserve them?
+
+**Recall first:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#causal-questions-need-a-different-graph). Use it to explain the mechanism before the derivation.
+
 Start here, then use [the lecture](notes.tex), [the workbook](workbook.ipynb),
 [the annotated reading](extended_reading.tex), and [the source dossier](../research/causal_biology.md).
 This week asks: **what can varied, noisy patient observations tell us about an intervention,
@@ -26,6 +38,18 @@ The treated group contains more severe cases with lower baseline outcomes. Apply
 </details>
 
 **Carry it onward:** Return to [week 11](../week-11-contextual-bandits-ope/teaching_guide.md): explain which selection probabilities are known by randomized logging and which assumptions a biological observational dataset must supply instead.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    C["Pre-treatment severity C"] --> A["Treatment A"]
+    C --> Y["Outcome Y"]
+    A --> Y
+```
+
+**Read the diagram:** The path A ← C → Y can confound treatment-outcome association. Appropriate adjustment needs measured pre-treatment confounders and the stated identification assumptions.
 
 ## Where this fits
 
@@ -269,6 +293,33 @@ for this lesson did not disclose enough detail to identify a Yang-specific enhan
 algorithm. His [UAI 2022 paper](https://proceedings.mlr.press/v180/yang22e.html) concerns noisy
 sparse subspace clustering, a related noise/structure topic rather than proof of a proprietary
 causal-enhancement system.
+
+## Notebook investigation: make the unit of evidence visible
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2, 4 and 7**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-26-causal-discovery-biological-data)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Start with the 200-unit fixture in exercises 1–2. Draw separate treated/untreated bars within each
+severity stratum, then a pooled pair. The within-stratum differences are +1 while the pooled
+difference is -0.2. Label both the stratum counts and target weights so the reversal has an
+explanation rather than looking like contradictory software.
+
+In exercise 4, colour all rows belonging to the same patient identically; every colour must remain
+inside one partition. Three measurement rows from a patient are not three independent patients.
+For exercise 7, compare the original and randomised nuisance column, verifying other columns and
+the source array stay unchanged. Then report the stable-feature ablation alongside enhancement.
+If that ablation wins, the result supports dropping the known synthetic proxy in this setup;
+it does not show biological causal structure was discovered.
+
+<details>
+<summary>Check your interpretation: Could a patient bootstrap interval be narrow while the causal conclusion remains unidentified?</summary>
+
+Yes. Resampling observed patients addresses sampling variability under a specified fitted procedure. Unmeasured confounding, graph ambiguity and transport assumptions can remain unresolved.
+
+</details>
 
 ## Retrieve, calculate, and transfer
 

@@ -1,5 +1,17 @@
 # Week 06 teaching guide — separate the reasons for each improvement
 
+**Course navigation:** [Week 05](../week-05-dqn/teaching_guide.md) ← **Week 06 / 26** → [Week 07](../week-07-policy-gradients/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** What distinct failure does each component address?
+
+**Recall first:** [Week 03](../week-03-monte-carlo/teaching_guide.md), [Week 05](../week-05-dqn/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#where-dqn-sends-the-gradient). Use it to explain the mechanism before the derivation.
+
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 For each Rainbow component, identify the mathematical object it changes.
 
@@ -18,6 +30,18 @@ The online network selects the second action, then the target network evaluates 
 </details>
 
 **Carry it onward:** [Policy gradients](../week-07-policy-gradients/teaching_guide.md) will change the learned object from action values to action probabilities.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart TD
+    D["DQN update"] --> S["Double: action selection versus evaluation"]
+    D --> R["PER: which replay rows are sampled"]
+    D --> H["Distributional head: represent a return law"]
+```
+
+**Read the diagram:** These components change different objects. An ablation should change one component while holding the comparison budget and evaluation protocol fixed.
 
 ## Before you start
 
@@ -158,6 +182,32 @@ with reward 1, gamma 0.9, and final value 10, the truncated target is
 $1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
 flag for this mask and either flag to reset the environment.
 See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
+
+## Notebook investigation: distinguish a distribution from a confidence interval
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 3 and 6**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-06-rainbow-bbf)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+In C51 exercise 6, use atoms `(-1,0,1)`, masses `(0.2,0.3,0.5)`, reward 0.5 and gamma 0.5.
+Draw vertical sticks at the **atom locations** rather than a smooth probability-density curve.
+Before running, predict transformed locations `(0,0.5,1)` and projected masses `(0,0.35,0.65)`.
+Check nonnegative mass, total mass one and represented mean 0.65.
+
+Set the terminal flag. The return is the single number 0.5, yet the grid stores mass `(0,0.5,0.5)`:
+spread across atoms is now discretisation, not outcome uncertainty or parameter uncertainty.
+Set the terminal reward to 2 and explain why support clipping makes the represented mean 1.
+In exercise 3, separately try a minibatch containing one PER weight: normalising by its own maximum
+makes it one. That normalisation cannot preserve the unnormalised correction's expectation.
+
+<details>
+<summary>Check your interpretation: Can a narrow return distribution certify that the Q estimate is well supported by data?</summary>
+
+No. A distributional head models returns under its fitted parameters. Epistemic uncertainty about those parameters and missing replay coverage require separate analysis.
+
+</details>
 
 ## Retrieve and transfer
 

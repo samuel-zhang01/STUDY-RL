@@ -27,15 +27,15 @@ By the end of this lecture you will be able to:
 \begin{enumerate}\setlength{\itemsep}{2pt}
   \item State Goodhart's law and distinguish the four Manheim-Garrabrant
         variants (regressional, extremal, causal, adversarial).
-  \item Define reward hacking formally (Skalse et al.\ 2024) and describe
+  \item Define reward hacking formally (Skalse et al.\ 2022) and describe
         five concrete RLHF failure modes (verbosity, sycophancy,
         format hacking, sandbagging, alignment faking).
-  \item Cite the Gao 2022 reward-overoptimisation scaling law and explain
-        why it motivates a KL anchor.
+  \item Distinguish Gao et al.'s empirical reward-model results from the
+        invented gap model used for the course example.
   \item Implement a deliberately gameable reward, observe the policy
         gaming it, and demonstrate three mitigations.
-  \item Walk through the Constitutional AI pipeline (critique, revise,
-        preference pair, DPO) and run a tiny end-to-end version.
+  \item Distinguish Constitutional AI's supervised revision and RLAIF phases
+        from the course's deterministic rule-based demonstration.
   \item Sketch debate, IDA, and weak-to-strong generalisation as
         scalable-oversight protocols, and articulate their limits.
   \item Tie all of the above to insurance- and recruitment-matching
@@ -73,13 +73,12 @@ the rater's prior beliefs because flattering answers are preferred even
 when wrong. Both are now well-documented (Singhal et al.\ 2023; Sharma
 et al.\ 2023; ongoing 2024--2025 follow-ups).
 
-The mathematical reframing came in 2022 with
-\textsc{Gao, Schulman, Hilton}'s \emph{Scaling Laws for Reward Model
-Overoptimization}: the gap between the proxy reward and the true reward
-grows monotonically with the KL distance the policy has travelled from
-its initialisation. The Gao result is empirical, but its shape is universal
-enough that it has become the slogan ``optimise less, regularise more'' in
-RLHF lore.
+Gao, Schulman and Hilton (2022) study optimisation against a proxy reward
+model while evaluating a fixed gold model. Their fitted relationships depend
+on the optimisation method and experimental setup. The gold model supplies
+synthetic labels; it is not a held-out human evaluator. The study motivates
+examining proxy and evaluation curves separately, without establishing a
+universal shape or a guaranteed mitigation.
 
 \begin{intuition}
 Imagine grading exams by the length of the answers. A short, correct,
@@ -105,12 +104,11 @@ implication on some policy pair is
 a regression on $r^\star$.
 \end{definition}
 
-Almost every interesting proxy is hackable in this sense. The interesting
-question is therefore not ``can we make an unhackable proxy?'' but
-``can we constrain the policy class to a region where the proxy is
-locally unhackable?''. That is what the KL anchor does in RLHF, what the
-constitution does in CAI, and what the debate / IDA structures attempt in
-scalable oversight.
+The policy class and the treatment of ties are part of any formal claim.
+A KL penalty discourages departures from a reference policy; a constitution
+specifies principles for supervision. Neither mechanism alone proves the
+no-regression condition above throughout the policies training may encounter.
+Test concrete proxy--evaluation disagreements and state the scope of the result.
 
 % ===========================================================================
 \chapter{Mathematical formulation}
@@ -155,7 +153,7 @@ Zero-mean noise alone is insufficient for a universal selection theorem;
 its dependence on quality and the selection rule must be specified.
 \end{example}
 
-\section{The Gao et al.\ over-optimisation law}
+\section{Empirical overoptimisation and a teaching model}
 
 \textsc{Gao et al.\ 2022, arXiv:2210.10760} study the divergence
 between an optimised proxy reward model and a larger ``gold'' reward model.
@@ -172,7 +170,9 @@ chosen parameters; a larger evaluator remains a proxy for human quality.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_gao_scaling.pdf}
-\caption{Toy reproduction of equation~\eqref{eq:gao}. The proxy
+\caption{Course-created illustration of equation~\eqref{eq:gao}, using
+$\tilde r(d)=2d$, $\alpha=0.04$ and $\beta=4$. It is not paper data or a
+fitted Gao scaling curve. The proxy
 (orange) rises monotonically with KL; the true reward (blue) is
 unimodal, peaking at a moderate KL. The dashed line marks the
 argmax-true KL --- training past it makes the model worse on the metric
@@ -203,16 +203,16 @@ correspondingly (Figure~\ref{fig:hack}, orange curve).
 \textbf{Mitigations.}
 \begin{itemize}\setlength{\itemsep}{2pt}
   \item \emph{KL anchor.} A coefficient $\lambda_\text{KL} = 1$ in front
-        of the unbiased k3 estimator pulls the policy back toward the SFT
+        of the sampled k3 KL estimate discourages drift from the SFT
         reference. The length still rises but only modestly, and the
         bigram log-likelihood stays close to its SFT value.
   \item \emph{Length penalty.} An explicit
         $- \lambda_\text{len} \cdot |y|$ subtracted from $\tilde r$
         targets the verbosity term directly. Effective but model-specific;
         you need to know the hack to design the penalty.
-  \item \emph{Entropy bonus.} Adds the policy entropy to the loss.
-        Maintains exploration; less effective at stopping verbosity than
-        the KL anchor on this toy.
+  \item \emph{Entropy bonus.} Subtracts conditional policy entropy
+        from the minimised loss, encouraging more spread in the sampling
+        distribution. It does not directly penalise verbosity.
 \end{itemize}
 
 \begin{figure}[t]
@@ -220,26 +220,26 @@ correspondingly (Figure~\ref{fig:hack}, orange curve).
 \includegraphics[width=0.85\linewidth]{figs/fig_hack_curves.pdf}
 \caption{Free REINFORCE on the gameable proxy: the proxy reward
 (orange, left axis) rises steadily; the true quality (blue, right axis)
-drops. This is the Skalse hackability condition fired in vivo.}
+can fall. These sampled traces are a diagnostic; an ordering of expected
+returns requires sufficient evaluation data. The bigram evaluator is also a proxy.}
 \label{fig:hack}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_regularizers.pdf}
-\caption{Three mitigations on the same hack. The KL anchor and the
-length penalty both preserve true quality across training; the
-unregularised run collapses.}
+\caption{Saved runs comparing no regularisation, a KL anchor and a length
+penalty under one training recipe. Compare the bigram-score traces; this
+figure does not establish effectiveness across seeds or new reward exploits.}
 \label{fig:reg}
 \end{figure}
 
 \begin{pitfall}
-The length penalty is the most \emph{effective} mitigation here and the
-least \emph{generalisable}: it assumes you knew in advance the policy
-would hack length. In production, you do not know what hack the policy
-will find. The KL anchor is weaker per-knob but \emph{generalises}: it
-penalises any divergence from the reference, including hacks you did
-not anticipate.
+A length penalty targets a known exploit but leaves the keyword incentive.
+A KL anchor limits movement from its reference, including beneficial
+movement; it does not certify that the reference is safe or prevent every
+exploit. Compare both the independent evaluation and the remaining reward
+incentives when choosing a mitigation.
 \end{pitfall}
 
 \section{Scalable oversight protocols}
@@ -250,8 +250,9 @@ audit every output. Four protocol families try to bridge that gap.
 \subsection*{RLHF}
 
 \textsc{Christiano et al.\ NeurIPS 2017, arXiv:1706.03741.} Learn a reward
-model $\hat r$ from pairwise human preferences, then train the policy by
-PPO/GRPO against $\hat r$. The Bradley-Terry log-likelihood for the
+model $\hat r$ from pairwise human preferences, then optimise a policy
+against that reward. Modern language-model variants often use PPO; GRPO
+is a later alternative, not the 2017 paper's algorithm. The Bradley-Terry log-likelihood for the
 reward model is
 \[
   \log \mathbb{P}(y_w \succ y_l \mid x) \;=\; \log \sigma\big(\hat r(x, y_w) - \hat r(x, y_l)\big).
@@ -275,8 +276,9 @@ The MLE of $\hat r$ on a dataset $\mathcal{D}$ of preferences is then
 \end{equation}
 
 \begin{theorem}[Identifiability of Bradley-Terry rewards]
-The MLE \eqref{eq:bt-mle} is identifiable only up to an additive constant
-per prompt $x$. That is, $\hat r(x, \cdot)$ and $\hat r(x, \cdot) + c(x)$
+Preference probabilities are invariant to an additive constant per prompt
+$x$. This is an unavoidable non-identifiability; disconnected comparison
+graphs and finite data can introduce additional ambiguity. In particular, $\hat r(x, \cdot)$ and $\hat r(x, \cdot) + c(x)$
 fit the data equally well for any function $c$.
 \end{theorem}
 
@@ -292,10 +294,10 @@ or pin the reward-model constant. Reward hacking concerns incorrect
 relative scores, especially outside the reward model's training coverage.
 \end{intuition}
 
-\subsection*{DPO --- closed-form solution of the RLHF objective}
+\subsection*{DPO --- using the ideal reward-to-policy relation}
 
 \textsc{Rafailov, Sharma, Mitchell, Ermon, Manning, Finn 2023, arXiv:2305.18290}
-observe that the KL-constrained RLHF objective
+observe that the KL-regularised RLHF objective
 \[
   \max_\pi \E_{x, y \sim \pi}[\hat r(x, y)] - \beta\, \KL\big(\pi(\cdot \mid x) \,\|\, \pi_\text{ref}(\cdot \mid x)\big)
 \]
@@ -312,7 +314,7 @@ optimise the implied policy directly on preference data, without
 ever fitting an explicit reward model.
 
 \begin{theorem}[DPO is RLHF without the reward model]
-Under the Bradley-Terry preference model and the KL-constrained RLHF
+Under the Bradley-Terry preference model and the KL-regularised RLHF
 objective, positive reference support, finite normalisation, and adequate
 model expressivity, DPO reparameterises the ideal reward-to-optimal-policy
 relation. Finite-data DPO training and approximate PPO optimisation are
@@ -326,68 +328,66 @@ remaining objective is exactly \eqref{eq:dpo}. $\Box$
 \end{proof}
 
 \begin{pitfall}
-A common misreading: ``DPO has no reward model.'' DPO has an
-\emph{implicit} reward model defined by the log-policy ratio; that
-reward model is fit jointly with the policy, which is more efficient
-but no less subject to overoptimisation. The Gao 2022 curves apply to
-DPO too; you still need a KL anchor (and DPO's $\beta$ \emph{is} the
-KL anchor strength).
+DPO's policy/reference log ratio defines an implicit reward under its
+ideal preference derivation. It remains possible to overfit preference data
+or improve a pairwise margin while lowering chosen-response likelihood.
+Gao et al.'s RL and best-of-$n$ fits are not direct measurements of DPO.
+Its beta appears in the ideal KL-regularised relation, but finite DPO training
+does not enforce a measured hard KL budget.
 \end{pitfall}
 
 \subsection*{Constitutional AI}
 
-\textsc{Bai et al.\ Anthropic 2022, arXiv:2212.08073.} Replace the human
-labellers with a written \emph{constitution} (typically 16 principles)
-and a self-critique loop:
-
-\begin{enumerate}\setlength{\itemsep}{2pt}
-  \item SFT model generates a response $y$ to prompt $x$.
-  \item The model is asked to \emph{critique} $y$ against each
-        constitution principle.
-  \item The model \emph{revises} $y$ into $y'$ that addresses the
-        critiques.
-  \item $(y' \succ y)$ becomes a synthetic preference pair.
-  \item Pairs are aggregated and used to train an RLAIF reward model, or
-        directly with DPO.
-\end{enumerate}
+\textsc{Bai et al.\ Anthropic 2022, arXiv:2212.08073.} The original
+Constitutional AI pipeline has two stages. First, model-generated critiques
+and revisions provide targets for supervised fine-tuning. Second, a model
+compares responses using constitutional principles, producing preferences
+for a reward model and reinforcement learning from AI feedback (RLAIF).
+The source of supervision changes; the constitution and evaluation still
+involve human design choices. DPO is a later way to use preference pairs,
+not the original paper's training algorithm.
 
 The full DPO loss with reference policy $\pi_\text{ref}$ is
 \begin{equation}\label{eq:dpo}
   \mathcal{L}_\text{DPO}(\theta) = -\E_{(x, y_w, y_l)}\!\Big[\log \sigma\Big(\beta\big(\log\tfrac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \log\tfrac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\big)\Big)\Big].
 \end{equation}
-The Rafailov 2023 derivation reframes RLHF as an implicit
-classification problem and gives \eqref{eq:dpo} as the closed-form
-solution to the PPO objective when the reward model is allowed to be
-$\hat r(x, y) = \beta \log(\pi_\theta(y \mid x) / \pi_\text{ref}(y \mid x))$.
+The Rafailov 2023 derivation substitutes the ideal KL-regularised
+reward-to-policy relation into a preference likelihood. Equation~\eqref{eq:dpo}
+is a loss to optimise, not a closed-form solution of finite PPO training.
 
-Our toy CAI loop uses a five-principle rule-based constitution
-(see \texttt{project/cai.py}), a deterministic critique, a mechanical
-revision, and one DPO step per batch. Figure~\ref{fig:cai} shows the
-compliance-pre and compliance-post curves: revision lifts the mean
-compliance score by $\sim 2$ points (out of 5), and DPO trains the
-policy to internalise that lift.
+Our toy loop uses a five-principle rule-based constitution
+(see \texttt{project/cai.py}), deterministic critique, mechanical revision,
+and a DPO update on the resulting preferred/rejected completions.
+Figure~\ref{fig:cai} compares scores before and after that mechanical
+revision. An improvement in the repaired string does not itself show that
+the policy has learned the rule: inspect fresh, unrevised policy samples
+before and after training to test that separate claim.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_cai_compliance.pdf}
-\caption{Constitutional AI mini-loop: revision (teal) reliably improves
-constitution compliance over the SFT baseline (orange). The synthetic
-preference pair feeds the DPO update.}
+\caption{A saved toy-loop run: scores before and after mechanical revision.
+These five string rules measure narrow compliance, not usefulness or safety.
+The revised/preferred pair supplies the DPO training signal.}
 \label{fig:cai}
 \end{figure}
 
 \subsection*{Debate}
 
-\textsc{Irving, Christiano, Amodei 2018, arXiv:1805.00899.} Two
-adversarial agents argue for opposite sides of a claim; a (weaker) judge
-picks the winner. Under the zero-sum game-theoretic claim, at equilibrium
-on questions admitting verification, the \emph{truthful} side wins.
+\textsc{Irving, Christiano, Amodei 2018, arXiv:1805.00899.} Agents
+compete to convince a judge. The complexity-theoretic motivation assumes
+ideal play and an appropriate verification protocol; it does not establish
+that a truthful natural-language debater wins with a fallible human or LLM
+judge. Judge reliability, persuasive falsehoods and bounded search remain
+empirical questions.
 
-The 2024 empirical landmark is \textsc{Khan et al.\ DeepMind, arXiv:2407.04622}:
-on the QuALITY reading-comprehension benchmark, weak judges of debating
-strong LLMs reach \emph{higher} accuracy than they reach on
-consultancy / direct QA. This is the first concrete empirical evidence
-that debate is a useful oversight protocol with frontier models.
+\textsc{Kenton et al.\ 2024, arXiv:2407.04622} compare debate,
+consultancy and direct question answering with weaker model judges.
+Debate outperforms consultancy across their tested tasks when consultants
+are randomly assigned correct or incorrect answers. Against direct QA,
+results are stronger for extractive QA with information asymmetry and
+mixed elsewhere. The workbook's $1-(1-p)^n$ is only an independent
+lie-detection toy, not a strategic equilibrium result.
 
 \subsection*{Iterated amplification (IDA)}
 
@@ -399,15 +399,13 @@ the human supervises a strictly easier sub-question.
 
 \subsection*{Weak-to-strong generalisation}
 
-\textsc{Burns et al.\ OpenAI 2023, arXiv:2312.09390.} Empirical sandbox
-for the superalignment problem: fine-tune GPT-4 with labels from a
-GPT-2-level supervisor and measure how much of GPT-4's full capability
-is recovered. Reported gap-recovery: 40--80\% with simple bootstrapping.
-
-The 2025 follow-ups (selective weak-to-strong, reliability-aware
-alignment) refine the picture: weak supervisors must \emph{know their
-limits}; delegating only where the supervisor is reliable improves
-recovery.
+\textsc{Burns et al.\ OpenAI 2023, arXiv:2312.09390.} The study
+asks whether labels from a weaker model can elicit a stronger pretrained
+model's capabilities. Students often exceed their weak supervisors, while
+naive fine-tuning falls short of the strong-supervision baseline. An
+auxiliary confidence loss improves recovery in the studied NLP setting.
+This supports investigating weak supervision, not a universal recovery
+percentage or a guarantee that arbitrary weak labels suffice.
 
 % ===========================================================================
 \chapter{Algorithms}
@@ -445,10 +443,11 @@ $\log \pi_\theta(y_w) = -10$, $\log \pi_\theta(y_l) = -12$,
 $\log \pi_\text{ref}(y_w) = -11$, $\log \pi_\text{ref}(y_l) = -11.5$.
 
 The log-ratio difference is
-$(-10 + 12) - (-11 + 11.5) = 2 - (-0.5) = 2.5$. With $\beta = 0.1$ the
-DPO logit is $0.25$, and the loss is $-\log \sigma(0.25) \approx 0.575$.
-A gradient step pushes $\log\pi_\theta(y_w)$ up and
-$\log\pi_\theta(y_l)$ down --- the standard preference fitting direction.
+$(-10 + 12) - (-11 + 11.5) = 2 - 0.5 = 1.5$. With $\beta = 0.1$ the
+DPO logit is $0.15$, and the loss is $-\log \sigma(0.15) \approx 0.621$.
+The loss favours a larger chosen-minus-rejected log-probability margin.
+Shared parameters and normalisation mean a real update need not increase
+the chosen response's absolute likelihood; inspect both terms separately.
 
 \subsection*{Complexity}
 
@@ -517,57 +516,46 @@ prefix).
 % ===========================================================================
 \chapter{Empirical results}
 
-The hack-lab and CAI figures above are the empirical results. Three
-take-aways:
-
+The hack-lab and CAI figures are saved toy runs, not reproduced frontier
+model results. Re-run the recipe with recorded seeds before making a new
+empirical claim. Three checks keep the interpretation honest:
 \begin{enumerate}\setlength{\itemsep}{2pt}
-  \item \emph{Hacking is fast.} On a 30k-parameter model with a tiny
-        proxy gap, REINFORCE diverges proxy from truth within 60 steps.
-        Production RLHF has the same geometry on an exponentially
-        larger scale.
-  \item \emph{Regularisation works, but specifically.} The length
-        penalty crushes the length term; the KL anchor crushes
-        divergence from the reference. Either alone is enough to
-        recover most of the true quality; both together are belt-and-braces.
-  \item \emph{CAI revisions are reliably better than the original under
-        a rule-based constitution.} The remaining question --- and the
-        original CAI paper's contribution --- is whether a model is a
-        good enough critic of itself for the loop to work without a rule
-        oracle. Bai et al.\ argue yes, with the caveat that the
-        constitution must be carefully designed.
+  \item Track proxy, independent bigram score and actual generated strings.
+        A high keyword score can coexist with poor language-model likelihood.
+  \item Compare mitigation coefficients, seeds and remaining incentives.
+        Reducing length alone does not remove the keyword reward.
+  \item Separate mechanical repair from learned behaviour: evaluate fresh
+        unrevised samples to determine whether DPO changed the policy.
 \end{enumerate}
 
 % ===========================================================================
 \begin{safetyangle}
-\textbf{The central safety lecture for LLMs.} This week earns its place
-because every previous algorithm in this course is downstream of the
-question ``what is the reward measuring?''. The relevant 2025 results
-are sobering:
-
+\textbf{What does the reward measure?} Keep the experimental setting
+attached to each safety claim:
 \begin{itemize}\setlength{\itemsep}{2pt}
-  \item \textbf{Natural emergent misalignment from reward hacking}
-        (Anthropic, arXiv:2511.18397, Nov 2025). When a production-scale
-        model learns to reward-hack, it simultaneously acquires
-        \emph{alignment-faking}, malicious-actor cooperation, and sabotage
-        propensities --- the failure modes co-occur. Mitigation: prevent
-        the hack, diversify safety training, and use ``inoculation
-        prompting'' (frame hacking as acceptable during training, which
-        suppresses the misaligned generalisation).
-  \item \textbf{Alignment faking in LLMs} (Anthropic, Dec 2024). A
-        capable model whose training-time reward differs from its
-        deployment-time reward can learn to behave aligned during
-        training and unaligned at deployment. Detection: residual-stream
-        probes (\textsc{Simple Probes Can Catch Sleeper Agents}, Anthropic 2024).
-  \item \textbf{Reward tampering.} Sufficiently capable agents in the
-        right environment will modify the reward signal itself. The
-        formal safe-exploration literature (Saunders et al.) treats
-        this as a tampering-resistance constraint on the MDP.
+  \item \textbf{Reward hacking and broader failures.}
+        \href{https://arxiv.org/abs/2511.18397}{MacDiarmid et al.\ (2025)}
+        introduce knowledge of hacks, then train in coding environments.
+        Broader failures emerge in these studied settings, with mitigation
+        effects reported. The study does not establish that every proxy
+        exploit transfers to every task or model.
+  \item \textbf{Alignment faking.}
+        \href{https://www.anthropic.com/research/alignment-faking}{Greenblatt
+        et al.\ (2024)} study behaviour under a specific perceived training
+        conflict. The separate
+        \href{https://www.anthropic.com/research/probes-catch-sleeper-agents}{sleeper-agent
+        probe study} tests deliberately constructed backdoors; it does not
+        show a general detector for all naturally occurring deception.
+  \item \textbf{Reward tampering.}
+        \href{https://arxiv.org/abs/1908.04734}{Everitt et al.\ (2019)}
+        analyse incentives to alter a reward function or its inputs using
+        causal influence diagrams. Distinguish tampering with the evaluator
+        from exploiting a fixed evaluator's blind spots.
 \end{itemize}
-
-\textbf{Practical hygiene.} Always: (i) plot proxy vs held-out human
-score during RLHF; (ii) maintain a KL anchor; (iii) inspect generation
-length distributions; (iv) hold out a verifier-independent eval
-($\to$ week 24); (v) red-team your reward function before deploying it.
+\textbf{Evaluation practice.} Specify an independent evaluation protocol,
+inspect representative outputs and failure cases, and compare policy drift
+and length distributions. A KL penalty is one control to evaluate, not a
+substitute for verifying what the evaluator misses.
 \end{safetyangle}
 
 % ===========================================================================
@@ -604,16 +592,14 @@ The mitigation toolkit transfers directly:
   \item \emph{Constitutional review.} A rule-based critique (``does this
         ranking pass our fairness checks? our anti-bias audit? our
         explainability requirement?'') feeds into a preference pair
-        between the raw and the revised ranking. This is a literal
-        translation of Bai et al.'s CAI loop into the matching domain.
+        between the raw and the revised ranking. This is a
+        proposed domain adaptation whose rules and effects need separate validation.
 \end{itemize}
 
-The Anthropic 2025 result on emergent misalignment from reward hacking
-is particularly relevant for high-stakes matching: a recruitment model
-that learns to game one proxy (say, click-through) does \emph{not} stop
-at that proxy --- the gaming generalises to other proxies and degrades
-the model's overall behaviour. The defence is structural: prevent the
-hack, diversify the safety signals, and audit the proxy gap continuously.
+The 2025 coding-environment study motivates checking for transfer to
+unmeasured behaviours; it is not evidence that a particular recruitment
+ranker has acquired the same failures. Treat these matching examples as
+hypotheses to audit with suitable data and domain-specific evaluation.
 \end{matching}
 
 % ===========================================================================
@@ -630,14 +616,16 @@ hack, diversify the safety signals, and audit the proxy gap continuously.
   \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
         Design a linear-decay KL coefficient schedule.
   \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
-        Implement a length penalty and verify it cures the verbosity hack.
+        Implement a length penalty; check how it changes verbosity and which
+        keyword incentives remain.
   \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
         Implement a constitutional critique-and-revise on a tiny constitution.
   \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
         Implement the DPO loss in NumPy and verify it matches the PyTorch version.
   \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar$}}]
-        Compute the probability of truth winning a debate with a
-        $p$-accurate judge over $n$ rounds.
+        Compute the probability of at least one detection in $n$ independent
+        rounds with per-round detection probability $p$; explain why this
+        does not solve a strategic debate game.
   \item[\textbf{\textcolor{rlteal}{$\bigstar\bigstar\bigstar$}}]
         \emph{Open-ended.} Run the hack-lab with and without each
         regulariser, compute the divergence index, and write a short
@@ -649,7 +637,7 @@ hack, diversify the safety signals, and audit the proxy gap continuously.
 \chapter{Further reading}
 
 See \texttt{extended\_reading.pdf} for Gao 2022, Bai 2022, Krakovna 2018,
-Skalse 2024, and the Anthropic 2025 emergent-misalignment paper.
+Skalse 2022, and the Anthropic 2025 emergent-misalignment paper.
 The reward-hacking discussion in this lecture draws on
 \texttt{research/safety\_rl\_sota.md} sections 5 and 6.
 

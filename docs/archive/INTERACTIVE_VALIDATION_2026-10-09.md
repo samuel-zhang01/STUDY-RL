@@ -3,7 +3,7 @@
 Checked on **9 October 2026**. The revision adds ten browser experiments, two
 standard-library coding projects plus a shared numerical anchor, five learner
 functions, and prerequisite/transfer bridges across all 26 weeks. The
-[student review](LEARNER_REVIEW.md) records the adversarial findings and rubric:
+[student review](../LEARNER_REVIEW.md) records the adversarial findings and rubric:
 coding projects **9.0/10**, browser lab **9.1/10**, connected curriculum
 **8.8/10**, and individual tracks **8.3–9.3/10**. These are agent review scores,
 not results from a human learning study.
@@ -60,7 +60,7 @@ control also pauses animation and reports the actual paused state.
 ## Reproduce
 
 From the repository root, install the course/lab dependencies as documented in
-the [README](../README.md), and use Node.js for the development checks:
+the [README](../../README.md), and use Node.js for the development checks:
 
 ```bash
 make tests PY=python
@@ -76,4 +76,4 @@ For a Mac where the Firefox test binary cannot launch, set
 three-browser Linux CI run. Source logs/screenshots and executed notebooks
 remain ignored local verification artifacts. The public repository is still
 private pending removal of the original GitHub cached content described in
-the [release review](RELEASE_REVIEW.md).
+the [release review](../RELEASE_REVIEW.md).

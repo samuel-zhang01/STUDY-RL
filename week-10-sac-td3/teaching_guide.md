@@ -1,5 +1,17 @@
 # Week 10 teaching guide — SAC from density to update direction
 
+**Course navigation:** [Week 09](../week-09-ppo/teaching_guide.md) ← **Week 10 / 26** → [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** How does entropy change the objective and its gradient?
+
+**Recall first:** [Week 04](../week-04-td-sarsa-q/teaching_guide.md), [Week 05](../week-05-dqn/teaching_guide.md), [Week 07](../week-07-policy-gradients/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#the-actor-and-critic-answer-different-questions). Use it to explain the mechanism before the derivation.
+
 Use this guide for exercises 1–5 before running a continuous-control experiment.
 
 ## Learning bridge
@@ -17,6 +29,20 @@ The new density at 2a is half the old density at a; differential entropy increas
 </details>
 
 **Carry it onward:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md) deliberately returns to a one-step decision so you can study logged evidence without continuous-control complexity.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    Z["Gaussian latent sample"] --> A["Tanh-squashed action"]
+    A --> Q["Critic evaluates action"]
+    Z --> D["Correct density with squashing Jacobian"]
+    Q --> L["SAC actor objective"]
+    D --> L
+```
+
+**Read the diagram:** The squashed action and its probability density must describe the same distribution. The actor balances expected value against an entropy term using that corrected density.
 
 ## Connect to what you know
 
@@ -143,6 +169,33 @@ The sign of a loss gradient differs from the direction of the gradient-descent s
 
 The twin minimum reduces one overestimation mechanism; it is not a calibrated lower confidence bound.
 Purely offline SAC can exploit unsupported actions even with twin critics; week 14 addresses that problem.
+
+## Notebook investigation: track action density through a change of coordinates
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 3 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-10-sac-td3)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+In exercise 1, evaluate the Gaussian sample `u=atanh(0.5)` and its squashed action 0.5.
+Record the Gaussian log density, log Jacobian and corrected action log density in separate columns:
+approximately `-1.069807`, `log(0.75)`, and `-0.782125`.
+For a visual extension, draw `a=tanh(u)` with selected points; tightly packed action coordinates
+explain why density is divided by the local Jacobian.
+
+Change the environment action scale to `2a`. The log density decreases by log 2, while the sampled
+physical action doubles. A density curve and its horizontal units must change together.
+In exercise 3, flip only the terminal flag to confirm the entropy term cannot resurrect a terminal
+bootstrap. In exercise 5, predict that sampled entropy below the target increases temperature
+under the stated loss convention; verify the sign of the actual update, not only its loss value.
+
+<details>
+<summary>Check your interpretation: Is a continuous density greater than one invalid?</summary>
+
+No. Probability is an integral of density over an interval. Coordinate scale changes density and differential entropy; it does not make event probabilities exceed one.
+
+</details>
 
 ## Retrieval and transfer
 

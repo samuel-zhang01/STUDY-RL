@@ -1,5 +1,17 @@
 # Week 22 teaching guide: derive the constraint price and check its sign
 
+**Course navigation:** [Week 21](../week-21-reward-hacking-oversight/teaching_guide.md) ← **Week 22 / 26** → [Week 23](../week-23-safe-exploration-shielding-robust/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Why does excess cost increase the penalty multiplier?
+
+**Recall first:** [Week 07](../week-07-policy-gradients/teaching_guide.md), [Week 08](../week-08-a2c-gae-trpo/teaching_guide.md), [Week 09](../week-09-ppo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#a-budget-and-a-shield-act-in-different-places). Use it to explain the mechanism before the derivation.
+
 Read with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples are small constrained optimisation problems, not safety certificates for trained agents.
 
@@ -18,6 +30,18 @@ The update is max(0,0.5+0.2×(3−1))=0.9. Excess cost increases its price; this
 </details>
 
 **Carry it onward:** [Shielding](../week-23-safe-exploration-shielding-robust/teaching_guide.md) limits executed actions using a safety model, addressing a different requirement.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    C["Cost exceeds budget"] --> L["Increase nonnegative multiplier"]
+    L --> P["Policy sees stronger cost penalty"]
+    P --> E["Measure reward and cost again"]
+```
+
+**Read the diagram:** The multiplier update responds to a cost-budget gap. It changes incentives; independent cost evaluation is still needed to assess feasibility.
 
 ## Connection and prerequisites
 
@@ -151,6 +175,32 @@ needed. For returns `(-4,2,10)` and `alpha=0.5`, it averages all of `-4` and hal
 of `2`: `(-4+0.5×2)/1.5=-2`, as checked in
 [the regression test](tests/test_regressions.py). For costs use the **upper**
 tail; for undesirable low returns use this lower tail.
+
+## Notebook investigation: draw the feasible reward–cost tradeoff
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 3 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-22-cmdp-cpo-lagrangian)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Parameterise the guide's two-action mixture by risky probability p. Plot cost `2p` horizontally
+and reward `2+4p` vertically for p from 0 to 1. Mark budget 0.5 as a vertical line: the best feasible
+point has p=0.25 and reward 3. The shaded feasible region concerns expected cost; a risky individual
+decision still costs 2.
+
+Use exercise 1 to follow the multiplier through one overspend and one underspend. Show its value
+on a time axis rather than treating a large multiplier as evidence of feasibility. Exercise 3's
+cost advantage can be negative even with nonnegative immediate costs; explain which action is
+less costly than its policy average. For exercise 5, state whether the tail concerns low returns
+or high costs and whether the requested tail fraction lands between sample counts.
+
+<details>
+<summary>Check your interpretation: What would changing the unit of cost do to a meaningful multiplier?</summary>
+
+The multiplier has reward-per-cost units. If every cost and budget is scaled by a positive factor, the corresponding penalty coefficient must be inversely scaled to represent the same tradeoff.
+
+</details>
 
 ## Retrieve and transfer
 

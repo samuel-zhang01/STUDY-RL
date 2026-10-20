@@ -1,5 +1,17 @@
 # Week 18 teaching guide: from a response probability to a PPO update
 
+**Course navigation:** [Week 17](../week-17-exploration-meta/teaching_guide.md) ← **Week 18 / 26** → [Week 19](../week-19-dpo-zoo/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which policy supplies each log-probability and each sample?
+
+**Recall first:** [Week 07](../week-07-policy-gradients/teaching_guide.md), [Week 08](../week-08-a2c-gae-trpo/teaching_guide.md), [Week 09](../week-09-ppo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#llm-training-keep-four-roles-separate). Use it to explain the mechanism before the derivation.
+
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 These calculations are illustrative fixtures, not claims about a trained language model.
 
@@ -21,6 +33,20 @@ The sample log ratio is log(0.5/0.25)=log(2). KL is the policy expectation over 
 </details>
 
 **Carry it onward:** [DPO](../week-19-dpo-zoo/teaching_guide.md) uses chosen/rejected pairs to train relative odds directly.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    S["Prompt and response prefix"] --> T["Policy samples token"]
+    T --> R["Response receives reward"]
+    R --> U["PPO update with critic"]
+    F["Fixed reference policy"] --> K["Reference deviation penalty"]
+    K --> U
+```
+
+**Read the diagram:** Tokens are actions and prefixes are states. The fixed reference anchors the objective; the old rollout policy supplies PPO denominators and changes between rollout cycles.
 
 ## The connection to earlier weeks
 
@@ -150,6 +176,33 @@ A prompt mask excludes prompt tokens from completion loss; an EOS/padding mask e
 positions after the response ended. Neither mask should discard the actual EOS action.
 Inspect whether reported KL is a mean **per token** or a sum **per response** before
 choosing a controller target. Different aggregation conventions have different units.
+
+## Notebook investigation: trace one response through all four probability roles
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 3, 4 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-18-rlhf-ppo-llm)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Make a token table with columns for token, response mask, old rollout log probability, current
+log probability, reference log probability, reward and advantage. Use the guide's three-token
+fixture first; every column then has an explanation before a model is involved.
+The PPO ratio uses current minus old; the reference penalty uses policy minus reference.
+An unchanged actor should have PPO ratio one under the same sampling temperature and token mask.
+
+Exercise 2 calculates a vocabulary expectation; compare it with a single signed token log-ratio
+without calling both the same measurement. For exercise 4, verify that the final shaped score
+propagates backward to advantages `(0.4787,0.443,0.37)`. Draw token contributions as bars and
+mark EOS. A completion mask excludes padding after EOS while retaining the EOS action itself.
+Before exercise 5, state whether its controller target is per token or per response.
+
+<details>
+<summary>Check your interpretation: Could reference KL grow while every individual PPO update remains small?</summary>
+
+Yes. Each old policy is a new local comparison, while the reference remains fixed. Many small moves can accumulate into a large departure from that fixed anchor.
+
+</details>
 
 ## Retrieve and transfer
 

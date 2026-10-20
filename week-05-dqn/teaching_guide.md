@@ -1,5 +1,17 @@
 # Week 05 teaching guide — why a Q-network needs careful targets
 
+**Course navigation:** [Week 04](../week-04-td-sarsa-q/teaching_guide.md) ← **Week 05 / 26** → [Week 06](../week-06-rainbow-bbf/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which network selects an action and which evaluates it?
+
+**Recall first:** [Week 04](../week-04-td-sarsa-q/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#where-dqn-sends-the-gradient). Use it to explain the mechanism before the derivation.
+
 Use beside [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The main calculation is supervised regression with a deliberately frozen target.
 
@@ -18,6 +30,20 @@ Standard DQN takes the target-network maximum: 0+0.9×5=4.5. This is an estimate
 </details>
 
 **Carry it onward:** [Week 6](../week-06-rainbow-bbf/teaching_guide.md) separates target selection from evaluation and changes replay sampling one component at a time.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    R["Replay row"] --> P["Online prediction Q(s,a)"]
+    R --> T["Detached target from target network"]
+    P --> L["Regression loss"]
+    T --> L
+    L --> U["Update online network"]
+```
+
+**Read the diagram:** The loss compares a current prediction with a detached target. The target network is refreshed separately; this regression step does not differentiate through it.
 
 ## Before you start
 
@@ -151,6 +177,31 @@ with reward 1, gamma 0.9, and final value 10, the truncated target is
 $1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
 flag for this mask and either flag to reset the environment.
 See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
+
+## Notebook investigation: make a batch-shape bug visible
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 6**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-05-dqn)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Reproduce the guide's two-row example before training a network. Gather predictions `(3,4)`
+and construct targets `(3,-2)`. Both arrays should have shape `(2,)`. The intended residuals are
+`(0,6)` when written prediction minus target. Deliberately reshape only the predictions to `(2,1)`:
+subtraction then makes a `(2,2)` matrix, comparing each prediction with both targets.
+
+Show that wrong matrix as a small annotated heatmap; it reveals why a plausible scalar loss can
+still be meaningless. Restore equal shapes and verify the unit-threshold mean Huber loss is 2.75.
+Now change only the terminal row's next values from 100 to 1000: its target and loss must stay fixed.
+This check isolates masking from optimisation. A training curve cannot explain a failed mask.
+
+<details>
+<summary>Check your interpretation: If the TD loss falls after this repair, has the policy been shown to improve?</summary>
+
+Only regression agreement on the sampled targets improved. Policy return needs separate evaluation; shared parameters and inaccurate targets can make that relationship indirect.
+
+</details>
 
 ## Retrieve and transfer
 

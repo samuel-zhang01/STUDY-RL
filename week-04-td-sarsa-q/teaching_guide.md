@@ -1,5 +1,17 @@
 # Week 04 teaching guide — learning before the episode ends
 
+**Course navigation:** [Week 03](../week-03-monte-carlo/teaching_guide.md) ← **Week 04 / 26** → [Week 05](../week-05-dqn/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which next action belongs in each target?
+
+**Recall first:** [Week 02](../week-02-bellman-dp/teaching_guide.md), [Week 03](../week-03-monte-carlo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#one-transition-different-targets). Use it to explain the mechanism before the derivation.
+
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 For every update, say aloud which policy supplies the next-action value.
 
@@ -18,6 +30,19 @@ Q-learning uses 0+0.9×3.6=3.24; SARSA uses 0+0.9×2=1.8. The difference comes f
 </details>
 
 **Carry it onward:** [DQN](../week-05-dqn/teaching_guide.md) keeps this target idea but replaces the table with shared neural-network parameters.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart TD
+    T["One transition: s, a, r, next state"] --> S["SARSA: sampled next action"]
+    T --> Q["Q-learning: maximum next estimate"]
+    S --> U["Old estimate + alpha times target error"]
+    Q --> U
+```
+
+**Read the diagram:** Both methods use an observed reward and a bootstrapped future. The next-action rule differs even when the same transition supplies the data.
 
 ## Before you start
 
@@ -156,6 +181,32 @@ with reward 1, gamma 0.9, and final value 10, the truncated target is
 $1+0.9(10)=10$; the terminal target is 1. The trainer uses the termination
 flag for this mask and either flag to reset the environment.
 See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
+
+## Notebook investigation: use one transition to compare three algorithms
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 3, 4 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-04-td-sarsa-q)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Keep the observed transition fixed: old Q is 2, reward is -1, next values are `(4,-2)`,
+gamma is 0.9, alpha is 0.5, and epsilon is 0.2. Choose the second next action for SARSA.
+Record **target, error, new Q** as three separate columns: SARSA gives `(-2.8,-4.8,-0.4)`;
+Expected SARSA gives `(2.06,0.06,2.03)`; Q-learning gives `(2.6,0.6,2.3)`.
+Exercise 5 returns the expected bootstrap, so multiply by gamma and add reward before comparing it
+with the other target columns.
+
+Draw arrows from old Q to new Q on a common number line. Change only epsilon to zero, keeping the
+Q-learning target fixed; Expected SARSA now agrees with Q-learning. Finally mark the transition
+terminal: every target becomes reward -1 and every update becomes 0.5, regardless of next values.
+
+<details>
+<summary>Check your interpretation: Would setting the next action to the greedy action make SARSA and Q-learning the same algorithm?</summary>
+
+It makes this one target equal. Their targets can differ again on a later exploratory action, and their long-run objectives and data collection still matter.
+
+</details>
 
 ## Retrieve and transfer
 

@@ -6,11 +6,23 @@ Each week includes a teaching guide, lecture PDF and TeX source, a Jupyter
 workbook, extended reading, a small Python project, and tests. An optional
 five-lesson lab trains real pretrained language models with LoRA and DPO.
 
-**Start here:** [study guide](docs/STUDY_GUIDE.md) ·
-[interactive learning path](docs/LEARNING_PATH.md) ·
-[all weeks and artifacts](docs/INDEX.md) ·
-[syllabus PDF](syllabus/syllabus.pdf) ·
-[glossary](docs/GLOSSARY.md) · [progress checklist](docs/PROGRESS.md).
+**Start here: [open the complete teaching website](https://study-rl.samuelzhang.co.uk/).**
+Use [How to use this course](https://study-rl.samuelzhang.co.uk/#/start) for your
+first session, the [course map](https://study-rl.samuelzhang.co.uk/#/curriculum)
+for all 26 weeks, and [Notebooks & downloads](https://study-rl.samuelzhang.co.uk/#/downloads)
+for individual `.ipynb` files, self-contained weekly ZIPs, PDFs and Jupyter setup.
+The website teaches the lessons directly and links each explanation to its
+actual notebook and project code.
+
+**This GitHub repository is the downloadable source:**
+[samuel-zhang01/STUDY-RL](https://github.com/samuel-zhang01/STUDY-RL).
+[Download all materials as ZIP](https://github.com/samuel-zhang01/STUDY-RL/archive/refs/heads/main.zip)
+or clone it using the commands below. No GitHub account is needed. Extract ZIPs
+before opening a notebook; retain the weekly folders alongside `common/`.
+
+For reading on GitHub: [study guide](docs/STUDY_GUIDE.md) ·
+[learning routes](docs/LEARNING_MAP.md) · [artifact index](docs/INDEX.md) ·
+[syllabus PDF](syllabus/syllabus.pdf) · [glossary](docs/GLOSSARY.md).
 
 Begin with Python, averages and basic probability. Linear algebra, calculus and
 neural networks become useful later; the [learning path](docs/LEARNING_PATH.md)
@@ -24,9 +36,10 @@ route exploration, Bellman backups, MC/TD targets, a learning grid game, policy
 gradients/PPO/GAE, old-policy logs, cost budgets, model error, preferences, and
 confounding. Graphs and animations show actual simulated decisions or named
 exact formulas. Each experiment asks you to predict, inspect, and change one
-assumption. The browser lab needs no packages or internet connection.
+assumption. The browser lab needs no Python packages. Its local copy works offline; the hosted portal needs a connection to load its assets.
 
-From the repository root:
+[Open the integrated experiment studio](https://study-rl.samuelzhang.co.uk/#/labs).
+To run the standalone lab locally, from the repository root:
 
 ```bash
 python -m http.server 8000 --bind 127.0.0.1
@@ -53,7 +66,7 @@ The second command intentionally reports `PENDING` until you implement
 ranking and LLM project ideas appear in the walkthrough. These toy experiments
 teach mechanisms; the existing weekly projects and readings develop the full
 algorithms. See the [adversarial learner review](docs/LEARNER_REVIEW.md) for the
-review rubric, [recorded validation](docs/INTERACTIVE_VALIDATION.md), and [lab development checks](interactive/README.md) for browser tests.
+review rubric, [recorded validation](docs/archive/INTERACTIVE_VALIDATION_2026-10-09.md), and [lab development checks](interactive/README.md) for browser tests.
 
 ## Read without installing anything
 
@@ -64,6 +77,12 @@ and reference-solution paths; attempting the exercises yourself is separate
 from executing the reference notebook.
 
 ## Install the course environment
+
+For **weeks 1–4 only**, use `requirements-foundations.txt` in place of the
+SWIG and full-requirements steps below. This smaller environment installs
+NumPy, SciPy, Matplotlib, Gymnasium, JupyterLab and the notebook/test tools;
+it does not need PyTorch or Box2D. Install the full environment when you
+reach deep RL. Run `python -m jupyter lab` after registering the kernel.
 
 Python **3.12** is recommended. Run these commands from a terminal on macOS or
 Linux. On Windows, use PowerShell for activation (`.venv\Scripts\Activate.ps1`);

@@ -3,6 +3,12 @@
 Symbols and terms used across the curriculum. Weekly derivations should still
 define their local notation. For a connected example, see [STUDY_GUIDE.md](STUDY_GUIDE.md).
 
+**Find a concept:** [Reward timing](#reward-indexing-translate-before-calculating) ·
+[Symbols](#set--function-notation) · [Algorithm names](#algorithms-one-line).
+For a mechanism rather than a definition, use the [visual explanations](CONCEPT_ATLAS.md).
+Use your viewer's Find command for an acronym; return to your week's derivation
+to check the symbol's local meaning.
+
 ## Reward indexing: translate before calculating
 
 The repository uses two common conventions. In early notes, $r_{t+1}$ is

@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", ".venv", ".venv-llm", "venv", "runs", "data", "checkpoints"}
+SKIP_DIRS = {".git", ".venv", ".venv-llm", "venv", "runs", "data", "checkpoints", "node_modules", "dist", "generated"}
 CACHE_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
               ".ipynb_checkpoints", "_minted"}
 AUX_SUFFIXES = {".aux", ".log", ".out", ".toc", ".fls", ".fdb_latexmk",

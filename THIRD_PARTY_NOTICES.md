@@ -19,3 +19,8 @@ locally generated synthetic data. The ATS architecture is a hypothetical
 teaching design. It is not an implementation or audit of a private production
 system. Public research and event references in the causal-biology lessons
 are identified in the [source dossier](research/causal_biology.md).
+
+The portal bundles Apache ECharts (Apache-2.0), Mermaid (MIT) and KaTeX (MIT)
+for local rendering. Their license files, ECharts NOTICE and exact versions
+ship under `vendor/` in the built website. Markdown parsing and sanitization
+are build-time dependencies recorded in `portal/package-lock.json`.

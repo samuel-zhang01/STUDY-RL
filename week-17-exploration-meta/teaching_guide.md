@@ -1,5 +1,17 @@
 # Week 17 teaching guide: novelty and learning to adapt
 
+**Course navigation:** [Week 16](../week-16-model-based/teaching_guide.md) ← **Week 17 / 26** → [Week 18](../week-18-rlhf-ppo-llm/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** How do novelty and task usefulness differ?
+
+**Recall first:** [Week 04](../week-04-td-sarsa-q/teaching_guide.md), [Week 07](../week-07-policy-gradients/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#the-actor-and-critic-answer-different-questions). Use it to explain the mechanism before the derivation.
+
 Read this beside [the notes](notes.tex), then attempt [the workbook](workbook.ipynb).
 The numerical examples below are constructed teaching cases, not training results.
 
@@ -18,6 +30,19 @@ The novel room wins the augmented objective, 2 versus 1. The known room wins the
 </details>
 
 **Carry it onward:** [RLHF](../week-18-rlhf-ppo-llm/teaching_guide.md) changes the action to a token and the reward source to a response-level judgement.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    S["Visited observation"] --> T["Fixed random target features"]
+    S --> P["Trainable predictor features"]
+    T --> E["Prediction error gives novelty bonus"]
+    P --> E
+```
+
+**Read the diagram:** The random target stays fixed while the predictor learns. A novelty bonus measures prediction error, which need not be task usefulness or fall after every update.
 
 ## What connects this week to earlier work?
 
@@ -145,6 +170,32 @@ Keep the grid comparison's seed, action-selection rule, and episode budget match
 `make_hard_grid` creates an open 7×7 grid with `pits=()` and a distant positive-reward goal.
 Measure extrinsic goal hits separately from total curiosity-augmented reward.
 The MAML toy is an algebra demonstration with known task means, not a sample-efficiency benchmark.
+
+## Notebook investigation: separate novelty, goal success and adaptation
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 6**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-17-exploration-meta)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+In exercise 1, send the same observation through the frozen random target twice; its features
+should match. In exercise 2, keep that target and observation fixed while updating the predictor.
+Plot predictor error against optimiser steps, then evaluate a different observation without training
+on it. Reduced error at both points can reflect generalisation, so error is not a literal visit counter.
+
+For the guide's directly parameterised predictor, compare step sizes 0.25 and 1.1: error changes
+from 2 to 0.5 or 2.88 respectively. This counterexample explains why monotone decrease needs conditions.
+In exercise 6, print pre- and post-adaptation expected reward and the inner data source. The toy
+uses the known mean vector; label that oracle information explicitly. It does not establish
+how quickly an agent learns unknown means from bandit feedback.
+
+<details>
+<summary>Check your interpretation: Can higher curiosity-augmented return accompany fewer task successes?</summary>
+
+Yes. Intrinsic reward changes the optimisation signal. Record external goal hits separately, and compare equal interaction budgets before calling a method more useful.
+
+</details>
 
 ## Retrieve and transfer
 

@@ -1,5 +1,17 @@
 # Week 01 teaching guide — deciding what to try
 
+**Course navigation:** [Start here](../docs/LEARNING_MAP.md) ← **Week 01 / 26** → [Week 02](../week-02-bellman-dp/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Why can the arm with the lower sample mean still be worth trying?
+
+**Recall first:** [weighted averages and probabilities](../docs/STUDY_GUIDE.md#prerequisite-check-five-tools-you-will-reuse). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#reward-return-and-value). Use it to explain the mechanism before the derivation.
+
 Use this beside [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Read each **Predict** prompt before uncovering the arithmetic.
 
@@ -18,6 +30,18 @@ Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
 </details>
 
 **Carry it onward:** The [next lesson](../week-02-bellman-dp/teaching_guide.md) keeps actions and rewards, then adds a next state and a delayed reward.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    A["Choose arm"] --> R["Observe its reward only"]
+    R --> Q["Update that arm estimate and count"]
+    Q --> A
+```
+
+**Read the diagram:** Only the selected arm supplies a new reward. Its count determines a sample-average step size; unchosen arms do not receive invented observations.
 
 ## First pass: one action, one reward, one running average
 
@@ -173,6 +197,32 @@ Compare **regret** coefficients $8/\Delta_a$ and $\Delta_a/\mathrm{KL}$,
 or compare **pull-count** coefficients $8/\Delta_a^2$ and $1/\mathrm{KL}$.
 The original proof must union-bound over possible adaptive sample counts.
 See [Auer, Cesa-Bianchi and Fischer, Theorem 1 and its proof](https://homes.di.unimi.it/~cesabian/Pubblicazioni/ml-02.pdf).
+
+## Notebook investigation: track uncertainty separately from reward
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 3 and 6**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-01-mdps-bandits)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Start with rewards `(1,0,1,0)` in exercise 1. Before running, write the four means:
+`1, 0.5, 2/3, 0.5`. Replace the reference call with your own update if you are practising implementation.
+Then use exercise 3 with counts `(1,4,16)` at a fixed round `t=100`: the bonuses should be in the ratio
+`4:2:1`, since only the square root of count changes. A lower bonus is less uncertainty under the
+bound's assumptions, not a worse reward estimate.
+
+Draw two separate panels: running mean against **pulls of that arm**, and bonus against **arm count**.
+Keep the round number fixed for the second panel. Finally change exercise 6's discount from 0 to 1
+on rewards `(1,1,1)`; return changes from 1 to 3. Neither this return curve nor an arm's sample mean
+is its cumulative regret.
+
+<details>
+<summary>Check your interpretation: Why can a bonus increase between two decisions even when that arm received no new reward?</summary>
+
+Its count can stay fixed while the global round t increases, increasing log(t) in the UCB bonus. The estimate and the bonus answer different questions.
+
+</details>
 
 ## Retrieve and transfer
 

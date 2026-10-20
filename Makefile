@@ -44,7 +44,7 @@ learning-tests:
 	$(PY) -m unittest discover -s learning_projects/tests -v
 
 lab-tests:
-	node --test interactive/tests/engine.test.js
+	node --test interactive/tests/engine.test.js study-lab/model.test.cjs portal/tests/plot-model.test.mjs portal/tests/state.test.mjs
 
 browser-tests:
 	PY=$(PY) node interactive/tests/run-browser.js
@@ -78,3 +78,17 @@ clean:
 	$(PY) scripts/clean_generated.py
 
 cleanall: clean
+
+.PHONY: portal portal-content portal-serve study-check
+portal-content:
+	$(PY) portal/scripts/prepare_content.py
+
+portal: portal-content
+	cd portal && npm ci --ignore-scripts --no-audit --no-fund && npm run build && npm test
+
+portal-serve:
+	$(PY) -m http.server 8767 --bind 127.0.0.1 --directory portal/dist
+
+study-check:
+	node --test study-lab/model.test.cjs
+	cd portal && npm test

@@ -27,7 +27,7 @@ By the end of this week you will be able to:
   \item Derive $n$-step advantages and the closed-form Generalised Advantage Estimator (GAE) as a geometric mixture, and explain the bias--variance role of $\lambda$.
   \item Implement synchronous A2C with GAE on LunarLander-Continuous and tune the $(\Disc, \lambda)$ pair sensibly.
   \item State the natural-policy-gradient update via the Fisher information matrix, including its invariance to reparameterisation.
-  \item Derive TRPO end-to-end: surrogate objective, KL trust region, second-order Taylor of the constraint, Lagrangian, conjugate-gradient $F^{-1}g$ solve, and the back-tracking line-search that restores monotonic improvement.
+  \item Derive TRPO end-to-end: surrogate objective, KL trust region, second-order Taylor of the constraint, Lagrangian, conjugate-gradient $F^{-1}g$ solve, and back-tracking line search, distinguishing its empirical acceptance checks from the ideal improvement guarantee.
   \item Recognise when a first-order PPO-style approximation suffices and when the full TRPO machinery is worth its compute.
   \item Connect KL trust regions to the alignment notion of ``stay close to the reference model'' that underpins RLHF/PPO and DPO.
 \end{enumerate}
@@ -35,23 +35,23 @@ By the end of this week you will be able to:
 
 \chapter{Motivation and intuition}
 
-REINFORCE works but is wasteful: each update needs a full episode and the gradient estimator has huge variance.\marginnote{The variance scales with the horizon $T$ through the cumulative $\Disc^t$ factors; for $T=1000$ and $\Disc=0.99$, sample paths' returns can span four orders of magnitude.} We are about to plug three holes in REINFORCE:
+REINFORCE uses sampled complete returns and can have high gradient variance. The variance depends on the reward process, horizon, policy and baseline; horizon and discount alone do not specify its numerical scale. This week studies three related design choices:
 
 \begin{enumerate}[leftmargin=*]
-  \item Replace the Monte-Carlo return $\Ret_t$ with a \emph{bootstrapped} multi-step target $\hat\Adv^{(n)}_t$ that trades a little bias for a lot of variance reduction (A2C, $n$-step returns).
-  \item Mix $n$-step estimators across all horizons into a single low-variance, low-bias estimator (GAE).
-  \item Constrain the policy update so each step monotonically improves the objective; this requires moving away from Euclidean parameter space into the \emph{policy manifold} equipped with the Fisher--Rao metric (Natural PG, TRPO).
+  \item Replace the Monte-Carlo return $\Ret_t$ with a \emph{bootstrapped} multi-step target $\hat\Adv^{(n)}_t$ that changes the dependence on observed rewards and critic error (A2C, $n$-step returns).
+  \item Mix $n$-step estimators across all horizons into an estimator whose bias and variance depend on the critic and weighting (GAE).
+  \item Use local policy-distribution geometry and trust-region constraints to control updates, then distinguish the ideal improvement bound from the practical algorithm (Natural PG, TRPO).
 \end{enumerate}
 
 \begin{intuition}
-TRPO is exactly the answer to the question ``how do I take a policy-gradient step without falling off a cliff?''. The cliff is the catastrophic policy update that REINFORCE will eventually produce when an unlucky batch causes $\theta$ to leap into a worse mode. TRPO bounds the size of every step in \emph{KL space}, not parameter space; the surrogate-improvement bound (Theorem~\ref{thm:surrbnd}) guarantees we never get arbitrarily worse in expectation.
+TRPO asks how to improve a policy while limiting changes in its action distribution. A noisy gradient can produce a damaging update; this is a risk, not an inevitable outcome of REINFORCE. The theoretical bound (Theorem~\ref{thm:surrbnd}) uses the maximum statewise divergence. Practical TRPO constrains an estimated average KL and uses approximate optimisation, so it does not inherit an unconditional monotonic-improvement guarantee.
 \end{intuition}
 
 \section*{Why bother with TRPO if PPO exists?}
-PPO (next week) is TRPO with the second-order optimisation replaced by a clipped first-order surrogate. Skipping TRPO obscures \emph{why} PPO's clip range matters and what it is approximating. Five hours on TRPO buys deep clarity on PPO and a working vocabulary for natural-gradient ideas you will meet again in K-FAC, GRPO, and NPG-CG.
+TRPO motivates controlling policy change; PPO uses a clipped surrogate with a different optimisation procedure. The clip range changes incentives but does not impose TRPO's KL constraint. Studying the trust-region derivation helps separate those mechanisms before comparing their empirical behaviour.
 
 \begin{pitfall}
-A common student error is to compute GAE \emph{within} a mini-batch of one-step transitions \emph{after} they have been shuffled. GAE is a recursive estimator along trajectory order; you must compute it on whole rollouts and then shuffle (treating episode boundaries with care). Every PPO implementation that ``trains but never converges'' has this bug.
+A common student error is to compute GAE \emph{within} a mini-batch of one-step transitions \emph{after} they have been shuffled. GAE is a recursive estimator along trajectory order; you must compute it on whole rollouts and then shuffle (treating episode boundaries with care). This is one possible failure among several; a disappointing training curve alone does not identify it.
 \end{pitfall}
 
 \chapter{Mathematical formulation}
@@ -66,7 +66,7 @@ and the $n$-step advantage estimator
 \[
   \hat \Adv_t^{(n)} \;=\; \hat R_t^{(n)} - \Vfn(s_t) \;=\; -\Vfn(s_t) + \sum_{k=0}^{n-1} \Disc^k r_{t+k} + \Disc^n \Vfn(s_{t+n}).
 \]
-As $n\to 1$ this is the one-step TD advantage (low variance, high bias); as $n\to T$ it tends to the Monte-Carlo advantage (high variance, low bias).
+At $n=1$ this is a one-step TD advantage. A return extending to true termination becomes Monte Carlo; an unfinished rollout retains an endpoint bootstrap. Bias and variance depend on critic error and the data-generating process, so their ordering needs stated conditions.
 
 \begin{definition}[Bellman residual / TD error]
 \label{def:td}
@@ -131,7 +131,7 @@ hyperparameter; compare alternatives empirically for the chosen task.
   \draw[rlorange,thick,dashed,domain=0:8,samples=80] plot (\x, {2.0 + 0.7*sin(deg(\x/3 - 0.5))});
   \node[rlorange] at (5.5,2.5) {\small total MSE};
 \end{tikzpicture}
-\caption{Bias--variance trade-off in $\lambda$. The dashed orange curve is the schematic total MSE; the minimum sits where marginal bias gain equals marginal variance cost --- empirically near $\lambda \approx 0.95$.}
+\caption{Schematic bias--variance intuition as $\lambda$ changes, not measured curves. The dashed line is an illustrative error curve, not the sum of the other two drawn curves. The best $\lambda$ depends on value error, reward noise and the task; $0.95$ is a starting setting, not a universal optimum.}
 \end{figure}
 
 \section{Natural Policy Gradient}
@@ -164,6 +164,7 @@ Define the importance-sampled surrogate
 \]
 
 \begin{theorem}[Maximum-state divergence bound, Schulman 2015]
+\label{thm:surrbnd}
 Use the normalised discounted state distribution
 $d^{\pi_\mathrm{old}}(s)=(1-\Disc)\sum_{t\ge0}\Disc^t\Prb(S_t=s\mid\pi_\mathrm{old})$
 in the surrogate above, with exact old-policy advantages. Let

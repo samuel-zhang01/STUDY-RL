@@ -1,0 +1,8 @@
+# Lightweight environment for weeks 1–4; Python 3.12 recommended.
+numpy>=1.26,<3
+scipy>=1.13,<2
+matplotlib>=3.9,<4
+gymnasium>=1.0,<2
+jupyterlab>=4,<5
+ipykernel>=6,<8
+pytest>=8.3,<10

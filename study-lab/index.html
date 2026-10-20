@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four offline experiments connecting RL equations to predictions, diagrams and numerical checks.">
+  <title>RL Study Lab — predict, change, explain</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="model.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to experiments</a>
+<header>
+  <a class="brand" href="#main">STUDY–RL <span>/ learning lab</span></a>
+  <a href="../docs/LEARNING_MAP.md">Course routes ↗</a>
+</header>
+<main id="main">
+  <div class="intro">
+    <p class="eyebrow">Four ideas. Small enough to work out by hand.</p>
+    <h1>Predict it.<br>Change it. Explain it.</h1>
+    <p class="lead">Keep the decision problem small. Move one assumption, follow the arithmetic,
+      and find out whether your intuition survives.</p>
+    <p>No installation or training needed. Work in order, or jump to the idea you are studying.
+      Your answers stay on this page and are not saved.</p>
+  </div>
+  <nav aria-label="Experiments">
+    <a href="#return-lab">01 · Return</a>
+    <a href="#td-lab">02 · TD boundaries</a>
+    <a href="#ppo-lab">03 · PPO clipping</a>
+    <a href="#support-lab">04 · Logged support</a>
+  </nav>
+  <noscript><p class="notice">The controls need JavaScript. Read the same worked examples in the
+    <a href="../docs/CONCEPT_ATLAS.md">visual explanations</a>, including all four PPO cases.</p></noscript>
+
+  <section id="return-lab" aria-labelledby="return-title">
+    <p class="eyebrow">01 / Weeks 1–2 → revisit in week 7</p>
+    <h2 id="return-title">A reward now, or a reward later?</h2>
+    <p>Stopping pays 2 immediately. Continuing pays 0, then a final reward one step later.
+      <strong>Predict:</strong> if you care less about the future, which choice becomes better?</p>
+    <figure tabindex="0" role="region" aria-label="Delivery diagram, horizontally scrollable on small screens">
+      <svg viewBox="0 0 720 176" role="img" aria-labelledby="delivery-title delivery-desc">
+        <title id="delivery-title">Two-step delivery task</title>
+        <desc id="delivery-desc">At state s0, stop gives reward 2 and terminates. Continue gives 0 and reaches s1.
+          At s1, finish gives the chosen final reward and terminates. Terminal future value is zero.</desc>
+        <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#49635f"/></marker></defs>
+        <rect x="12" y="59" width="140" height="62" rx="10"/><text x="82" y="96" text-anchor="middle">s₀ · choose</text>
+        <rect x="295" y="101" width="140" height="62" rx="10"/><text x="365" y="138" text-anchor="middle">s₁ · finish</text>
+        <rect x="566" y="59" width="142" height="62" rx="10"/><text x="637" y="85" text-anchor="middle">terminal</text><text x="637" y="107" text-anchor="middle">future value 0</text>
+        <path class="edge" d="M152 73 L225 30 L500 30 L566 73"/><text x="365" y="22" text-anchor="middle">stop · reward 2</text>
+        <path class="edge" d="M152 105 L295 132"/><text x="223" y="92" text-anchor="middle">continue · 0</text>
+        <path class="edge" d="M435 132 L566 105"/><text id="final-reward-label" x="502" y="155" text-anchor="middle">reward 4</text>
+      </svg>
+      <figcaption>Rewards live on arrows. The terminal state adds no extra reward.
+        <span class="mobile-hint">Scroll sideways to follow the whole diagram.</span></figcaption>
+    </figure>
+    <div class="workbench">
+      <form id="return-controls" class="controls">
+        <label for="discount">Discount γ <output id="discount-value" for="discount">0.90</output></label>
+        <input id="discount" type="range" min="0" max="1" step="0.05" value="0.9">
+        <p class="hint">0 values only the immediate reward; 1 counts both equally in this finite task.</p>
+        <label for="probability">Probability of continuing <output id="probability-value" for="probability">0.25</output></label>
+        <input id="probability" type="range" min="0" max="1" step="0.05" value="0.25">
+        <label for="final-reward">Final reward <output id="final-reward-value" for="final-reward">4</output></label>
+        <input id="final-reward" type="range" min="0" max="8" step="1" value="4">
+        <button type="reset">Reset example</button>
+      </form>
+      <div class="result" id="return-result" aria-live="polite" aria-atomic="true"></div>
+    </div>
+    <details><summary>Why is the policy gradient not zero when advantages average to zero?</summary>
+      <p>The two action scores differ. If p = sigmoid(z), continue has score 1−p
+        and stop has score −p. Their advantage-weighted sum is
+        p(1−p)(Qcontinue−Qstop). The displayed derivative is with respect to z.
+        At exact p=0 or 1 we display its limit; a finite sigmoid logit never reaches those endpoints.</p>
+    </details>
+    <form class="check" data-check="return">
+      <label for="return-answer"><strong>Check without the sliders:</strong> final reward 4, γ=0.5,
+        continue probability 0.8. What is V(s₀)?</label>
+      <div class="answer-row"><input id="return-answer" name="answer" type="number" step="any" required placeholder="Your value"><button>Check prediction</button></div>
+      <p class="feedback" role="status"></p>
+    </form>
+    <p class="lesson"><a href="../week-02-bellman-dp/notes.pdf">Week 2 lecture PDF</a> ·
+      <a href="../docs/CONCEPT_ATLAS.md#reward-return-and-value">Read the explanation</a> ·
+      <a href="#td-lab">Next: learning from a transition ↓</a></p>
+  </section>
+
+  <section id="td-lab" aria-labelledby="td-title">
+    <p class="eyebrow">02 / Weeks 3–4 → revisit in week 8</p>
+    <h2 id="td-title">The data stopped. Did the task?</h2>
+    <p>For one observed transition, the current value estimate is 1 and the learning
+      rate α is 0.5. <strong>Predict:</strong> should an external rollout cutoff erase the future?</p>
+    <div class="workbench">
+      <form id="td-controls" class="controls">
+        <label for="ending">What ended?</label>
+        <select id="ending">
+          <option value="ongoing">Neither: task and collection continue</option>
+          <option value="truncated">Collection only: external cutoff</option>
+          <option value="terminated">The task: true termination</option>
+        </select>
+        <label for="td-reward">Observed reward <output id="td-reward-value" for="td-reward">0</output></label>
+        <input id="td-reward" type="range" min="0" max="4" step="1" value="0">
+        <label for="next-value">Next-state value estimate <output id="next-value-value" for="next-value">3</output></label>
+        <input id="next-value" type="range" min="0" max="6" step="0.5" value="3">
+        <label for="td-discount">Discount γ <output id="td-discount-value" for="td-discount">0.90</output></label>
+        <input id="td-discount" type="range" min="0" max="1" step="0.05" value="0.9">
+        <button type="reset">Reset example</button>
+      </form>
+      <div class="result" id="td-result" aria-live="polite" aria-atomic="true"></div>
+    </div>
+    <p class="notice">A time limit built into the task's objective is termination. An external
+      collection limit is truncation. For finite-horizon decisions, include remaining time in the state.
+      At a reset, never bootstrap from the next episode's initial observation.</p>
+    <form class="check" data-check="td">
+      <label for="td-answer"><strong>Transfer check:</strong> reward 2, next value 5, γ=0.9.
+        Collection is truncated but the task continues. What is the target?</label>
+      <div class="answer-row"><input id="td-answer" name="answer" type="number" step="any" required placeholder="Your target"><button>Check prediction</button></div>
+      <p class="feedback" role="status"></p>
+    </form>
+    <p class="lesson"><a href="../week-04-td-sarsa-q/notes.pdf">Week 4 lecture PDF</a> ·
+      <a href="https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/">Time-limit source</a> ·
+      <a href="#ppo-lab">Next: what clipping changes ↓</a></p>
+  </section>
+
+  <section id="ppo-lab" aria-labelledby="ppo-title">
+    <p class="eyebrow">03 / Week 9</p>
+    <h2 id="ppo-title">Which side goes flat?</h2>
+    <p>PPO uses the smaller of a raw and a clipped advantage product.
+      <strong>Predict:</strong> when a bad action becomes more likely, should the penalty disappear?</p>
+    <div class="workbench">
+      <form id="ppo-controls" class="controls">
+        <label for="ratio">New / old probability ratio ρ <output id="ratio-value" for="ratio">1.50</output></label>
+        <input id="ratio" type="range" min="0.1" max="2" step="0.05" value="1.5">
+        <p class="hint">ρ=1 means unchanged probability for this sampled action.</p>
+        <label for="advantage">Advantage Â</label>
+        <select id="advantage"><option value="2">+2 · better than average</option><option value="-2">−2 · worse than average</option><option value="0">0 · equal to average</option></select>
+        <label for="epsilon">Clip radius ε <output id="epsilon-value" for="epsilon">0.20</output></label>
+        <input id="epsilon" type="range" min="0.05" max="0.4" step="0.05" value="0.2">
+        <button type="reset">Reset example</button>
+      </form>
+      <div class="result" id="ppo-result" aria-live="polite" aria-atomic="true"></div>
+    </div>
+    <figure tabindex="0" role="region" aria-label="PPO chart, horizontally scrollable on small screens">
+      <svg id="ppo-chart" viewBox="0 0 680 276" role="img" aria-labelledby="ppo-chart-title ppo-chart-desc">
+        <title id="ppo-chart-title">PPO surrogate as the action probability ratio changes</title>
+        <desc id="ppo-chart-desc">The solid line is the clipped surrogate to maximise. The dashed line is the raw product. A dot marks the selected ratio.</desc>
+      </svg>
+      <figcaption>Solid teal: surrogate to maximise. Dashed grey: raw ρÂ.
+        Vertical markers: 1−ε and 1+ε. The training loss is the negative surrogate.
+        <span class="mobile-hint">Scroll sideways to read the whole chart.</span></figcaption>
+    </figure>
+    <p class="notice">The plateau describes this sample's actor term. Shared parameters, other
+      samples and other losses can still move the policy. Clipping does not impose a hard KL bound.</p>
+    <form class="check" data-check="ppo">
+      <label for="ppo-answer"><strong>Sign check:</strong> Â=−2, ρ=0.5, ε=0.2.
+        What is the surrogate to maximise (before negating it for the loss)?</label>
+      <div class="answer-row"><input id="ppo-answer" name="answer" type="number" step="any" required placeholder="Your surrogate"><button>Check prediction</button></div>
+      <p class="feedback" role="status"></p>
+    </form>
+    <p class="lesson"><a href="../week-09-ppo/notes.pdf">Week 9 lecture PDF</a> ·
+      <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html">PPO equation source</a> ·
+      <a href="#support-lab">Next: when the evidence runs out ↓</a></p>
+  </section>
+
+  <section id="support-lab" aria-labelledby="support-title">
+    <p class="eyebrow">04 / Week 11 → revisit in week 14</p>
+    <h2 id="support-title">A large weight cannot invent evidence.</h2>
+    <p>We observe only the reward of each chosen action. In this teaching fixture,
+      an observed A pays 1 and an observed B pays 4. <strong>Predict:</strong>
+      can you evaluate “always B” if your logger never chooses B?</p>
+    <div class="workbench">
+      <form id="support-controls" class="controls">
+        <label for="logging-b">Logger probability of B <output id="logging-b-value" for="logging-b">0.25</output></label>
+        <input id="logging-b" type="range" min="0" max="1" step="0.05" value="0.25">
+        <label for="target-b">Target probability of B <output id="target-b-value" for="target-b">1.00</output></label>
+        <input id="target-b" type="range" min="0" max="1" step="0.05" value="1">
+        <label for="sample">Observed four-row log</label>
+        <select id="sample"><option value="mixed">A, A, A, B</option><option value="only-a">A, A, A, A · no B observed</option></select>
+        <p class="hint">The log stays fixed as you change probabilities. This is sensitivity
+          analysis, not a new random sample. We flag impossible logs.</p>
+        <button type="reset">Reset example</button>
+      </form>
+      <div class="result" id="support-result" aria-live="polite" aria-atomic="true"></div>
+    </div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Logged action weights, horizontally scrollable">
+      <table><caption>Inspect each observed contribution</caption><thead><tr><th scope="col">Action</th><th scope="col">Reward</th><th scope="col">Logger b</th><th scope="col">Target π</th><th scope="col">π / b</th><th scope="col">Weight × reward</th></tr></thead><tbody id="support-rows"></tbody></table>
+    </div>
+    <details><summary>What do IPS, SNIPS and effective sample size tell me?</summary>
+      <p>IPS divides the sum of weighted rewards by the number of logged rows.
+        SNIPS divides it by the sum of weights, which must be nonzero.
+        Weight-based effective sample size is (sum w)² / sum(w²); it diagnoses weight
+        concentration, not a confidence interval. A single B row may carry the whole estimate.
+        Neither normalisation repairs absent support or data used to select the target policy.</p>
+    </details>
+    <form class="check" data-check="support">
+      <label for="support-answer"><strong>Denominator check:</strong> log A,A,A,B; B reward 4;
+        logger P(B)=0.25; target always B. What is IPS?</label>
+      <div class="answer-row"><input id="support-answer" name="answer" type="number" step="any" required placeholder="Your IPS estimate"><button>Check prediction</button></div>
+      <p class="feedback" role="status"></p>
+    </form>
+    <p class="lesson"><a href="../week-11-contextual-bandits-ope/notes.pdf">Week 11 lecture PDF</a> ·
+      <a href="../docs/CONCEPT_ATLAS.md#logged-data-and-support">Support explanation</a> ·
+      <a href="../docs/INTERACTIVE_LEARNING.md">Next: implement the calculations yourself ↗</a></p>
+  </section>
+  <footer>
+    <h2>What changed your mind?</h2>
+    <p>Write one sentence: “I predicted ___ because ___; changing ___ showed ___.”
+      Reproduce that calculation next session before reopening the lab.</p>
+    <p><a href="../docs/PROGRESS.md">Record your evidence</a> · <a href="../docs/STUDY_GUIDE.md">Study guide</a> ·
+      <a href="../docs/GLOSSARY.md">Notation help</a> · <a href="#main">Back to top ↑</a></p>
+  </footer>
+</main>
+</body>
+</html>

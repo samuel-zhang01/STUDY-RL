@@ -1,5 +1,17 @@
 # Week 14 teaching guide — learn from support without inventing it
 
+**Course navigation:** [Week 13](../week-13-multi-agent-alphazero/teaching_guide.md) ← **Week 14 / 26** → [Week 15](../week-15-decision-transformer-diffusion/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** What happens when the maximisation chooses an unsupported action?
+
+**Recall first:** [Week 05](../week-05-dqn/teaching_guide.md), [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#logged-data-and-support). Use it to explain the mechanism before the derivation.
+
 Use this guide before expectile, AWR, and CQL exercises; inspect coverage before interpreting returns.
 
 ## Learning bridge
@@ -17,6 +29,18 @@ It chooses the unlogged action with predicted value 10. No logged outcome valida
 </details>
 
 **Carry it onward:** [Sequence policies](../week-15-decision-transformer-diffusion/teaching_guide.md) learn from the same fixed-data limitation with a different training target.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart TD
+    D["Fixed logged dataset"] --> Q["Fit values on observed evidence"]
+    Q --> A["Policy may favour an unseen action"]
+    A --> E["No online trial to correct its estimate"]
+```
+
+**Read the diagram:** Offline learning cannot collect new evidence for unsupported actions. A conservative penalty or restricted policy extraction addresses aspects of this risk under assumptions.
 
 ## Connect to what you know
 
@@ -155,6 +179,31 @@ See [Conservative Q-Learning](https://arxiv.org/abs/2006.04779).
   `episode_end` splits terminal and time-limited episodes; `done` alone masks
   absorbing terminals in Bellman backups. Log-domain trajectory weights prevent
   arithmetic underflow but do not cure weight concentration.
+
+## Notebook investigation: make unsupported optimism visible
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 3**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-14-offline-rl-1)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+For the expectile exercise, use values `(0,1)` with equal frequency. Sweep tau from 0.1 to 0.9:
+the exact scalar minimiser is tau. Plot value against tau and mark the ordinary mean at 0.5.
+This is a curve through **supported values**, not a confidence band and not a maximum over unseen actions.
+
+For CQL, use logged action A, `Q_A=0`, `Q_B=log 3`. Draw arrows for the penalty-only gradient step:
+A increases by 0.075 and B decreases by 0.075 at step size 0.1. Add the Bellman-loss component only
+after inspecting this isolated effect. In AWR, compare unequal behaviour frequencies with a softmax
+of Q alone; equal Q should preserve those unequal frequencies. Check whether the helper normalises
+sample weights or constructs an action policy—the two normalisations answer different questions.
+
+<details>
+<summary>Check your interpretation: If the conservative penalty lowers an unseen action value, is its true return now known?</summary>
+
+No. The penalty changes an estimate or preference for extrapolation. It does not collect the missing outcome, and formal bounds require additional assumptions.
+
+</details>
 
 ## Retrieval and transfer
 

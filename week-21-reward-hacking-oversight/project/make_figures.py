@@ -4,8 +4,8 @@ Outputs:
 - ``fig_hack_curves.pdf``    --- proxy vs true-quality divergence
 - ``fig_regularizers.pdf``   --- effect of KL, length penalty, entropy
 - ``fig_cai_compliance.pdf`` --- CAI compliance pre/post per step
-- ``fig_gao_scaling.pdf``    --- toy reproduction of the Gao et al. 2022
-                                 over-optimisation scaling law shape
+- ``fig_gao_scaling.pdf``    --- course-created proxy/objective tradeoff
+                                 (not fitted paper data)
 """
 from __future__ import annotations
 import os
@@ -87,16 +87,12 @@ def fig_cai_compliance(seed: int = 0, num_steps: int = 40):
 
 
 def fig_gao_scaling(seed: int = 0):
-    """Reproduce the *shape* of Gao et al. 2022's reward-overoptimisation
-    scaling law on a toy.
+    """Plot a course-created illustration, not a fitted Gao et al. curve.
 
-    The Gao paper models true reward as
-        R_true(kl) = R_proxy(kl) - phi(kl)
-    where phi(kl) grows as kl increases beyond a threshold. We use a
-    quadratic phi for the toy.
+    With d = sqrt(KL), proxy = 2d and objective = 2d - 0.04d**4.
+    The parameters are chosen to illustrate divergence, not estimated from data.
     """
     use_rl_style()
-    rng = np.random.default_rng(seed)
     kl_grid = np.linspace(0, 25, 200)
     # Proxy improves with sqrt of KL (returns diminish).
     r_proxy = 2.0 * np.sqrt(kl_grid)
@@ -110,7 +106,7 @@ def fig_gao_scaling(seed: int = 0):
                lw=0.8, label="argmax true")
     ax.set_xlabel(r"KL($\pi_\theta \,\|\, \pi_\text{ref}$)")
     ax.set_ylabel("reward")
-    ax.set_title("Gao 2022 over-optimisation law (toy reproduction)")
+    ax.set_title("Illustrative proxy–objective tradeoff (not paper data)")
     ax.legend()
     fig.tight_layout()
     fig.savefig(os.path.join(FIGS, "fig_gao_scaling.pdf"))

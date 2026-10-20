@@ -1,5 +1,17 @@
 # Week 03 teaching guide — learning from finished stories
 
+**Course navigation:** [Week 02](../week-02-bellman-dp/teaching_guide.md) ← **Week 03 / 26** → [Week 04](../week-04-td-sarsa-q/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which visit and whose trajectory does this return estimate?
+
+**Recall first:** [Week 01](../week-01-mdps-bandits/teaching_guide.md), [Week 02](../week-02-bellman-dp/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#one-transition-different-targets). Use it to explain the mechanism before the derivation.
+
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Track reward timing and visit timing separately throughout this week.
 
@@ -18,6 +30,18 @@ The returns are 3.6 and 0, so their average is 1.8. This estimate uses both fini
 </details>
 
 **Carry it onward:** [TD](../week-04-td-sarsa-q/teaching_guide.md) will update before the trip ends by inserting a next-state estimate.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    E["Complete sampled episode"] --> G["Return from each visit"]
+    G --> F["Choose first visits in chronological order"]
+    F --> V["Average returns for each state"]
+```
+
+**Read the diagram:** First-visit MC uses the first chronological visit of a state in each episode. Scanning backward and accepting the first encounter would select its last chronological visit.
 
 ## Before you start
 
@@ -155,6 +179,32 @@ For the original per-decision correction and its temporal structure, see
 [Precup, Sutton and Singh, Eligibility Traces for Off-Policy Policy Evaluation](https://web.eecs.umich.edu/~baveja/Papers/OffPolicy.pdf).
 This changes weights on each reward to include only the actions preceding it;
 it does not repair absent coverage.
+
+## Notebook investigation: separate visit order from return computation
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 4 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-03-monte-carlo)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+In exercise 1, use the repeated-pair trajectory `[(0,0,1), (1,1,2), (0,0,3)]` with gamma 0.5.
+Write the return at each position before selecting visits: `(2.75,3.5,3)`.
+The first-visit result for `(0,0)` must contain 2.75, not 3. A test that checks only the number of
+entries misses this bug; check the retained value too.
+
+For exercises 4–5, set rewards `(1,0)` and target/logged probabilities `(0.75,0.25)/(0.5,0.5)`.
+Predict IPS 0.75 and WIS 0.75, then change only the logged sample to contain the rewarded action twice.
+IPS becomes 1.5 while WIS is 1. The change is a different finite sample, not a different true policy.
+If you plot repeated samples, use one dot per independent dataset and label bias and variability
+separately; one estimator need not win on both.
+
+<details>
+<summary>Check your interpretation: What would an all-zero importance-weight array tell you about WIS?</summary>
+
+Its denominator is zero, so it is undefined. This sample contains no target-weighted evidence; replacing the denominator by epsilon does not make its policy value zero.
+
+</details>
 
 ## Retrieve and transfer
 

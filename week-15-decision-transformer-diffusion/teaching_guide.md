@@ -1,5 +1,17 @@
 # Week 15 teaching guide — conditioning is not a promise
 
+**Course navigation:** [Week 14](../week-14-offline-rl-1/teaching_guide.md) ← **Week 15 / 26** → [Week 16](../week-16-model-based/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Why is a requested return not a guaranteed outcome?
+
+**Recall first:** [Week 14](../week-14-offline-rl-1/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#logged-data-and-support). Use it to explain the mechanism before the derivation.
+
 Use this guide for returns-to-go, causal masking, and the diffusion noising exercise.
 
 ## Learning bridge
@@ -17,6 +29,18 @@ It proves nothing about achieving 10. The conditional model must extrapolate bey
 </details>
 
 **Carry it onward:** [Model-based RL](../week-16-model-based/teaching_guide.md) explicitly learns predicted consequences and lets a planner question them.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    H["Past states and actions"] --> P["Sequence policy"]
+    G["Requested return-to-go"] --> P
+    P --> A["Predict next action"]
+```
+
+**Read the diagram:** A requested return conditions a prediction learned from logged sequences. It is not a constraint forcing the environment to deliver that return.
 
 ## Connect to what you know
 
@@ -148,6 +172,32 @@ The project trains a tiny DT; its diffusion exercise is an algebra demonstration
 Compare target-return effects over multiple rollouts, including attainable and unsupported targets.
 Return conditioning can select environmental luck as well as useful behavior;
 see [Brandfonbrener et al.](https://arxiv.org/abs/2206.01079) for conditions and limitations.
+
+## Notebook investigation: audit what the action predictor is allowed to see
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 3**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-15-decision-transformer-diffusion)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Write the six tokens `(R0,s0,a0,R1,s1,a1)` along both axes of an attention matrix.
+Use exercise 2 to shade forbidden query/key pairs. Mark prediction rows at indices 1 and 4;
+row 1 cannot read action token 2. Reading the prediction at row 2 instead would leak the answer
+through self-attention despite the triangular mask.
+
+In exercise 3, use a window longer than a short episode so padding appears. Inspect both the
+attention mask and the loss mask: hiding padded labels from the loss does not by itself prevent
+attention to padded inputs. For exercise 1, calculate returns `(8,9,10)` from rewards `(-1,-1,10)`.
+Compare with a requested target 10 after observing reward -1: its next target is 11.
+Label requested and achieved returns as separate quantities in any later rollout plot.
+
+<details>
+<summary>Check your interpretation: If requested return rises but achieved return plateaus, has the model ignored its input?</summary>
+
+Not necessarily. Its conditional action distribution can change while attainable returns or dataset coverage limit performance. Inspect actions and support as well as the final scalar return.
+
+</details>
 
 ## Retrieval and transfer
 

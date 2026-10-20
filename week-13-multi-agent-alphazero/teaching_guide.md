@@ -1,5 +1,17 @@
 # Week 13 teaching guide — keep the player's perspective explicit
 
+**Course navigation:** [Week 12](../week-12-rl-ranking-matching/teaching_guide.md) ← **Week 13 / 26** → [Week 14](../week-14-offline-rl-1/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Whose perspective does a search value use?
+
+**Recall first:** [Week 09](../week-09-ppo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#the-actor-and-critic-answer-different-questions). Use it to explain the mechanism before the derivation.
+
 Use this guide before exercises 1–4, then connect its second example to MAPPO.
 
 ## Learning bridge
@@ -17,6 +29,17 @@ It is −1 for the current player in the alternating zero-sum convention. A coop
 </details>
 
 **Carry it onward:** [Offline RL](../week-14-offline-rl-1/teaching_guide.md) freezes the source of experience and asks which choices the existing evidence supports.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    R["Root player value"] -->|"change perspective"| C["Child player value"]
+    C -->|"change perspective again"| L["Grandchild player value"]
+```
+
+**Read the diagram:** In this alternating zero-sum game, each edge changes the player to move, so each value backup changes sign. Two edges restore the original sign.
 
 ## Connect to what you know
 
@@ -143,6 +166,32 @@ Fixed weak opponents can reveal improvement while missing exploitable weaknesses
 The no-noise forced-win regression checks sign correctness directly.
 `evaluate_vs_random` now counts positive agent outcomes as wins; its legacy `winrate` field is a score rate with draws worth 0.5.
 A second regression checks that a forced agent win is reported as a win.
+
+## Notebook investigation: label every search value with its player
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 4**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-13-multi-agent-alphazero)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Draw the guide's forced-win board, then its child after applying the winning move. Write “player
+to move” beside both boards: the identities differ. The child stores -1 while the root receives +1.
+Use exercise 2 to verify terminal evaluation and exercise 1 to verify the parent's negation.
+A correct local sign with an inconsistent backup convention still breaks search.
+
+In exercise 4, compare the network prior with normalised root visits using paired bars over legal
+actions. They are different objects; more visits are evidence about this finite search, not a
+calibrated probability that the move wins. Set illegal-action probabilities to zero and check the
+remaining visits sum to one. Leave training exercises until this convention is clear; a short
+random-opponent benchmark is too weak to diagnose a perspective error reliably.
+
+<details>
+<summary>Check your interpretation: When should a child value not simply be negated?</summary>
+
+When the game is not alternating two-player zero-sum under this storage convention—for example an extra turn, cooperative rewards, or player-indexed values. Track whose payoff each number represents.
+
+</details>
 
 ## Retrieval and transfer
 

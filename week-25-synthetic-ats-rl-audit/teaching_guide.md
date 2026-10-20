@@ -1,5 +1,17 @@
 # Week 25 teaching guide: make an audit claim that the evidence can support
 
+**Course navigation:** [Week 24](../week-24-capstone-safe-matching/teaching_guide.md) ← **Week 25 / 26** → [Week 26](../week-26-causal-discovery-biological-data/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which conclusions transfer beyond the synthetic demonstration?
+
+**Recall first:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md), [Week 12](../week-12-rl-ranking-matching/teaching_guide.md), [Week 22](../week-22-cmdp-cpo-lagrangian/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#logged-data-and-support). Use it to explain the mechanism before the derivation.
+
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 This directory contains a synthetic ATS demonstration and a hypothetical architecture.
 All data and calculations are constructed examples. They do not validate an external system.
@@ -19,6 +31,18 @@ No. It supports a result under this synthetic reward function and shortlist proc
 </details>
 
 **Carry it onward:** [Causal biology](../week-26-causal-discovery-biological-data/teaching_guide.md) carries over overlap and audit discipline, then asks what observational evidence identifies about an intervention.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    Q["Write a claim"] --> D["Name dataset and source revision"]
+    D --> E["Run an appropriate evaluation"]
+    E --> L["Limit conclusion to that evidence"]
+```
+
+**Read the diagram:** A synthetic ATS result supports a claim about the synthetic fixture. It does not validate an external production architecture or population.
 
 ## What this capstone brings together
 
@@ -158,6 +182,33 @@ not an algorithmic guarantee. A failure deserves investigation rather than a cha
 conditional outcomes yield NaN. `selection_rates` reports selected-group shares,
 which cannot be interpreted as group-conditional applicant selection rates
 without exposure denominators. Its toy ratio is not a four-fifths hiring audit.
+
+## Notebook investigation: follow the evaluated policy, not the result-key name
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 4, 5 and 10**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-25-synthetic-ats-rl-audit)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Draw three boxes for logger, fitted candidate scorer and evaluated target. Connect each estimate
+to the policy that supplied its action probabilities. The training driver evaluates a fixed
+posterior-mean exploitation target, while the audit's returned choices come from the behaviour
+policy. A legacy “LinTS” key does not by itself mean marginal Thompson sampling was evaluated.
+
+In exercise 4, print point estimate, lower endpoint and upper endpoint separately. A percentile
+bootstrap requires ordered finite endpoints; it need not contain the original point estimate.
+Name the resampling unit and remember that resampling cannot repair shortlist support.
+For exercise 5, put eligible-group counts beside selected-group counts: its share ratio cannot
+become a conditional selection-rate ratio without the former. In exercise 10, label simulated
+hire rates and record the source revision before making any claim about an external ATS.
+
+<details>
+<summary>Check your interpretation: If a shadow scorer agrees with every active choice, has its causal impact been measured?</summary>
+
+No. The active policy generated the outcomes. Agreement is a useful diagnostic, but impact requires a suitable evaluation design and supported counterfactual assumptions or an intervention.
+
+</details>
 
 ## Retrieve and transfer
 

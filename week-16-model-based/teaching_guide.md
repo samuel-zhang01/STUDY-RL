@@ -1,5 +1,17 @@
 # Week 16 teaching guide — learn a simulator, then question its predictions
 
+**Course navigation:** [Week 15](../week-15-decision-transformer-diffusion/teaching_guide.md) ← **Week 16 / 26** → [Week 17](../week-17-exploration-meta/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** How can small model errors compound under planning?
+
+**Recall first:** [Week 05](../week-05-dqn/teaching_guide.md), [Week 08](../week-08-a2c-gae-trpo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#where-dqn-sends-the-gradient). Use it to explain the mechanism before the derivation.
+
 Use this guide before Gaussian KL, lambda-return, and the world-model exercises.
 
 ## Learning bridge
@@ -17,6 +29,18 @@ The gap is 1+0.9+0.9²=2.71. Even this simple per-step reward error compounds; t
 </details>
 
 **Carry it onward:** [Exploration and meta-learning](../week-17-exploration-meta/teaching_guide.md) ask which real experience to collect and how to adapt to a changed task.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    O["Real observations"] --> P["Posterior state estimate"]
+    P --> I["Prior imagines future transitions"]
+    I --> V["Predicted rewards and terminal bootstrap"]
+```
+
+**Read the diagram:** Real observations correct the latent estimate. Future imagination uses the learned prior, so model error can accumulate before the critic supplies the final bootstrap.
 
 ## Connect to what you know
 
@@ -158,6 +182,32 @@ Short rollouts branched from real states are motivated by this tradeoff; see [MB
 
 Exercise 6's first/last evaluation return is not a matched imagined/real diagnostic.
 A proper imagined/real comparison needs the same initial history, matched actions, and a common observable representation.
+
+## Notebook investigation: compare a model with the world it is supposed to predict
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 7**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-16-model-based)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Begin with the diagonal-Gaussian KL in exercise 1: swapping prior and posterior should generally
+change its value. In exercise 2, use a continuation flag of zero and verify that arbitrarily large
+future values cannot cross that terminal boundary.
+
+Inspect the world-model loss components in exercise 7 separately, with their scales labelled.
+A lower total loss could trade worse reward prediction for better reconstruction; it is not an
+unqualified simulation-accuracy score. As a small notebook extension, plot the guide's analytic
+model-error example over horizon H: `0.1 H(H-1)/2`, giving 0.6 at H=4 and 4.5 at H=10.
+Explain each point from accumulated state drift. For a real imagined/observed comparison, match the
+initial history and action sequence; exercise 6's first/last policy return does not perform that comparison.
+
+<details>
+<summary>Check your interpretation: Why is a visually accurate reconstruction insufficient for planning?</summary>
+
+The representation can preserve pixels while missing action-dependent reward or transition details. Planning needs accurate consequences under the policy’s proposed actions, including their coverage.
+
+</details>
 
 ## Retrieval and transfer
 

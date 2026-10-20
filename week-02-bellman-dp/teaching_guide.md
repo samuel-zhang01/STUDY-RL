@@ -1,5 +1,17 @@
 # Week 02 teaching guide — turning the future into an equation
 
+**Course navigation:** [Week 01](../week-01-mdps-bandits/teaching_guide.md) ← **Week 02 / 26** → [Week 03](../week-03-monte-carlo/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Why does a backup propagate information about the future?
+
+**Recall first:** [Week 01](../week-01-mdps-bandits/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#reward-return-and-value). Use it to explain the mechanism before the derivation.
+
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The objective is to explain every term in a Bellman backup before running it.
 
@@ -18,6 +30,18 @@ Stop wins: continue is worth 0+0.4×4=1.6. The delivery reward stayed 4; the obj
 </details>
 
 **Carry it onward:** [Monte Carlo](../week-03-monte-carlo/teaching_guide.md) will keep the same return but replace known model averages with completed trips.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    V["Current values"] --> B["Average reward + discounted next value"]
+    B --> N["New values under fixed policy"]
+    N --> I["Optional: improve the policy"]
+```
+
+**Read the diagram:** A Bellman evaluation backup averages using a specified policy and transition model. Choosing a better action is a separate policy-improvement operation.
 
 ## Before you start
 
@@ -156,6 +180,34 @@ The connection between exact DP and approximate TD is discussed in
 [Tsitsiklis and Van Roy's analysis](https://web.mit.edu/~jnt/www/Papers/J063-97-bvr-td.pdf):
 approximation changes the fixed point and the relevant convergence conditions.
 The finite calculations and inequalities above are derived directly here.
+
+## Notebook investigation: watch information move through a value table
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2 and 6**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-02-bellman-dp)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Use exercise 1 with a zero value vector. Mark which states can receive the goal reward in one
+transition; only those immediate predecessors can acquire that goal information after one synchronous
+backup. Repeat the operator yourself, saving each full value vector before replacing it.
+
+Display successive grids with one fixed colour scale. An independently rescaled colourbar can make
+an early small value look as strong as a later large value. Alongside the grids, plot the maximum
+Bellman residual on a log scale; omit exact zeros from a logarithm. Compare with exercise 6's linear
+solve under the **same fixed policy**. Value iteration optimises, so comparing it to an arbitrary
+policy's solution answers a different question.
+
+Change gamma from 0.5 to 0.95. For residual 0.01, the exact-model error bounds become 0.02 and 0.2.
+Higher discount preserves more distant rewards and makes the same residual a weaker certificate.
+
+<details>
+<summary>Check your interpretation: If two policy arrows differ but their Q-values tie, must one of the grid plots be wrong?</summary>
+
+No. Equal action values allow different optimal policies. Compare values, residuals and tie-breaking before interpreting arrows.
+
+</details>
 
 ## Retrieve and transfer
 

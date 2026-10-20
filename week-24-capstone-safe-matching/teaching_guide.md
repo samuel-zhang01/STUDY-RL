@@ -1,5 +1,17 @@
 # Week 24 teaching guide: separate learning, evaluation, and the decision claim
 
+**Course navigation:** [Week 23](../week-23-safe-exploration-shielding-robust/teaching_guide.md) ← **Week 24 / 26** → [Week 25](../week-25-synthetic-ats-rl-audit/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which evidence supports each claim in the audit?
+
+**Recall first:** [Week 11](../week-11-contextual-bandits-ope/teaching_guide.md), [Week 14](../week-14-offline-rl-1/teaching_guide.md), [Week 22](../week-22-cmdp-cpo-lagrangian/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#a-budget-and-a-shield-act-in-different-places). Use it to explain the mechanism before the derivation.
+
 Use alongside [the notes](notes.tex) and [the workbook](workbook.ipynb).
 This is a synthetic educational matching problem, not a validated production hiring system.
 
@@ -18,6 +30,19 @@ A supported reward estimate still needs valid logging assumptions; measured aver
 </details>
 
 **Carry it onward:** [Week 25](../week-25-synthetic-ats-rl-audit/teaching_guide.md) turns this evidence table into a bounded application audit.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    T["Training split"] --> P["Fit policy"]
+    P --> S["Choose using validation split"]
+    S --> E["Evaluate once on held-out logs"]
+    E --> C["State supported claims and limits"]
+```
+
+**Read the diagram:** Policy fitting, policy selection and final evaluation consume different evidence. Reusing evaluation rewards for selection undermines the final comparison.
 
 ## The connections that matter
 
@@ -153,6 +178,33 @@ For 40 recommendations among 100 group-0 contexts and 20 among 50 group-1 contex
 DP gap is `|0.4−0.4|=0`. Raw recommendation counts differ but conditional rates agree.
 If no qualified examples from a group are observed, its equal-opportunity rate is undefined;
 a numerical fallback of zero should not be reported as measured zero performance.
+
+## Notebook investigation: build an audit in which every number has an owner
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 4, 6 and 7**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-24-capstone-safe-matching)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Before the full pipeline, make a table with rows for logger, offline policy and fine-tuned policy;
+columns should name fitting data, evaluation data, action probability and metric denominator.
+Exercise 2 describes the logger. Exercise 4 evaluates a uniform target. Neither is automatically
+the final learned policy's result, even if all numbers appear in the same notebook.
+
+Recompute SNIPS weights for the **action actually logged**, using probability of skip on skip rows.
+For exercise 6, present before/after reward and group rates with common axes and the actual row count.
+Report empty qualified-group cells as undefined, not measured zero. Exercise 7 flips one attribute
+while holding the rest fixed: call its result feature sensitivity. It does not specify the causal
+changes required for a person-level counterfactual. Explain one failure that the aggregate parity
+gap would miss before choosing an operating point.
+
+<details>
+<summary>Check your interpretation: Could a zero parity gap be achieved by a useless policy?</summary>
+
+Yes. Recommending everyone or nobody makes both groups’ recommendation rates equal. Capacity, relevance, qualification and utility metrics are necessary to interpret that number.
+
+</details>
 
 ## Retrieve and transfer
 

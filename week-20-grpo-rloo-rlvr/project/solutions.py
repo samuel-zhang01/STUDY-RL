@@ -1,9 +1,9 @@
 """Reference solutions for the workbook exercises.
 
-Every workbook exercise calls ``exercise_N(...)`` from this module — the
-notebook cell scaffolds raise ``NotImplementedError`` until the learner
-overrides them, and the hidden test cell asserts that the *reference*
-implementation here matches an expected output.
+Supplied notebook wrappers call these functions for demonstrations. Learners
+should replace a wrapper with their own implementation and make sure the
+following checks invoke it. Running a reference cell is not an independent
+assessment, and the notebook does not silently switch to learner mode.
 """
 from __future__ import annotations
 from typing import Sequence

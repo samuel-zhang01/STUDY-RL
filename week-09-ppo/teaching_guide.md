@@ -1,5 +1,17 @@
 # Week 9 teaching guide — what PPO actually clips
 
+**Course navigation:** [Week 08](../week-08-a2c-gae-trpo/teaching_guide.md) ← **Week 09 / 26** → [Week 10](../week-10-sac-td3/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Which branch is clipped for each sign of advantage?
+
+**Recall first:** [Week 07](../week-07-policy-gradients/teaching_guide.md), [Week 08](../week-08-a2c-gae-trpo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#ppo-the-sign-decides-the-plateau). Use it to explain the mechanism before the derivation.
+
 Read this before workbook exercises 1–3; return to the code bridge before training.
 The goal is to predict the direction of an update before trusting its loss curve.
 
@@ -18,6 +30,19 @@ For +2, the minimum is min(3,2.4)=2.4. For −2, it is min(−3,−2.4)=−3; th
 </details>
 
 **Carry it onward:** [SAC and TD3](../week-10-sac-td3/teaching_guide.md) return to replay and add continuous actions; SAC also changes the objective with entropy.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart TD
+    A["Sign of advantage"] --> P["Positive: plateau above 1 + epsilon"]
+    A --> N["Negative: plateau below 1 - epsilon"]
+    P --> L["Negate surrogate for minimisation loss"]
+    N --> L
+```
+
+**Read the diagram:** The positive and negative branches flatten on opposite sides. A probability change in the harmful direction remains penalised outside the interval.
 
 ## Connect to what you know
 
@@ -149,6 +174,32 @@ Policy probability ratios and value predictions have different units, even if a 
 
 Training improvement on a particular short run is an empirical result, not an algebraic invariant.
 Separate “the loss matches these examples” from “three independent seeds improve.”
+
+## Notebook investigation: read a ppo plot in the optimiser’s direction
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2, 3 and 6**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-09-ppo)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Sweep a ratio from 0.4 to 1.6 for advantages +2 and -2 with epsilon 0.2.
+Plot the surrogate to maximise and label its vertical axis explicitly; the helper returns the
+negative mean, so negate it for that plot. Mark 0.8, 1 and 1.2 on the horizontal axis.
+Predict which side is flat for each advantage sign before calling the helper.
+
+Now inspect the slope using nearby points away from either kink. At ratio 1.5 with advantage -2,
+the surrogate still slopes downward: a bad action becoming more likely must remain penalised.
+Change epsilon to zero and explain why this does not freeze all possible policy updates.
+Finally compare approximate KL and clip fraction as separate diagnostics; neither tells you that
+all actual ratios were kept inside the drawn vertical boundaries.
+
+<details>
+<summary>Check your interpretation: If every sampled actor contribution is on a plateau, can the network still change?</summary>
+
+Yes. Critic and entropy losses, shared parameters, optimiser state, and other samples can still move it. A plateau concerns that sample’s policy-surrogate derivative.
+
+</details>
 
 ## Retrieval and transfer
 

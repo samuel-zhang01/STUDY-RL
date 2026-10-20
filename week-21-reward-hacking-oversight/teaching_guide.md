@@ -1,5 +1,17 @@
 # Week 21 teaching guide: when improving the score makes the answer worse
 
+**Course navigation:** [Week 20](../week-20-grpo-rloo-rlvr/teaching_guide.md) ← **Week 21 / 26** → [Week 22](../week-22-cmdp-cpo-lagrangian/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** What could improve the proxy while worsening the actual objective?
+
+**Recall first:** [Week 18](../week-18-rlhf-ppo-llm/teaching_guide.md), [Week 19](../week-19-dpo-zoo/teaching_guide.md), [Week 20](../week-20-grpo-rloo-rlvr/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#llm-training-keep-four-roles-separate). Use it to explain the mechanism before the derivation.
+
 Use alongside [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The numerical examples are deliberately simple models of selection and reward design.
 
@@ -18,6 +30,18 @@ It chooses proxy 10 despite delivering 0. This counterexample calls for a better
 </details>
 
 **Carry it onward:** [Constrained RL](../week-22-cmdp-cpo-lagrangian/teaching_guide.md) adds a separately defined cost budget rather than hoping one scalar proxy captures every requirement.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    O["Optimise proxy score"] --> S["Policy selects high-scoring outputs"]
+    S --> P["Proxy can improve"]
+    S --> G["Independent goal metric may worsen"]
+```
+
+**Read the diagram:** Optimisation changes the outputs encountered. A proxy that tracked the desired goal on earlier data can fail under the new selection pressure.
 
 ## The link to earlier weeks
 
@@ -154,6 +178,33 @@ score is constant, its rank variance is zero and mathematical Spearman
 correlation is undefined; this helper returns 0 by a numerical convention.
 Interpret that case as an uninformative ranking, rather than evidence of a
 measured zero relationship.
+
+## Notebook investigation: find a counterexample to your own repair
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 4 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-21-reward-hacking-oversight)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Before running a training loop, compare `"the cat sat"` and `"goodgoodgood"` under the exact proxy.
+Record characters, keyword occurrences, proxy and independent bigram score in separate columns.
+Exercise 4's length penalty at 0.03 leaves the repeated-keyword score at 2.28; explain why the
+keyword increment still dominates the penalty. A smoother training curve would not fix that arithmetic.
+
+For exercise 5, re-run critique after revision rather than trusting the routine's name.
+Use the existing regression cases: uppercase banned words and an overlong input needing final
+punctuation. The current helper should pass every rule after repair. Save original, revised and
+pass/fail vectors, then change one repair operation and predict which regression will fail. Plot proxy and evaluation on separate
+labelled axes or panels, and include representative outputs. Arbitrarily subtracting their scales
+can change the “divergence index” even when all model behaviour stays the same.
+
+<details>
+<summary>Check your interpretation: If a revised output passes the listed rules, what has been established?</summary>
+
+Only compliance with those checks on that output. The rules may omit relevant properties, and the bigram “true_quality” helper is not a human truth or meaning evaluator.
+
+</details>
 
 ## Retrieve and transfer
 

@@ -1,5 +1,17 @@
 # Week 19 teaching guide: track the margin before comparing the losses
 
+**Course navigation:** [Week 18](../week-18-rlhf-ppo-llm/teaching_guide.md) ← **Week 19 / 26** → [Week 20](../week-20-grpo-rloo-rlvr/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Why does the normalising constant disappear in a preference pair?
+
+**Recall first:** [Week 18](../week-18-rlhf-ppo-llm/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#llm-training-keep-four-roles-separate). Use it to explain the mechanism before the derivation.
+
 Pair this with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples use supplied sequence log probabilities; they are not measured model results.
 
@@ -22,6 +34,18 @@ The relative margin is 0, so the pair probability is sigmoid(0)=0.5. A supplied 
 </details>
 
 **Carry it onward:** [Group-baseline methods](../week-20-grpo-rloo-rlvr/teaching_guide.md) return to sampled responses and an online reward or verifier.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    W["Preferred response log ratio"] --> M["Preferred minus rejected margin"]
+    L["Rejected response log ratio"] --> M
+    M --> O["Preference likelihood loss"]
+```
+
+**Read the diagram:** Each log ratio compares the trainable policy with a reference on the same response. Their difference forms a pairwise margin; the normaliser cancels within a prompt.
 
 ## What you need from week 18
 
@@ -150,6 +174,32 @@ KTO's branch still uses an in-batch reference-point proxy; it omits the separate
 unpaired KL-estimation batch, so the bake-off is not a reproduction of the full recipe.
 Keep the reference frozen and check completion masking before diagnosing optimiser behaviour.
 Report held-out preferences, length distributions, and chosen/rejected likelihoods separately.
+
+## Notebook investigation: use a preference margin without losing absolute likelihood
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 3, 4 and 8**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-19-dpo-zoo)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Reproduce DPO's raw margin h=2 and beta=0.1, giving loss about 0.598139.
+Then subtract one from both current log probabilities without changing the reference.
+The margin and loss stay fixed while both response probabilities fall by a factor of e.
+Plot chosen and rejected log probability alongside the margin; the margin alone hides this movement.
+
+For IPO, sweep h across its target `1/(2 beta)=5`; the squared-loss curve turns upward beyond 5,
+whereas the DPO curve keeps decreasing. These vertical loss values have different meanings, so
+compare update direction and held-out behaviour rather than declaring the smaller loss better.
+In SimPO, keep sequence log probabilities fixed and change completion lengths. Predict the changed
+mean-token margin before running. A length-normalised score is not a full-response probability.
+
+<details>
+<summary>Check your interpretation: Why can both log probabilities move down in a normalised language model?</summary>
+
+Other responses can receive the freed probability mass. A preference pair covers only two responses, so an improved relative margin does not fix either absolute probability.
+
+</details>
 
 ## Retrieve and transfer
 

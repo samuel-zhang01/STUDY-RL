@@ -1,5 +1,17 @@
 # Week 08 teaching guide — blending horizons and controlling policy change
 
+**Course navigation:** [Week 07](../week-07-policy-gradients/teaching_guide.md) ← **Week 08 / 26** → [Week 09](../week-09-ppo/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** How do temporal residuals become an advantage estimate?
+
+**Recall first:** [Week 04](../week-04-td-sarsa-q/teaching_guide.md), [Week 07](../week-07-policy-gradients/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#the-actor-and-critic-answer-different-questions). Use it to explain the mechanism before the derivation.
+
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Keep three ideas separate: the advantage estimate, the update direction, and its size.
 
@@ -18,6 +30,18 @@ The first advantage is 1+(0.9×0.5)×2=1.9. Lambda 0 gives 1; lambda 1 gives 2.8
 </details>
 
 **Carry it onward:** [PPO](../week-09-ppo/teaching_guide.md) keeps an advantage estimate and changes the update objective’s incentives.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    T["TD residuals along a rollout"] --> G["GAE: discounted residual sum"]
+    G --> A["Actor direction"]
+    A --> K["TRPO: restrict policy change"]
+```
+
+**Read the diagram:** GAE specifies the advantage estimator. TRPO addresses the size of a policy update. A better estimator and a smaller policy change solve different problems.
 
 ## Before you start
 
@@ -175,6 +199,32 @@ not a pointwise guarantee at every state or at a changed future state distributi
   also makes vector autoreset explicit. See [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
 - [agent.py](project/agent.py) trains A2C. The project supplies TRPO building
   blocks and notes, not a complete TRPO training implementation.
+
+## Notebook investigation: see which boundary stops which signal
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2 and 3**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-08-a2c-gae-trpo)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Use rewards `(1,2,3)` and values `(0.5,1,1.5)` with gamma 0.5. Start with a true terminal boundary
+and compare lambda 0, 0.8 and 1. Save advantages and `advantages + values` separately.
+At lambda 1, the latter must equal returns `(2.75,3.5,3)`.
+Then keep the rewards fixed and make the last boundary a collection cutoff with final value 4:
+the lambda-1 targets become `(3.25,4.5,5)`.
+
+Plot target at each time index using grouped bars; a line across a reset can misleadingly imply a
+continuous trajectory. Explain the extra first-target value 0.5 as `gamma³ × 4`, not as a new reward.
+The pure helper takes one segment; the training collector additionally needs a trace boundary at a
+reset. A zero terminal mask and a zero trace-continuation mask serve different jobs.
+
+<details>
+<summary>Check your interpretation: At lambda 1, why does the final value prediction still affect a truncated segment?</summary>
+
+Telescoping removes intermediate values but leaves the endpoint bootstrap. It disappears only when the segment reaches true termination or that endpoint value is zero.
+
+</details>
 
 ## Retrieve and transfer
 

@@ -86,7 +86,21 @@ def check_path(path: Path, root: Path) -> list[str]:
     elif path.suffix == ".html":
         parser = AssetLinks()
         parser.feed(text)
-        errors.extend(check_links("\n".join(f"[asset]({target})" for target in parser.links), path, root))
+        for target in parser.links:
+            # The portal entrypoint is a build template. Validate copied assets
+            # against their canonical source; bundled vendor files are checked
+            # after npm build by the portal's content/browser suites.
+            if relative.as_posix() == "portal/src/index.html":
+                if target.startswith("assets/"):
+                    if not (root / target.removeprefix("assets/")).is_file():
+                        errors.append(f"{relative}: missing source asset {target}")
+                    continue
+                if target == "vendor/katex/katex.min.css":
+                    package = json.loads((root / "portal/package.json").read_text())
+                    if "katex" not in package.get("dependencies", {}):
+                        errors.append(f"{relative}: undeclared KaTeX build dependency")
+                    continue
+            errors.extend(check_links(f"[asset]({target})", path, root))
     elif path.suffix == ".ipynb":
         import nbformat
         try:

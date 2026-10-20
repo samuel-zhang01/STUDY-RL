@@ -1,5 +1,12 @@
 # How to learn from STUDY-RL
 
+**First visit?** [Choose a route and plan a session](LEARNING_MAP.md).
+[Download and run the actual notebooks](LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+from [GitHub: samuel-zhang01/STUDY-RL](https://github.com/samuel-zhang01/STUDY-RL).
+Use [the visual atlas](CONCEPT_ATLAS.md) for connected mechanisms and
+[the staged learning path](LEARNING_PATH.md) when a prerequisite is unfamiliar.
+
+
 Start with a small decision problem, work out the answer yourself, then use the
 algorithm to reproduce it. This guide connects the 24 core weeks, the applied
 audit in week 25, and causal biology in week 26. Each week has a `teaching_guide.md` alongside its lecture
@@ -27,7 +34,11 @@ the [NVIDIA / RTX 5090 guide](../llm-lab/NVIDIA.md) for LoRA and 4-bit QLoRA.
    conditioning, linearity, differentiation, or an approximation.
 4. **Implement.** Attempt the workbook exercise before opening a hint or calling
    `project/solutions.py`. Some supplied cells already call the reference solution;
-   running these verifies the example, not your ability to implement it.
+   running these verifies the example, not your ability to implement it. Each
+   guide includes a **notebook investigation** naming actual exercises, an
+   expected visual pattern, and a changed-input check. Follow the
+   [Jupyter workflow](LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+   to preserve the project imports and select the correct Python kernel.
 5. **Transfer.** Change a number or assumption. Predict the result before running
    the code. Use the hidden-answer questions at the end of the teaching guide.
 6. **Revisit.** At your next study session, reproduce one update from memory. At
@@ -36,6 +47,12 @@ the [NVIDIA / RTX 5090 guide](../llm-lab/NVIDIA.md) for LoRA and 4-bit QLoRA.
 Keep a short error log: **my prediction → observed result → mistaken assumption
 → smallest example that reveals the mistake**. A green test is useful feedback;
 being able to explain and vary the example is a separate learning objective.
+
+An investigation is complete when you can account for a surprising result.
+For example, a falling TD loss alongside falling evaluation return is not
+necessarily a software contradiction: the loss measures agreement with
+bootstrapped targets on the replay distribution. Write down which quantity
+each curve measures before deciding what to change.
 
 ## Prerequisite check: five tools you will reuse
 

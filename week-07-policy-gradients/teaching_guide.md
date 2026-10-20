@@ -1,5 +1,17 @@
 # Week 07 teaching guide — learning probabilities directly
 
+**Course navigation:** [Week 06](../week-06-rainbow-bbf/teaching_guide.md) ← **Week 07 / 26** → [Week 08](../week-08-a2c-gae-trpo/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Why does reward multiply a log-probability gradient?
+
+**Recall first:** [Week 04](../week-04-td-sarsa-q/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#the-actor-and-critic-answer-different-questions). Use it to explain the mechanism before the derivation.
+
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The key distinction is between a scalar loss and its parameter gradient.
 
@@ -18,6 +30,19 @@ The average is 0.75×2+0.25×3.6=2.4. Stop has advantage 2−2.4=−0.4: positiv
 </details>
 
 **Carry it onward:** [Actor–critic and GAE](../week-08-a2c-gae-trpo/teaching_guide.md) replace noisy completed returns with critic-based advantage estimates.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    P["Policy probabilities"] --> A["Sample action"]
+    A --> G["Observe return"]
+    G --> U["Return minus baseline times score gradient"]
+    U --> P
+```
+
+**Read the diagram:** The sampled action has a log-probability derivative. Multiplying it by a return relative to a suitable baseline changes probabilities in a reward-sensitive direction.
 
 ## Before you start
 
@@ -158,6 +183,32 @@ Dropping the outer discount gives 0.25, twice the correct start-state gradient.
 
 For the original discounted policy-gradient setting, see
 [Sutton et al., Policy Gradient Methods for RL with Function Approximation](https://proceedings.neurips.cc/paper/1999/hash/464d828b85b0bed98e80ade0a5c43b0f-Abstract.html).
+
+## Notebook investigation: plot the gradient estimator, not just its loss
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 1, 2, 4 and 5**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-07-policy-gradients)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Use the two-action policy with p=0.2 and rewards `(0,1)`. Enumerate actions instead of training:
+the scores are `a-p`, and the two unbaselined sample gradients are `(0,0.8)`.
+Weight them by probabilities `(0.8,0.2)` to recover mean 0.16.
+Repeat with baselines 0.2 and 0.8; the mean stays 0.16 while variances are 0.0576 and zero.
+
+Plot one mark per action at its **score-weighted gradient**, with its probability shown explicitly.
+Do not use a histogram of `log_prob * advantage` to label parameter-gradient variance: the workbook's
+exercise 5 loss-term diagnostic does not calculate those derivatives. Add your enumerated check as
+a separate notebook cell. Then change p to 0.8: the value baseline now increases variance relative
+to using no baseline, which disproves a universal variance-reduction claim.
+
+<details>
+<summary>Check your interpretation: Why can two zero-mean advantages still give a positive expected gradient?</summary>
+
+The advantages multiply different score gradients. Their probability-weighted sum can be zero while the probability-weighted sum of those products is positive.
+
+</details>
 
 ## Retrieve and transfer
 

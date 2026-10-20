@@ -1,5 +1,17 @@
 # Week 11 teaching guide — what a logged experiment can tell you
 
+**Course navigation:** [Week 10](../week-10-sac-td3/teaching_guide.md) ← **Week 11 / 26** → [Week 12](../week-12-rl-ranking-matching/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** When can logged actions evaluate a different policy?
+
+**Recall first:** [Week 01](../week-01-mdps-bandits/teaching_guide.md), [Week 03](../week-03-monte-carlo/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#logged-data-and-support). Use it to explain the mechanism before the derivation.
+
 Use this guide before exercises 5–9. The estimator is only as meaningful as its sampling assumptions.
 
 ## Learning bridge
@@ -17,6 +29,18 @@ They cannot: two worlds with different C rewards produce the same B-only logs. M
 </details>
 
 **Carry it onward:** [Ranking and matching](../week-12-rl-ranking-matching/teaching_guide.md) add exposure and examination mechanisms to this selection problem.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    B["Logging policy chooses action"] --> R["Observed reward"]
+    R --> W["Weight by target / logger probability"]
+    W --> E["Evaluate a fixed target policy"]
+```
+
+**Read the diagram:** Importance weights change which action distribution an average represents. They require support; unobserved actions cannot acquire rewards through a large weight.
 
 ## Connect to what you know
 
@@ -151,6 +175,33 @@ A reward model can extrapolate to B, but that is a modeling assumption.
 MIPS marginalizes over action embeddings: both numerator and denominator must marginalize actions,
 using target and logger policies respectively. Embedding dimension alone does not determine variance.
 See [Saito and Joachims](https://proceedings.mlr.press/v162/saito22a.html).
+
+## Notebook investigation: diagnose the log before trusting its estimate
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 5, 6 and 7**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-11-contextual-bandits-ope)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Print the logged-action target probabilities, logging probabilities and their ratios before
+computing an estimate. Sort the ratios and plot cumulative normalised weight against the fraction
+of rows. If one row contributes nearly all the weight, a large dataset can still have little useful
+information for this target. Report maximum weight and ESS alongside IPS/SNIPS.
+
+Add the guide's two-world fixture: logger always A, target always B. No amount of repeated A data
+can distinguish reward 0 from reward 1 for B. This is stronger than a numerical warning about a
+small denominator. The current helper's denominator floor must not be interpreted as an answer.
+For exercise 6, create a training/evaluation split before fitting the reward model; keep the target
+fixed while evaluating. Comparing that estimate with the same-log demonstration teaches which
+assumption changed, without guaranteeing one particular sample moves up or down.
+
+<details>
+<summary>Check your interpretation: Can excellent ESS rule out confounding or a wrongly recorded propensity?</summary>
+
+No. ESS describes weight concentration. It does not validate the logging mechanism, outcome definition, causal assumptions, or policy-selection split.
+
+</details>
 
 ## Retrieval and transfer
 

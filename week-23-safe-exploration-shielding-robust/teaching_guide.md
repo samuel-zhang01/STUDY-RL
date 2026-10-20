@@ -1,5 +1,17 @@
 # Week 23 teaching guide: a shield needs a safe future, not just a safe next step
 
+**Course navigation:** [Week 22](../week-22-cmdp-cpo-lagrangian/teaching_guide.md) ← **Week 23 / 26** → [Week 24](../week-24-capstone-safe-matching/teaching_guide.md)
+
+[Routes](../docs/LEARNING_MAP.md) · [All weeks](../docs/STUDY_GUIDE.md#week-by-week-teaching-guides) · [Notation](../docs/GLOSSARY.md) · [Progress](../docs/PROGRESS.md)
+
+[Lecture PDF](notes.pdf) · [Workbook](workbook.ipynb) · [Extended reading PDF](extended_reading.pdf)
+
+**You are here:** Under which dynamics and safe-set assumptions does the filter protect you?
+
+**Recall first:** [Week 22](../week-22-cmdp-cpo-lagrangian/teaching_guide.md). If unfamiliar, use the [repair tasks](../docs/LEARNING_MAP.md#if-a-prerequisite-is-missing).
+
+**Visual anchor:** [See the connected diagram](../docs/CONCEPT_ATLAS.md#a-budget-and-a-shield-act-in-different-places). Use it to explain the mechanism before the derivation.
+
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples distinguish mathematical guarantees from finite empirical checks.
 
@@ -18,6 +30,18 @@ Only right remains under the stated one-step hazard model. A guarantee for all f
 </details>
 
 **Carry it onward:** [The matching capstone](../week-24-capstone-safe-matching/teaching_guide.md) combines learning, evaluation and a cost constraint while keeping their claims separate.
+
+
+## Mechanism at a glance
+
+```mermaid
+flowchart LR
+    A["Policy proposes action"] --> F["Intersect safe actions with control limits"]
+    F --> E["Execute feasible filtered action"]
+    F --> X["Empty set: explicit failure handling"]
+```
+
+**Read the diagram:** A shield checks actions against a model and safety property. If the feasible set is empty, returning an arbitrary proposed action cannot establish the promised protection.
 
 ## What this adds to week 22
 
@@ -149,6 +173,33 @@ Domain randomisation optimises performance under a distribution; it need not sol
 Zero violations in a finite rollout is an empirical observation.
 An induction proof is conditional on the model, invariant set, initial state, and action execution.
 Neither substitutes for the other.
+
+## Notebook investigation: test an empty safe set before a long rollout
+
+Open [the actual Jupyter workbook](workbook.ipynb) and find **Exercises 2, 3 and 7**.
+The [GitHub week folder](https://github.com/samuel-zhang01/STUDY-RL/tree/main/week-23-safe-exploration-shielding-robust)
+contains this notebook, its `project/` imports and tests. Follow the
+[download and Jupyter workflow](../docs/LEARNING_MAP.md#download-and-open-the-jupyter-materials)
+so the shared `common/` package is available.
+
+Draw start→trap→danger from the guide and keep the wait self-loop at start.
+Colour currently safe states separately from states that can remain safe forever.
+The trap begins safe under the immediate label but disappears on the first invariant-set sweep.
+Explain why merely checking the next state's danger flag allows a future dead end.
+
+Use exercise 3 to inspect how preferences are filtered, including an empty feasible set; the filter
+must report failure instead of returning an unchecked action. In exercise 7, use proposed 0.5,
+h=0.2 and derivative coefficient -2: projection gives 0.1. Then make the coefficient zero with a
+positive required lower bound; the constraint is infeasible. Record that outcome explicitly.
+Only after these checks compare finite-rollout violation counts. Zero observed violations and a
+conditional induction proof answer different questions.
+
+<details>
+<summary>Check your interpretation: Why does domain randomisation not automatically establish worst-case robustness?</summary>
+
+It optimises an average under the chosen training distribution. A rare or unsupported dynamics setting can still fail; inspect the evaluation grid and the worst measured return separately.
+
+</details>
 
 ## Retrieve and transfer
 
