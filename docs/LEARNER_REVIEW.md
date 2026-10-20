@@ -75,6 +75,14 @@ process. It caught Week 15's cross-week logger dependency, which is now included
 The Week 18/19 bundles also include the optional recipe's separate LLM-lab code
 and small teaching fixtures. Python dependencies still need local installation.
 
+A final independent screenshot review caught a narrow-screen defect that the
+original overflow assertions missed: a floating home-page label squeezed the
+hero and clipped its heading and start action. A wrapping flex row now contains
+the label. The browser suite additionally verifies the hero's available width,
+heading and action bounds, and a successful start-button click at 320, 390 and
+768 pixels. All 12 workflow groups and 25 accessibility audits passed again
+after this repair; the 320-pixel home screenshot was inspected separately.
+
 ## Remaining limits
 
 The audit does not certify every historical claim in all 52 lecture/readings,

@@ -126,6 +126,17 @@ const screenshots=process.env.PORTAL_QA_DIR||'/tmp/rl-round2-portal-qa';
     await p.setViewportSize({width,height:844});
     for(const route of ['home','lesson/09?view=guide','lesson/08?view=lecture','lesson/01?view=workbook','labs?experiment=groups','labs?experiment=gridworld','labs?experiment=importance-weights','start','downloads','progress','library']){
      await goto(route);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${width}px ${route}`);
+     if(route==='home'){
+      const visible=await p.evaluate(()=>{
+       const main=document.querySelector('main'),hero=document.querySelector('.hero'),title=hero.querySelector('h1'),button=hero.querySelector('a');
+       const h=hero.getBoundingClientRect(),m=main.getBoundingClientRect(),s=getComputedStyle(main),t=title.getBoundingClientRect(),b=button.getBoundingClientRect();
+       return h.width>=m.width-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight)-1&&t.left>=h.left&&t.right<=h.right&&b.left>=h.left&&b.right<=h.right;
+      });
+      assert.equal(visible,true,`${width}px home: heading and start action must not be clipped`);
+      await p.screenshot({path:path.join(screenshots,`home-${width}.png`)});
+      await p.locator('.hero a[href="#/start"]').click();await p.waitForSelector('.journey-steps');
+      assert.ok(p.url().endsWith('#/start'));
+     }
     }
    }
    await p.setViewportSize({width:390,height:844});await goto('lesson/09?view=guide');await p.waitForSelector('.mermaid svg');
