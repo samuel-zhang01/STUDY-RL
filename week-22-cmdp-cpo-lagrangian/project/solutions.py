@@ -24,12 +24,11 @@ from .train import train as _train
 # Exercise 1 ★ — derive the Lagrangian dual update direction
 # -----------------------------------------------------------------------------
 def exercise_1(lam: float, eta: float, J_c: float, d: float) -> float:
-    """One projected-ascent step on lambda for J_c - d.
+    """One projected-descent step for min_lambda of the stated Lagrangian.
 
     L(pi, lam) = J_r - lam * (J_c - d), with lam >= 0.
-    The dL/d(lam) = -(J_c - d), but we MAXIMISE over pi and MINIMISE over lam, hence
-    we ascend lam in the direction *(J_c - d)* (the gradient of the *outer* problem
-    after the dual swap). Project onto [0, +inf).
+    The derivative is -(J_c-d). Descent subtracts that derivative, so lambda
+    increases when cost exceeds the budget. Project onto [0, +inf).
     """
     return float(max(0.0, lam + eta * (J_c - d)))
 

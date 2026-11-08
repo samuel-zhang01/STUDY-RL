@@ -15,6 +15,10 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 For each Rainbow component, identify the mathematical object it changes.
 
+**Statistics companion:** [A return distribution is not an uncertainty interval for its mean](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/04-intervals-comparisons.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Compute a distributional target or projection, then explain what its atoms represent before comparing Rainbow components.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -235,6 +239,24 @@ makes it one. That normalisation cannot preserve the unnormalised correction's e
 No. A distributional head models returns under its fitted parameters. Epistemic uncertainty about those parameters and missing replay coverage require separate analysis.
 
 </details>
+
+## Statistics bridge: A return distribution is not an uncertainty interval for its mean
+
+**Model and unit.** A fixed policy has returns -1, 0 and 1 with probabilities 0.25, 0.5 and 0.25. Assume independent evaluation episodes for the mean-uncertainty calculation.
+
+**Calculate before running.** The return mean is 0 and variance is $0.25(1)+0.5(0)+0.25(1)=0.5$. Its SD is $\sqrt{0.5}\approx0.7071$. The sampling SD of the mean across 100 independent episodes is instead $\sqrt{0.5/100}\approx0.07071$.
+
+**Interpret the result.** Distributional RL models variation of returns conditional on state and action. That outcome spread is different from epistemic uncertainty about learned probabilities or the mean. A wide categorical support is not a 95% confidence interval.
+
+**Change one assumption.** Quadruple the independent evaluation episodes. What happens to the return distribution and the sampling SD of its mean?
+
+<details><summary>Check the changed assumption</summary>
+
+The modeled return distribution is unchanged. The sampling SD of the mean halves to approximately 0.03536 under the same independence and fixed-policy assumptions.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.3, 6.2, PDF pp.460, 817; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

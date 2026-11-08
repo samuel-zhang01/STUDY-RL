@@ -19,6 +19,10 @@ The examples use supplied sequence log probabilities; they are not measured mode
 trains DPO on a real pretrained model, starting from a saved SFT adapter and caching
 the complete initial policy as its fixed reference.
 
+**Statistics companion:** [A preference probability depends on the label-noise model](../docs/statistics/01-probability-conditioning.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Compute a pairwise log-ratio margin and its gradient, then state the label mechanism and evaluate held-out preferences separately from task outcomes.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -227,6 +231,24 @@ mean-token margin before running. A length-normalised score is not a full-respon
 Other responses can receive the freed probability mass. A preference pair covers only two responses, so an improved relative margin does not fix either absolute probability.
 
 </details>
+
+## Statistics bridge: A preference probability depends on the label-noise model
+
+**Model and unit.** A latent preference favors an answer with probability 0.8. Independently, an annotator flips the intended binary label with probability 0.2. This simple symmetric-noise model is a teaching assumption.
+
+**Calculate before running.** The observed positive-label probability is $0.8(0.8)+0.2(0.2)=0.68$. Its log odds are $\log(0.68/0.32)\approx0.75377$, whereas the latent preference log odds are $\log(0.8/0.2)\approx1.38629$.
+
+**Interpret the result.** Even infinite data from these annotators estimate the observed-label mechanism, not the unobserved noiseless preference without extra assumptions. A preference-loss margin does not automatically become a calibrated task reward or a universal measure of human preference.
+
+**Change one assumption.** Set the flip probability to 0.5, then to zero. What observed probabilities result? Can more pairs identify an unknown latent preference and unknown flip rate from one observed probability?
+
+<details><summary>Check the changed assumption</summary>
+
+They become 0.5 and 0.8. With both latent probability and flip rate unknown, one observed probability cannot identify both; more of the same observations only refine that probability.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/01-probability-conditioning.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§2.4, 4.7, 7.3, PDF pp.181, 507, 917; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

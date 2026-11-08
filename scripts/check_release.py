@@ -16,7 +16,7 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 LINK = re.compile(r"!?\[[^\]\n]*\]\(([^\s)]+)(?:\s+\"[^\"]*\")?\)")
-FORBIDDEN_DIRS = {".git", ".claude", ".codex", ".venv", ".venv-llm",
+FORBIDDEN_DIRS = {".git", ".claude", ".codex", ".venv", ".venv-llm", "textbooks",
                   "__pycache__", ".ipynb_checkpoints", "runs", "checkpoints"}
 FORBIDDEN_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".pt", ".pth",
                       ".ckpt", ".safetensors", ".bundle"}
@@ -131,7 +131,7 @@ def check_path(path: Path, root: Path) -> list[str]:
 def main() -> int:
     errors = []
     for name in ("README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
-                 "THIRD_PARTY_NOTICES.md", "docs/RELEASE_REVIEW.md"):
+                 "docs/ATTRIBUTION.md", "docs/RELEASE_REVIEW.md"):
         if not (ROOT / name).is_file():
             errors.append(f"Missing release document: {name}")
     paths = source_paths(ROOT)

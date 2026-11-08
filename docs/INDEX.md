@@ -4,11 +4,14 @@ A 24-week core curriculum, an applied audit in week 25, and a causal-biology ext
 
 ## Quick links
 
+- **Probability and statistics**: [connected textbook foundation](statistics/README.md) · [verified source map](statistics/SOURCES.md)
 - **Visual experiments and coding games**: [courier lab](../interactive/index.html) · [activities and hint ladders](INTERACTIVE_LEARNING.md) · [26-week connections](LEARNING_PATH.md)
 - **Interactive validation**: [462 code checks and three-browser results](archive/INTERACTIVE_VALIDATION_2026-10-09.md)
 - **Adversarial learner review**: [rubric, findings and revised scores](LEARNER_REVIEW.md)
 - **Start here**: [study guide and all 26 weekly teaching guides](STUDY_GUIDE.md)
 - **Current release checks**: [release preparation review](RELEASE_REVIEW.md)
+- **November upgrade**: [scope and acceptance criteria](UPGRADE_PLAN.md)
+- **November validation**: [materials, notebook, website, and release evidence](UPGRADE_REVIEW.md)
 - **Causal biology**: [one-week lesson](../week-26-causal-discovery-biological-data/teaching_guide.md) · [research and source notes](../research/causal_biology.md)
 - **Practical LLM post-training**: [LoRA, QLoRA, DPO and quantisation lab](../llm-lab/README.md) · [RTX 5090 setup](../llm-lab/NVIDIA.md)
 - **Earlier teaching review (6 October snapshot)**: [archived teaching review](archive/TEACHING_REVIEW.md)
@@ -77,6 +80,7 @@ PYTHONPATH=../ pytest tests -q           # check
 | `scripts/pdf_margin_sweep.py` | Scan all PDFs for overfull-hbox + page-edge cutoffs |
 | `scripts/recompile_all_pdfs.sh` | Idempotent rebuild of every PDF |
 | `scripts/append_hints_section.py` | Consolidate exercise-specific hints; `--refresh` replaces the generated section |
+| `scripts/execute_reference_notebooks.py` | Run clean source notebooks in isolated kernels and record safe result outputs with dependency hashes |
 
 ## Validation and authoring
 

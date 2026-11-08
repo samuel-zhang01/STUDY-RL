@@ -15,6 +15,10 @@
 Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples distinguish mathematical guarantees from finite empirical checks.
 
+**Statistics companion:** [Small per-decision model error can accumulate over a run](../docs/statistics/01-probability-conditioning.md) · [Related foundation](../docs/statistics/09-statistical-claims.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Trace which actions the model-based shield allows, preserve the terminal backup rule, then challenge the model used by the shield.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -227,6 +231,24 @@ conditional induction proof answer different questions.
 It optimises an average under the chosen training distribution. A rare or unsupported dynamics setting can still fail; inspect the evaluation grid and the worst measured return separately.
 
 </details>
+
+## Statistics bridge: Small per-decision model error can accumulate over a run
+
+**Model and unit.** For a deliberately simplified calculation, suppose each of 100 decisions independently has probability 0.01 of an unmodeled hazard. The probability is assumed, not estimated from the supplied toy.
+
+**Calculate before running.** The probability of no such hazards is $0.99^{100}\approx0.36603$, so the probability of at least one is $1-0.99^{100}\approx0.63397$. A one-percent per-decision probability is therefore compatible with a much larger run-level event probability under this model.
+
+**Interpret the result.** The shield theorem or invariant is conditional on its dynamics and uncertainty assumptions. An empirical hazard frequency answers another question. Real failures may be dependent; the product calculation is invalid without its independence premise and is not a deployment risk estimate.
+
+**Change one assumption.** Use ten decisions under the same hypothetical model. Then explain why a shared hidden fault could defeat the independent-events calculation.
+
+<details><summary>Check the changed assumption</summary>
+
+The run-level probability is $1-0.99^{10}\approx0.09562$. A common hidden fault couples decisions, so their joint no-hazard probability need not factor into a product.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/01-probability-conditioning.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§2.4, 2.5, PDF pp.181, 197; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

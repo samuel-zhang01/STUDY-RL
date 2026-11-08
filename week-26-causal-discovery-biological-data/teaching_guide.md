@@ -23,6 +23,10 @@ lists a virtual October 5, 2026 discussion on learning causal structure across e
 and task-aware enhancement. This bundle teaches public methods; it does not reproduce
 Synlico's proprietary platform or summarize an event recording.
 
+**Statistics companion:** [Repeated measurements do not become independent patients](../docs/statistics/05-resampling-dependence.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Define the causal question and measured adjustment set, calculate the standardized effect, then split patients before fitting enhancement and assess a held-out environment.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -347,6 +351,24 @@ it does not show biological causal structure was discovered.
 Yes. Resampling observed patients addresses sampling variability under a specified fitted procedure. Unmeasured confounding, graph ambiguity and transport assumptions can remain unresolved.
 
 </details>
+
+## Statistics bridge: Repeated measurements do not become independent patients
+
+**Model and unit.** Two independent patients have patient-level outcome summaries 0 and 2. Each summary is duplicated across ten records to expose the unit-count issue, not to model realistic biology.
+
+**Calculate before running.** The patient mean is 1. Patient-level sample variance is $(1+1)/(2-1)=2$, giving SE $\sqrt2/\sqrt2=1$. Treating twenty duplicate records as independent gives variance $20/19$ and misleading SE $\sqrt{(20/19)/20}=1/\sqrt{19}\approx0.22942$.
+
+**Interpret the result.** The independent-patient evidence count is two. Patient-level splitting prevents one leakage route, but does not establish exchangeability, causal direction or transport across biological environments. Enhancement can improve a prediction metric while changing a causal target.
+
+**Change one assumption.** If a new tissue environment changes the outcome mechanism, can a patient-cluster bootstrap from the original environment quantify that shift? What additional evaluation is required?
+
+<details><summary>Check the changed assumption</summary>
+
+No. Resampling the original patients approximates variation under their source environment. Evaluate held-out target environments and state assumptions about which mechanisms can change; uncertainty about identification remains separate.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/05-resampling-dependence.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.5, 6.2, PDF pp.478, 817; Ross §15.3, PDF p.683; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve, calculate, and transfer
 

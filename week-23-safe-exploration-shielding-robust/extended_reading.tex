@@ -53,4 +53,9 @@ assumptions and one observation that would challenge your interpretation.
 The notebook should distinguish execution safety from value estimation. The current tabular learner masks executed actions but maximises over all actions in its bootstrap. Compare that optimistic target with a maximum over safe next actions; preserve the terminal mask in both. An execution shield can still block a dangerous action while its unused optimistic value distorts learning.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{Small per-decision model error can accumulate over a run.} Read event probabilities and independence before composing per-decision claims. Separate a model-conditioned invariant, a sampled failure rate and a horizon-level risk statement; use shielding primary sources for their precise model assumptions.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~2.4, 2.5, PDF pp.181, 197. \url{https://stats.libretexts.org/@go/page/10133}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

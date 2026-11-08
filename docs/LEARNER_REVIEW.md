@@ -1,5 +1,9 @@
 # Adversarial learner review — 20 October 2026
 
+This is the dated October review. The [November textbook and statistics
+upgrade review](UPGRADE_REVIEW.md) records the newer changes and their scoped
+validation; the scores and counts below remain evidence about the October work.
+
 Acceptance target: **9.5/10**, with no unresolved mathematical, missing-material,
 misleading-feedback, data-loss or essential-navigation defect in the inspected
 student workflows. Scores are editorial judgements, not measured learning

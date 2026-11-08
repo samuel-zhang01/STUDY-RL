@@ -339,6 +339,20 @@ imitating a noisy real-world logger.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: A held-out split cannot manufacture an unsupported action}
+\begin{example}[Original statistical teaching fixture]
+Only action A is logged. To isolate missing support, suppose its mean is known to be 0.6. The target chooses A with probability 0.25 and unseen B with probability 0.75.
+
+A world with B mean 0.1 gives target value $0.25(0.6)+0.75(0.1)=0.225$. A world with B mean 0.9 gives $0.25(0.6)+0.75(0.9)=0.825$. Both worlds produce the same A-only logs. If rewards lie in $[0,1]$, the unsupported target contribution alone permits values from 0.15 to 0.90.
+\end{example}
+The range holds A mean fixed by assumption; finite-sample uncertainty about A would add another issue. A row-level train/test split can check prediction on logged actions, but cannot validate B. Pessimism is an explicit modeling/optimization choice, not observed evidence for B outcomes.
+
+\paragraph{Check a changed assumption.} Reduce the target B probability to 0.25. Calculate the corresponding bounded-reward range while A mean remains known. Does narrower uncertainty prove the learned policy is optimal?
+\paragraph{Check.} The target value is $0.75(0.6)+0.25q_B$, giving $[0.45,0.70]$. The unsupported component is smaller, but optimality still requires information or assumptions about both actions.
+\paragraph{Statistical foundation.} Siegrist \S~\S~2.4, 7.1, PDF pp.181, 896. Section source: \url{https://stats.libretexts.org/@go/page/10189}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.9\textwidth]{figs/fig_offline_curves.pdf}

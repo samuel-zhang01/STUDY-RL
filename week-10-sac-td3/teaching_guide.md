@@ -14,6 +14,10 @@
 
 Use this guide for exercises 1–5 before running a continuous-control experiment.
 
+**Statistics companion:** [The minimum of two unbiased critics can be biased](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/04-intervals-comparisons.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Check the continuous-action density/Jacobian, then distinguish stochastic SAC targets from TD3 action smoothing and twin-critic selection.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -223,6 +227,24 @@ under the stated loss convention; verify the sign of the actual update, not only
 No. Probability is an integral of density over an interval. Coordinate scale changes density and differential entropy; it does not make event probabilities exceed one.
 
 </details>
+
+## Statistics bridge: The minimum of two unbiased critics can be biased
+
+**Model and unit.** Both critics estimate a true scalar value 5 with independent errors +1 or -1, each equally likely. This artificial error model isolates the minimum operation.
+
+**Calculate before running.** The four equally likely critic pairs are $(4,4),(4,6),(6,4),(6,6)$. Their minima are $4,4,4,6$, with mean $18/4=4.5$. Each individual critic has mean 5, but their minimum has bias -0.5.
+
+**Interpret the result.** Clipped double estimates can counter overestimation without being generically unbiased or guaranteeing a better final policy. Critic errors are often correlated because they share replay data and targets; the fixture explicitly assumed independence.
+
+**Change one assumption.** Make both errors identical on every draw. What is the expected minimum? Does this show that a low empirical critic disagreement certifies accuracy?
+
+<details><summary>Check the changed assumption</summary>
+
+The minimum is then the shared critic estimate, with mean 5 in this fixture. Both critics could instead share a large systematic bias, so agreement alone does not certify accuracy.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.1, 7.1, PDF pp.439, 896; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

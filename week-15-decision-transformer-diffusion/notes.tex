@@ -163,6 +163,20 @@ At deployment, returns-to-go are *user-specified* and decremented by observed re
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Conditioning on a lucky return can select a worse action}
+\begin{example}[Original statistical teaching fixture]
+In a one-step toy, safe pays 1 deterministically; risky pays 4 with probability 0.1 and 0 otherwise. The behavior policy chooses each action with probability one-half.
+
+A logged return of 4 occurs with probability $0.5(0.1)=0.05$, and every such row chose risky. Thus $P(A=\mathrm{risky}\mid R=4)=1$. Yet choosing risky next time has expected reward $0.1(4)+0.9(0)=0.4$, below the safe reward 1.
+\end{example}
+The conditional training slice selects both an action and a favorable outcome. A request for return 4 does not force that outcome to recur. Support for a high-return action sequence is different from a guarantee that its environmental outcome can be controlled.
+
+\paragraph{Check a changed assumption.} Increase risky success probability to 0.5. Does conditioning on return 4 change, and which action now has the higher expected reward?
+\paragraph{Check.} The conditional probability of risky given return 4 remains 1, while risky expected reward becomes 2. The same conditioning pattern can accompany different action quality because the reward law matters.
+\paragraph{Statistical foundation.} Siegrist \S~\S~2.4, 4.7, PDF pp.181, 507. Section source: \url{https://stats.libretexts.org/@go/page/10132}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{figs/fig_dt_loss.pdf}

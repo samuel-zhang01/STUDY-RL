@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Tuple
 
 import numpy as np
+from common.statistics import importance_diagnostics
 
 LogEntry = Tuple[np.ndarray, int, float, float, np.ndarray]
 
@@ -115,8 +116,13 @@ def direct_method(log: List[LogEntry], pi: Callable, qhat: RidgeRewardModel) -> 
 
 
 def effective_sample_size(log: List[LogEntry], pi: Callable) -> float:
-    ws = []
+    """Observed weight concentration; undefined when every target weight is zero.
+
+    Positive ESS does not establish population support, independent rows, or
+    correctness of the logged propensities.
+    """
+    target_probabilities, logged_probabilities = [], []
     for x, a, r, pb, slate, p in _checked_entries(log, pi):
-        ws.append(p[a] / pb)
-    w = np.asarray(ws)
-    return float(w.sum() ** 2 / max((w ** 2).sum(), 1e-12))
+        target_probabilities.append(p[a])
+        logged_probabilities.append(pb)
+    return importance_diagnostics(target_probabilities, logged_probabilities)["effective_sample_size"]

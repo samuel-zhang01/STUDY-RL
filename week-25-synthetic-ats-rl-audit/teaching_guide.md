@@ -16,6 +16,10 @@ Use with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 This directory contains a synthetic ATS demonstration and a hypothetical architecture.
 All data and calculations are constructed examples. They do not validate an external system.
 
+**Statistics companion:** [Cross-fitting cannot repair two misspecified nuisance models](../docs/statistics/07-importance-weighting.md) · [Related foundation](../docs/statistics/09-statistical-claims.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Verify actual event propensities and eligible actions, fit reward nuisances away from evaluation rows, then state the bounded claim in the audit memo.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -236,6 +240,24 @@ hire rates and record the source revision before making any claim about an exter
 No. The active policy generated the outcomes. Agreement is a useful diagnostic, but impact requires a suitable evaluation design and supported counterfactual assumptions or an intervention.
 
 </details>
+
+## Statistics bridge: Cross-fitting cannot repair two misspecified nuisance models
+
+**Model and unit.** For one context, target action A has true logger probability 0.5 and reward mean 0.6. A misspecified fitted logger uses 0.25 for A, while a fitted reward model predicts 0.8.
+
+**Calculate before running.** The DR conditional bias contribution is $(1-b/\widehat b)(\widehat q-q)=(1-0.5/0.25)(0.8-0.6)=-0.2$. Thus the expected estimate is $0.6-0.2=0.4$ in this fixture. Correcting either nuisance makes the product zero under the remaining identification assumptions.
+
+**Interpret the result.** Independent fitting or cross-fitting separates evaluation outcomes from fitting noise; it does not make either model correct. A frozen-model bootstrap describes conditional variation, and does not include the entire fitting and policy-selection pipeline unless those steps are repeated.
+
+**Change one assumption.** Keep the reward-model error 0.2 but set the fitted propensity to 0.5. Then explain why an ESS threshold cannot detect all reward-model or propensity misspecification.
+
+<details><summary>Check the changed assumption</summary>
+
+The bias term becomes zero because the propensity ratio is correct. ESS only describes concentration of supplied observed weights; it cannot verify that those propensities are correct or that reward predictions generalize.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/07-importance-weighting.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.7, 7.1, PDF pp.507, 896; Ross §15.3, PDF p.683; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

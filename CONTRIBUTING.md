@@ -50,7 +50,7 @@ keyboard/reduced-motion preferences. The browser lab has no runtime packages.
 Keep credentials, private system descriptions, real applicant/patient records,
 model weights, and machine-specific settings out of commits. Generate fixtures
 locally with deterministic seeds. Cite third-party sources and retain their
-licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+licenses; see [third-party notices](docs/ATTRIBUTION.md).
 
 ## New weekly bundles
 

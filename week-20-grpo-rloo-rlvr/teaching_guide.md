@@ -19,6 +19,10 @@ All numerical cases below are finite examples whose expectations can be enumerat
 connects DPO to online rewards; its [strict answer verifier](../llm-lab/llm_lab/data.py)
 and [generation evaluation](../llm-lab/llm_lab/evaluate.py) expose format and cutoff failures.
 
+**Statistics companion:** [Zero-sum coefficients do not imply a zero policy gradient](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/05-resampling-dependence.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Calculate RLOO and GRPO coefficients within one prompt, then multiply them by actual score gradients before comparing estimator variability.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -232,6 +236,24 @@ of the two k3 values evaluates a different sampling experiment.
 No. Identical rewards give a zero centred numerator. Sampling or task design must supply reward differences; scaling cannot create them. A separate KL term can still move the policy.
 
 </details>
+
+## Statistics bridge: Zero-sum coefficients do not imply a zero policy gradient
+
+**Model and unit.** For a realized four-completion group, rewards are (0,0,0,1), centered coefficients are (-0.25,-0.25,-0.25,0.75), and scalar score gradients are (1,1,1,-3). These are a constructed group, not repeated-gradient measurements.
+
+**Calculate before running.** The centered coefficients sum to zero, but their score-weighted average is $[(-0.25)(1)+(-0.25)(1)+(-0.25)(1)+0.75(-3)]/4=-0.75$. RLOO coefficients multiply these centered coefficients by $4/3$, giving gradient -1 for this group.
+
+**Interpret the result.** A coefficient variance compares numbers before multiplication by scores. Full gradient variance needs repeated independently sampled groups under a fixed policy and prompt protocol. Completions share a prompt, and a claim across prompts requires an additional prompt-level sampling design.
+
+**Change one assumption.** Set every score to the same number while keeping these coefficients. What gradient follows? Does that special case prove a lower-variance estimator generally?
+
+<details><summary>Check the changed assumption</summary>
+
+The gradient is zero because the common score factors out of the zero coefficient sum. It is a special realized configuration, not a variance theorem across possible groups.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.3, 4.5, 6.2, PDF pp.460, 478, 817; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

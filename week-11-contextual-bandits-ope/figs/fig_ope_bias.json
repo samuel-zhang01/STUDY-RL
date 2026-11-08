@@ -1,0 +1,200 @@
+{
+  "schema": 1,
+  "producer": "project/make_figures.py",
+  "producer_sha256": "6e8e7b41882474ad8f8d30d312c45222c2d2afd2da98ad0c105421b708a4ec12",
+  "model_seed": 0,
+  "theta_sha256": "6ff3b1de58aa2365e65c349f4ef9e58bfbec08d90191f9a9bd2f5d4a6dabd846",
+  "repetitions": 12,
+  "evaluation_rows_per_log": 4000,
+  "fitting_rows_per_replicate": 2000,
+  "independent_unit": "a complete adaptive logged dataset and its independently generated nuisance-fitting dataset",
+  "within_log": "adaptive epsilon-greedy actions; rows are not asserted IID",
+  "logger_epsilon": 0.3,
+  "reward_model": "per-arm ridge, lambda=1",
+  "reference": {
+    "estimate": 0.6666403070817533,
+    "standard_error": 0.00034766479085688364,
+    "sample_sd": 0.07774021057392391,
+    "n_contexts": 50000,
+    "seed": 33000,
+    "quantity": "E_X[sum_a pi(a|X) q(X,a)]",
+    "method": "fresh IID context Monte Carlo; actions and rewards integrated via simulator conditional means",
+    "units": "expected Bernoulli reward",
+    "exact_truth": false,
+    "conditional_values_sha256": "47827bc2277272936148f04ccc1ebad7b37c0cfc45e92ca07681ddafed636911"
+  },
+  "replicate_seeds": [
+    {
+      "replicate": 0,
+      "data_seed": 2320080825,
+      "logger_seed": 834992642,
+      "fit_seed": 3106968237
+    },
+    {
+      "replicate": 1,
+      "data_seed": 3097315488,
+      "logger_seed": 2850519260,
+      "fit_seed": 2003776651
+    },
+    {
+      "replicate": 2,
+      "data_seed": 1761868560,
+      "logger_seed": 3934619810,
+      "fit_seed": 196296973
+    },
+    {
+      "replicate": 3,
+      "data_seed": 1145903712,
+      "logger_seed": 2273784378,
+      "fit_seed": 1913798063
+    },
+    {
+      "replicate": 4,
+      "data_seed": 3045136951,
+      "logger_seed": 1546001974,
+      "fit_seed": 1039218745
+    },
+    {
+      "replicate": 5,
+      "data_seed": 3518692109,
+      "logger_seed": 273232968,
+      "fit_seed": 3615163996
+    },
+    {
+      "replicate": 6,
+      "data_seed": 790747276,
+      "logger_seed": 1945321090,
+      "fit_seed": 2772453163
+    },
+    {
+      "replicate": 7,
+      "data_seed": 3408213744,
+      "logger_seed": 3636409776,
+      "fit_seed": 377097870
+    },
+    {
+      "replicate": 8,
+      "data_seed": 2683509116,
+      "logger_seed": 935267148,
+      "fit_seed": 351101616
+    },
+    {
+      "replicate": 9,
+      "data_seed": 383225945,
+      "logger_seed": 1894016465,
+      "fit_seed": 4034471702
+    },
+    {
+      "replicate": 10,
+      "data_seed": 2710980527,
+      "logger_seed": 2884141897,
+      "fit_seed": 2304775106
+    },
+    {
+      "replicate": 11,
+      "data_seed": 62721356,
+      "logger_seed": 1210597394,
+      "fit_seed": 3256627064
+    }
+  ],
+  "units": "expected Bernoulli reward",
+  "target": {
+    "kind": "softmax of fixed true logits",
+    "beta": 4.0
+  },
+  "estimators": {
+    "IPS": [
+      0.6594857111019582,
+      0.6440264799130206,
+      0.6596846317718523,
+      0.6440054937980277,
+      0.6844505919317172,
+      0.6398004311719145,
+      0.6559973800120855,
+      0.7009977283413155,
+      0.6062281603195191,
+      0.6601005597642974,
+      0.6748055493373619,
+      0.664214074452414
+    ],
+    "SNIPS": [
+      0.6554172867115058,
+      0.6651950530601374,
+      0.6763418915939183,
+      0.6526627176808878,
+      0.6742055587178354,
+      0.6556969278543889,
+      0.6490121695473527,
+      0.6774926906956584,
+      0.6503930244395759,
+      0.6559223720606733,
+      0.6729399749648448,
+      0.685778115105139
+    ],
+    "DR": [
+      0.6536133561189251,
+      0.6625878839746142,
+      0.6745672127219482,
+      0.6507971953782911,
+      0.6803441708816333,
+      0.6574117712095615,
+      0.6496042947349294,
+      0.6840367118506749,
+      0.6481860972369861,
+      0.6509132471985969,
+      0.6755595325133815,
+      0.6842291264086924
+    ],
+    "SWITCH-DR": [
+      0.6497360151129958,
+      0.6469095344262208,
+      0.6541239783117466,
+      0.6399919873497084,
+      0.661283794979205,
+      0.6652104796229574,
+      0.6565439444628466,
+      0.67959982533238,
+      0.6635606655269722,
+      0.6492949716616315,
+      0.669923575201668,
+      0.6633565324026613
+    ],
+    "Direct": [
+      0.6140609622721651,
+      0.6417037052000869,
+      0.6564624018588976,
+      0.621270063403462,
+      0.6421171557814079,
+      0.6270423886157946,
+      0.6499453206496656,
+      0.6428425170387231,
+      0.6165407281195486,
+      0.6209531415383168,
+      0.6394300588155468,
+      0.6211955410481883
+    ]
+  },
+  "summaries": {
+    "IPS": {
+      "mean": 0.6578163993262903,
+      "sample_sd_ddof1": 0.02390358754380203
+    },
+    "SNIPS": {
+      "mean": 0.6642548152026598,
+      "sample_sd_ddof1": 0.012575436789361766
+    },
+    "DR": {
+      "mean": 0.664320883352353,
+      "sample_sd_ddof1": 0.014390800984721144
+    },
+    "SWITCH-DR": {
+      "mean": 0.6582946086992495,
+      "sample_sd_ddof1": 0.011031244418341059
+    },
+    "Direct": {
+      "mean": 0.6327969986951504,
+      "sample_sd_ddof1": 0.014210696570248448
+    }
+  },
+  "error_bars": "sample SD across independent whole-log and nuisance-fit replicates; not SE/CI"
+}

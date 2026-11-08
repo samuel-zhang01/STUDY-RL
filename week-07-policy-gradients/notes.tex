@@ -314,6 +314,20 @@ The full trainer lives in \texttt{project/train.py}; see also \texttt{project/ag
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: An unbiased policy-gradient sample can still be mostly noise}
+\begin{example}[Original statistical teaching fixture]
+A one-step Bernoulli policy chooses the rewarding action with probability 0.2. Its score-function gradient sample is 0.8 with probability 0.2 and 0 with probability 0.8.
+
+The gradient mean is $0.2(0.8)=0.16$, second moment is $0.2(0.8^2)=0.128$, and variance is $0.128-0.16^2=0.1024$. Averaging 25 independent samples gives sampling SD $\sqrt{0.1024/25}=0.064$; 100 independent samples give 0.032.
+\end{example}
+Unbiasedness concerns the average over repeated samples; it does not make each update accurate or positive. Correlated tokens or states are not automatically independent gradient samples. Baseline comparison must examine complete gradient vectors, not only reward coefficients.
+
+\paragraph{Check a changed assumption.} At the same batch size, a baseline halves the full gradient variance. By what factor does the sampling SD shrink? Does halving coefficient variance prove this premise?
+\paragraph{Check.} The sampling SD is multiplied by $1/\sqrt2\approx0.7071$. Coefficients are multiplied by score vectors, so their variance alone does not establish variance reduction of the full gradient.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.3, 4.7, 6.2, PDF pp.460, 507, 817. Section source: \url{https://stats.libretexts.org/@go/page/10158}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/learning_curve.pdf}

@@ -14,6 +14,10 @@
 
 Use this guide alongside exercises 4 and 6–9, then apply the distinctions in the recommendation memo.
 
+**Statistics companion:** [Position correction trades bias for uneven variance](../docs/statistics/07-importance-weighting.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Separate relevance, examination and click probabilities; calculate a position correction before adding fairness or two-sided matching constraints.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -226,6 +230,24 @@ positions and whether the whole ranking or only top-k contributes.
 The examination factor changed. In the position model, relevance belongs to the item/query and examination belongs to its position; their product predicts observed clicks.
 
 </details>
+
+## Statistics bridge: Position correction trades bias for uneven variance
+
+**Model and unit.** Two positions have examination probabilities 0.8 and 0.2. Both displayed items have relevance probability 0.5, and a click requires examination and relevance under this toy model.
+
+**Calculate before running.** The click probabilities are 0.4 and 0.1. Corrected means are $0.4/0.8=0.5$ and $0.1/0.2=0.5$. For a Bernoulli click C and examination probability e, $\operatorname{Var}(C/e)=0.5/e-0.25$: this is 0.375 at the first position and 2.25 at the second.
+
+**Interpret the result.** Equal corrected means can have very different sampling noise. The calculation assumes known correct examination probabilities and this multiplicative click model; it does not establish a universal ranking correction or remove unmeasured selection.
+
+**Change one assumption.** Set second-position examination to zero. Can inverse examination weighting identify its relevance? What should a user-level experiment keep together?
+
+<details><summary>Check the changed assumption</summary>
+
+No. Zero examination supplies no click evidence about relevance. Keep related impressions and outcomes from the same independent user/session together according to the evaluation design.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/07-importance-weighting.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.3, 6.2, PDF pp.460, 817; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

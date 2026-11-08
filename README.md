@@ -11,6 +11,9 @@ Use [How to use this course](https://study-rl.samuelzhang.co.uk/#/start) for you
 first session, the [course map](https://study-rl.samuelzhang.co.uk/#/curriculum)
 for all 26 weeks, and [Notebooks & downloads](https://study-rl.samuelzhang.co.uk/#/downloads)
 for individual `.ipynb` files, self-contained weekly ZIPs, PDFs and Jupyter setup.
+The [probability and statistics foundation](docs/statistics/README.md) connects
+textbook ideas to the weekly experiments: conditioning, uncertainty, paired
+comparisons, resampling, validation, importance weights, and adaptive data.
 The website teaches the lessons directly and links each explanation to its
 actual notebook and project code. Each week also has three diagnostic questions
 with answer-specific explanations and a cumulative [revision queue](https://study-rl.samuelzhang.co.uk/#/review).
@@ -144,7 +147,10 @@ assets. The repository does not bundle Atari ROMs or accept their terms for you.
    Select the **STUDY-RL** kernel. Start with a fresh kernel and keep the
    notebook's working directory inside that week; the imports assume this.
    Save a separate local copy for your own attempts. The distributed notebook
-   can execute using reference solutions in `project/solutions.py`.
+   can execute using reference solutions in `project/solutions.py`. Scaffolded
+   workbooks expose `REFERENCE_MODE`: `True` demonstrates the reference;
+   after implementing the scaffold, select `False`, restart, and run the
+   learner checks. An unfinished learner stops without substituting a solution.
 4. Inspect and run the small bandit experiment from the same weekly directory:
 
    ```bash
@@ -328,4 +334,4 @@ limits, [contribution instructions](CONTRIBUTING.md) for changes, and
 
 Original contributions are distributed under the [MIT license](LICENSE).
 Cited papers, external dependencies, downloaded models, and trademarks retain
-their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md).
+their own terms; see [third-party notices](docs/ATTRIBUTION.md).

@@ -66,10 +66,20 @@ def train(seed=0, n_patients=240, repeats=3, steps=250, missing_rate=0.3,
                                       confounded["confounder"])
     validation_prediction = models[selected].predict(x_validation)
     null_prediction = np.full(len(te), data.outcome[tr].mean())
+    test_patients = np.unique(data.patient_ids[te])
+    # Retain paired patient losses for an inspectable prediction comparison.
+    # All values are synthetic; repeated rows are averaged before resampling.
+    patient_losses = {}
+    for name, prediction in [("baseline", baseline_prediction), ("selected", enhanced_prediction),
+                             ("no_proxy", stable_prediction), ("training_mean", null_prediction)]:
+        squared = (data.outcome[te]-prediction)**2
+        patient_losses[name] = [float(squared[data.patient_ids[te] == pid].mean())
+                                for pid in test_patients]
     report = {
         "seed": seed, "selected_randomization_probability": selected,
         "true_ate": 1.0, "naive_ate": naive, "adjusted_ate": adjusted,
         "test_environment": 2,
+        "test_patient_losses": patient_losses,
         "baseline_test_mse": patient_mse(data.outcome[te], baseline_prediction, data.patient_ids[te]),
         "enhanced_test_mse": patient_mse(data.outcome[te], enhanced_prediction, data.patient_ids[te]),
         "stable_features_ablation_test_mse": patient_mse(data.outcome[te], stable_prediction, data.patient_ids[te]),

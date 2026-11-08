@@ -53,4 +53,9 @@ assumptions and one observation that would challenge your interpretation.
 Run novelty, external return and coverage diagnostics together. For meta-learning, keep adaptation and evaluation samples separate, then compare full and first-order meta-gradients on a scalar problem before scaling up. Novelty, task learning and across-task adaptation answer different questions.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{Adaptation steps are not independent new tasks.} Read sample-mean uncertainty with tasks as units. Distinguish within-task adaptation randomness from across-task generalization; use exploration/meta-RL primary sources for the algorithm and the information it assumes.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~6.2, 8.1, PDF pp.817, 960. \url{https://stats.libretexts.org/@go/page/10179}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

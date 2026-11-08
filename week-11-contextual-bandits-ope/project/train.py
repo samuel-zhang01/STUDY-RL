@@ -6,7 +6,7 @@ Runtime: ~5-15 s on CPU.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Tuple
 import numpy as np
 
@@ -21,6 +21,8 @@ from .ope import (
     doubly_robust,
     switch_dr,
     true_policy_value,
+    independent_logged_sample,
+    UndefinedOverlapError,
 )
 
 
@@ -95,8 +97,9 @@ def softmax_policy(env: SyntheticLeadBandit, beta: float = 4.0) -> Callable[[np.
 @dataclass
 class TrainResult:
     regrets: Dict[str, np.ndarray]
-    ope: Dict[str, Dict[str, float]]
+    ope: Dict[str, Dict[str, float | None]]
     ope_truth: Dict[str, float]
+    ope_diagnostics: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
 
 def train(seed: int = 0, T: int = 2000, n_log: int = 4000, eps_log: float = 0.3) -> TrainResult:
@@ -115,8 +118,9 @@ def train(seed: int = 0, T: int = 2000, n_log: int = 4000, eps_log: float = 0.3)
     # Logs and oracle truth must use the same latent reward mechanisms.
     log = collect_logs(SyntheticLeadBandit(seed=seed), n_log, eps_log, seed + 17)
 
-    # 3. Fit reward model for DR / Direct.
-    qhat = RidgeRewardModel(K=env.K, d=env.d, lam=1.0).fit(log)
+    # 3. Fit on independent synthetic rows, never on evaluation outcomes.
+    fit_log = independent_logged_sample(env, max(100, n_log//2), seed+10001)
+    qhat = RidgeRewardModel(K=env.K, d=env.d, lam=1.0).fit(fit_log)
 
     # 4. Evaluate three counterfactual policies.
     policies = {
@@ -125,19 +129,29 @@ def train(seed: int = 0, T: int = 2000, n_log: int = 4000, eps_log: float = 0.3)
         "oracle-greedy": greedy_oracle_policy(env),
     }
 
-    ope: Dict[str, Dict[str, float]] = {}
+    ope: Dict[str, Dict[str, float | None]] = {}
+    diagnostics: Dict[str, Dict[str, str]] = {}
     ope_truth: Dict[str, float] = {}
     for name, pi in policies.items():
+        try:
+            snips_estimate = snips(log, pi)
+        except UndefinedOverlapError:
+            # A valid finite sample can have no observed target actions. Keep
+            # that estimation failure visible without inventing policy value 0.
+            # Invalid propensities or malformed target distributions still raise.
+            snips_estimate = None
+            diagnostics[name] = {"SNIPS": "unavailable: zero observed target overlap"}
         ope[name] = {
             "IPS": ips(log, pi),
-            "SNIPS": snips(log, pi),
+            "SNIPS": snips_estimate,
             "Direct": direct_method(log, pi, qhat),
             "DR": doubly_robust(log, pi, qhat),
             "SWITCH-DR(tau=10)": switch_dr(log, pi, qhat, tau=10.0),
         }
         ope_truth[name] = true_policy_value(env, pi)
 
-    return TrainResult(regrets=regrets, ope=ope, ope_truth=ope_truth)
+    return TrainResult(regrets=regrets, ope=ope, ope_truth=ope_truth,
+                       ope_diagnostics=diagnostics)
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -146,4 +160,7 @@ if __name__ == "__main__":  # pragma: no cover
     for name, est in r.ope.items():
         print(f"\nPolicy: {name}  (truth = {r.ope_truth[name]:.3f})")
         for k, v in est.items():
-            print(f"  {k:20s} = {v:.3f}")
+            if v is None:
+                print(f"  {k:20s} = {r.ope_diagnostics[name][k]}")
+            else:
+                print(f"  {k:20s} = {v:.3f}")

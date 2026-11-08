@@ -10,6 +10,7 @@ for p in (ROOT, HERE):
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
+import pytest
 
 from project.solutions import (  # noqa: E402
     discount_cumsum,
@@ -20,6 +21,22 @@ from project.solutions import (  # noqa: E402
     topk_offpolicy_multiplier,
     snips_estimator,
 )
+
+
+def test_snips_log_probabilities_and_reward_contract():
+    behavior = np.log([.5, .5])
+    assert snips_estimator(behavior, np.array([-np.inf, 0.]), np.array([10., 20.])) == 20
+    # Continuous-action densities may exceed one; equal target/logging
+    # densities still give unit importance weights and the ordinary mean.
+    log_densities = np.array([.1, -.1])
+    assert snips_estimator(log_densities, log_densities, np.array([1., 3.])) == 2
+    for b, target, rewards in [
+        (np.array([np.nan, -.1]), behavior, np.array([1., 2.])),
+        (behavior, np.array([0., np.inf]), np.array([1., 2.])),
+        (behavior, behavior, np.array([1., np.nan])),
+    ]:
+        with pytest.raises(ValueError):
+            snips_estimator(b, target, rewards)
 
 
 def test_log_prob_normal_matches_torch():

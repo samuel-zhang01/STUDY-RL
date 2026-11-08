@@ -473,7 +473,7 @@ const HANDOFF_TARGETS = {
     "needle": "Exercise 2 (★) — $\\epsilon$-greedy cumulative regret"
   },
   "w01-arm-count": {
-    "line": 23,
+    "line": 24,
     "symbol": "exercise_1_incremental_mean",
     "cell": 5,
     "needle": "exercise_1_incremental_mean"
@@ -495,19 +495,19 @@ const HANDOFF_TARGETS = {
     "needle": "exercise_7_gpi"
   },
   "w03-first-visit-order": {
-    "line": 14,
+    "line": 15,
     "symbol": "exercise_1_first_visit_returns",
     "cell": 5,
     "needle": "exercise_1_first_visit_returns"
   },
   "w03-first-return": {
-    "line": 14,
+    "line": 15,
     "symbol": "exercise_1_first_visit_returns",
     "cell": 5,
     "needle": "exercise_1_first_visit_returns"
   },
   "w03-trajectory-support": {
-    "line": 107,
+    "line": 108,
     "symbol": "exercise_4_ordinary_is",
     "cell": 17,
     "needle": "exercise_4_ordinary_is"
@@ -615,19 +615,19 @@ const HANDOFF_TARGETS = {
     "needle": "tanh_gaussian_log_prob"
   },
   "w11-ope-overlap": {
-    "line": 31,
+    "line": 58,
     "symbol": "snips",
     "cell": 16,
     "needle": "Exercise 5 — IPS and SNIPS for a uniform target (★★)"
   },
   "w11-ips-range": {
-    "line": 23,
+    "line": 50,
     "symbol": "ips",
     "cell": 16,
     "needle": "Exercise 5 — IPS and SNIPS for a uniform target (★★)"
   },
   "w11-dr-limits": {
-    "line": 51,
+    "line": 79,
     "symbol": "doubly_robust",
     "cell": 19,
     "needle": "Exercise 6 — Doubly Robust against softmax target (★★)"

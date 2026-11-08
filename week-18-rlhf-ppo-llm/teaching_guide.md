@@ -18,6 +18,10 @@ These calculations are illustrative fixtures, not claims about a trained languag
 **Practical companion:** [LLM post-training lab, lessons 1–3](../llm-lab/README.md)
 adds real pretrained-model LoRA SFT, completion masks, save/reload, and NVIDIA QLoRA.
 
+**Statistics companion:** [Twenty preference pairs may contain only two prompt units](../docs/statistics/05-resampling-dependence.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Track token log-probabilities, reference KL and sequence reward separately, then evaluate a frozen policy on prompts excluded from selection.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -230,6 +234,24 @@ Before exercise 5, state whether its controller target is per token or per respo
 Yes. Each old policy is a new local comparison, while the reference remains fixed. Many small moves can accumulate into a large departure from that fixed anchor.
 
 </details>
+
+## Statistics bridge: Twenty preference pairs may contain only two prompt units
+
+**Model and unit.** A reward model gets 10 of 10 preference pairs right for one prompt and 8 of 10 for another. For illustration, treat prompts as independent and compute their accuracy summaries.
+
+**Calculate before running.** The pair-weighted accuracy is $18/20=0.9$. Prompt accuracies are 1 and 0.8, with mean 0.9, sample SD $\sqrt{0.1^2+0.1^2}\approx0.14142$, and estimated SE across the two prompt summaries 0.1. Treating all pairs as independent would instead give the plug-in Bernoulli SE $\sqrt{0.9(0.1)/20}\approx0.06708$.
+
+**Interpret the result.** The pair-level independence premise is unjustified when outcomes share prompt-specific difficulty or labeling errors. Two prompts are too few for a robust new-prompt claim. Preference prediction and policy task performance are separate endpoints; optimizing the learned reward also changes the response distribution.
+
+**Change one assumption.** If each prompt is duplicated ten times, what happens to the count of independent prompts? What split is needed to evaluate new-prompt behavior?
+
+<details><summary>Check the changed assumption</summary>
+
+The independent prompt count remains two. Split prompts before reward-model fitting and policy selection, then evaluate on a held-out prompt population matching the intended question.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/05-resampling-dependence.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.5, 6.2, PDF pp.478, 817; Ross §15.3, PDF p.683; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

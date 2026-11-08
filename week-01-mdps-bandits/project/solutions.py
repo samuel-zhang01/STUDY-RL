@@ -6,6 +6,7 @@ The workbook tests import these and check correctness on fixed seeds.
 from __future__ import annotations
 from typing import Dict, List, Tuple
 import numpy as np
+from common.statistics import importance_diagnostics
 
 from .env import BernoulliBandit, GaussianBandit, SyntheticLeadBrokerBandit
 from .agent import (
@@ -155,9 +156,12 @@ def exercise_8_snips(
     """Self-Normalised IPS estimate of E_{pi}[r] from logs of pi_b.
 
     SNIPS(pi) = sum_i w_i r_i / sum_i w_i  where w_i = pi(a_i|x_i) / pi_b(a_i|x_i).
-    Returns 0.0 if the denominator is zero (vacuous estimate).
+    Raises when observed overlap is absent; a numerical zero is not evidence.
     """
-    w = np.asarray(target_prob) / np.maximum(np.asarray(logged_prob), 1e-12)
-    num = float((w * np.asarray(rewards)).sum())
-    den = float(w.sum())
-    return num / den if den > 0 else 0.0
+    w = importance_diagnostics(target_prob, logged_prob)["weights"]
+    r = np.asarray(rewards, dtype=float)
+    if r.shape != w.shape or not np.isfinite(r).all():
+        raise ValueError("finite rewards must match the logged probabilities")
+    # Normalize first to avoid overflow in the weighted sum.
+    w = w/w.max()
+    return float(np.dot(w, r)/w.sum())

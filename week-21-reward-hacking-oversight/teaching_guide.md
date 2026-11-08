@@ -15,6 +15,10 @@
 Use alongside [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The numerical examples are deliberately simple models of selection and reward design.
 
+**Statistics companion:** [An improved proxy can accompany a worse held-out outcome](../docs/statistics/06-regression-validation.md) · [Related foundation](../docs/statistics/09-statistical-claims.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Construct a reward-hacking counterexample, name the intended outcome, then evaluate a frozen policy using an independent endpoint rather than the optimized proxy.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -232,6 +236,24 @@ can change the “divergence index” even when all model behaviour stays the sa
 Only compliance with those checks on that output. The rules may omit relevant properties, and the bigram “true_quality” helper is not a human truth or meaning evaluator.
 
 </details>
+
+## Statistics bridge: An improved proxy can accompany a worse held-out outcome
+
+**Model and unit.** Two frozen policies have proxy scores 0.90 and 0.95. On separate independent sets of 100 Bernoulli task evaluations, their observed success counts are 80 and 60.
+
+**Calculate before running.** The proxy rises by 0.05 while observed task success drops from 0.8 to 0.6, a difference of -0.2. Under the independent Bernoulli design, a plug-in SE for the task difference is $\sqrt{0.8(0.2)/100+0.6(0.4)/100}=\sqrt{0.004}\approx0.06325$.
+
+**Interpret the result.** This fixture separates the optimized signal from the endpoint. The SE assumes the specified independent units and fixed policies; it does not account for selecting these policies after inspecting the same task outcomes. Correlated prompts would also require another uncertainty analysis.
+
+**Change one assumption.** Write a bounded claim with the policy, endpoint, independent unit and evaluation split. Would increasing proxy-model accuracy on its training data establish protection against reward hacking?
+
+<details><summary>Check the changed assumption</summary>
+
+A useful claim reports held-out task success under the stated protocol, separately from proxy improvement. Training fit does not validate the proxy on optimized-policy outputs or establish protection against new exploits.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/06-regression-validation.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§6.2, 7.1, PDF pp.817, 896; Ross §§9.2–9.4, PDF pp.421–429; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

@@ -44,7 +44,34 @@ def ips_ltr_value(
 
     For each clicked item, weight by target examination probability divided
     by its logged examination probability, if the item is in the target.
+    The position-based model requires stable item relevance and logging
+    coverage of every item the target can expose. Missing coverage is an
+    identification failure, including when no click happens to be observed.
     """
+    clicks = np.asarray(clicks, dtype=float)
+    ranking = np.asarray(ranking)
+    target_ranking = np.asarray(target_ranking)
+    pos_bias = np.asarray(pos_bias, dtype=float)
+    if (ranking.ndim != 1 or not len(ranking) or ranking.dtype.kind not in "iu"
+            or target_ranking.ndim != 1
+            or (len(target_ranking) and target_ranking.dtype.kind not in "iu")
+            or clicks.shape != ranking.shape or not np.isfinite(clicks).all()
+            or not np.isin(clicks, [0, 1]).all()
+            or len(np.unique(ranking)) != len(ranking)
+            or len(np.unique(target_ranking)) != len(target_ranking)
+            or (ranking < 0).any() or (target_ranking < 0).any()):
+        raise ValueError("Need unique nonnegative item IDs and aligned binary clicks")
+    if (pos_bias.ndim != 1 or len(pos_bias) < max(len(ranking), len(target_ranking))
+            or not np.isfinite(pos_bias).all()
+            or (pos_bias < 0).any() or (pos_bias > 1).any()):
+        raise ValueError("Examination probabilities must cover both rankings and lie in [0,1]")
+    logged_positions = {int(item): k for k, item in enumerate(ranking)}
+    if any(clicks[k] and pos_bias[k] == 0 for k in range(len(ranking))):
+        raise ValueError("A click at zero examination probability is an impossible logged row")
+    for k, item in enumerate(target_ranking):
+        if pos_bias[k] > 0 and (int(item) not in logged_positions
+                               or pos_bias[logged_positions[int(item)]] == 0):
+            raise ValueError("Target exposure requires positive logged examination support for every item")
     val = 0.0
     K = len(ranking)
     target_pos = {int(item): pos for pos, item in enumerate(target_ranking)}
@@ -55,7 +82,7 @@ def ips_ltr_value(
         if item in target_pos:
             kp = target_pos[item]
             if kp < len(pos_bias):
-                val += pos_bias[kp] / max(pos_bias[k], 1e-9)
+                val += pos_bias[kp] / pos_bias[k]
     return val
 
 

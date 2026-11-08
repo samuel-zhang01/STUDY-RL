@@ -428,38 +428,61 @@ noise plus exploration noise.
 % =============================================================================
 \chapter{Empirical results}
 
+\section{Statistics bridge: A posterior mean is not the observed success fraction}
+\begin{example}[Original statistical teaching fixture]
+Use independent stationary Bernoulli rewards and an explicitly chosen Beta prior for one arm. This is a probability-model illustration, not an algorithm ranking.
+
+After three successes and one failure, a Beta$(1,1)$ prior becomes Beta$(4,2)$. The observed success fraction is $3/4$, but the posterior mean is $4/6=2/3$ and posterior variance is $4(2)/(6^2(7))=2/63\approx0.031746$. With a Beta$(10,10)$ prior, the same observations give Beta$(13,11)$, mean $13/24\approx0.541667$.
+\end{example}
+The data are identical; the posterior changes because the prior is part of the model. A posterior variance is not the frequentist SE of the observed success fraction, and a UCB exploration bonus is another object again.
+
+\paragraph{Check a changed assumption.} Replace the prior by Beta(2,2). Calculate the new mean and explain whether a smaller posterior spread would establish lower deployed regret.
+\paragraph{Check.} The posterior is Beta$(5,3)$, with mean $5/8=0.625$. A posterior summary under this reward model does not establish deployed regret or protection against a changing reward law.
+\paragraph{Statistical foundation.} Siegrist \S~7.4, PDF p.929; \S~6.2, PDF p.817. Section source: \url{https://stats.libretexts.org/@go/page/10192}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[ht]\centering
 \includegraphics[width=0.92\linewidth]{figs/fig_bernoulli_bakeoff.pdf}
-\caption{10-armed Bernoulli testbed. Means $\in[0.1,0.7]$ in steps of $0.05$,
-$T=2000$, 20 seeds. Thompson sampling clearly dominates; UCB1 ($c=2$) is
-over-exploratory in the first $\sim 500$ rounds but its slope flattens
-sub-linearly afterwards. Boltzmann ($\tau=0.1$) is competitive but
-hyper-parameter sensitive.}
+\caption{10-armed Bernoulli teaching testbed with means
+$(0.10,0.20,0.25,0.30,0.35,0.45,0.50,0.55,0.60,0.70)$,
+$T=2000$, and 20 seeded repetitions per method. Lines are mean cumulative
+pseudo-regret; bands show empirical SD across repetitions, not confidence
+intervals. Agent and reward-noise generators are separate. The finite-horizon
+comparison describes this fixed instance and parameter setting; it does not
+establish a universal algorithm ranking or asymptotic growth rate.}
 \label{fig:bakeoff}
 \end{figure}
 
 \begin{figure}[ht]\centering
 \includegraphics[width=0.92\linewidth]{figs/fig_regret_bound.pdf}
-\caption{Empirical UCB1 regret vs the Auer et al.\ theoretical upper
-bound~\eqref{eq:ucb1-bound} on a 4-arm Bernoulli with gaps
-$\Delta\in\{0.1,0.2,0.3\}$. The empirical curve sits well below the bound,
-which is loose by a constant but matches the slope.}
+\caption{Mean UCB1 pseudo-regret across ten seeded repetitions at each of six
+horizons, compared with the Auer et al.\ theoretical upper
+bound~\eqref{eq:ucb1-bound} on a 4-arm Bernoulli with suboptimal gaps
+$\Delta\in\{0.1,0.2,0.3\}$. The band is empirical SD, not an interval for the
+mean. The theorem bounds expected regret under its assumptions; it does not
+predict the exact finite-horizon slope of the sampled curve.}
 \label{fig:bound}
 \end{figure}
 
 \begin{figure}[ht]\centering
 \includegraphics[width=0.92\linewidth]{figs/fig_contextual_bandit.pdf}
-\caption{synthetic insurance lead-broker contextual bandit (8 brokers, $d=6$).
-LinUCB exploits the context structure and achieves sub-linear regret;
-$\epsilon$-greedy ignores the context and grows linearly.}
+\caption{Synthetic insurance lead-broker contextual bandit: 8 brokers, $d=6$,
+1500 rounds, twelve seeded repetitions, with one fixed latent reward model.
+Lines show mean pseudo-regret and bands empirical SD. LinUCB uses context;
+this $\epsilon$-greedy baseline ignores it. The logistic reward law is not an
+exact linear-payoff model, so the finite curve does not verify LinUCB's
+linear-model regret theorem or establish asymptotic rates.}
 \label{fig:contextual}
 \end{figure}
 
 \begin{intuition}
-The slope of regret \emph{after} the burn-in phase is the diagnostic you care
-about. A bandit algorithm with steep early regret but a clean log-linear tail
-is much safer than one with a flat early curve that turns linear in the long
-run --- the latter is silently mis-calibrating its uncertainty.
+Inspect early and late cumulative regret, the task horizon, variability across
+independent repetitions, and performance on changed instances. A finite curve
+can reveal an exploration problem, but its visual slope does not establish an
+asymptotic rate, calibrated uncertainty, or deployment safety. The trade-off
+between early exploration cost and later information depends on the stated
+objective and horizon.
 \end{intuition}
 
 % =============================================================================

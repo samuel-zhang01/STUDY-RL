@@ -1106,6 +1106,20 @@ parameters improve held-out calibration.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Position correction trades bias for uneven variance}
+\begin{example}[Original statistical teaching fixture]
+Two positions have examination probabilities 0.8 and 0.2. Both displayed items have relevance probability 0.5, and a click requires examination and relevance under this toy model.
+
+The click probabilities are 0.4 and 0.1. Corrected means are $0.4/0.8=0.5$ and $0.1/0.2=0.5$. For a Bernoulli click C and examination probability e, $\operatorname{Var}(C/e)=0.5/e-0.25$: this is 0.375 at the first position and 2.25 at the second.
+\end{example}
+Equal corrected means can have very different sampling noise. The calculation assumes known correct examination probabilities and this multiplicative click model; it does not establish a universal ranking correction or remove unmeasured selection.
+
+\paragraph{Check a changed assumption.} Set second-position examination to zero. Can inverse examination weighting identify its relevance? What should a user-level experiment keep together?
+\paragraph{Check.} No. Zero examination supplies no click evidence about relevance. Keep related impressions and outcomes from the same independent user/session together according to the evaluation design.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.3, 6.2, PDF pp.460, 817. Section source: \url{https://stats.libretexts.org/@go/page/10158}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_tt_loss.pdf}

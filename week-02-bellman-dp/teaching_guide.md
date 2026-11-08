@@ -15,6 +15,10 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The objective is to explain every term in a Bellman backup before running it.
 
+**Statistics companion:** [A Bellman expectation need never occur on a trajectory](../docs/statistics/01-probability-conditioning.md) · [Related foundation](../docs/statistics/02-expectation-variance.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Calculate one discounted return, evaluate one fixed policy, then perform one improvement step. Treat contraction bounds as a second pass after the table update is clear.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -235,6 +239,24 @@ Higher discount preserves more distant rewards and makes the same residual a wea
 No. Equal action values allow different optimal policies. Compare values, residuals and tie-breaking before interpreting arrows.
 
 </details>
+
+## Statistics bridge: A Bellman expectation need never occur on a trajectory
+
+**Model and unit.** Keep the policy and next-state values fixed. A state moves to either of two successors with probabilities one-half; their continuation values are 0 and 4. Immediate reward is 1 and gamma is 0.9.
+
+**Calculate before running.** The two one-step targets are $1+0.9(0)=1$ and $1+0.9(4)=4.6$. Their mean is $2.8$ and variance is $[(1-2.8)^2+(4.6-2.8)^2]/2=3.24$. The Bellman expectation is 2.8 even though neither sampled target equals 2.8.
+
+**Interpret the result.** Dynamic programming averages a specified transition model. Sampling from that model adds target noise; estimating the model adds another uncertainty source. A small Bellman residual in a wrong model does not prove the value is correct in the real environment.
+
+**Change one assumption.** Change gamma to 0.5 and recompute the mean and variance. What extra check is needed if the transition probabilities were fitted from data?
+
+<details><summary>Check the changed assumption</summary>
+
+The targets become 1 and 3, with mean 2 and variance 1. Fitted transitions need held-out predictive checks or uncertainty/sensitivity analysis; algebra alone does not verify their probabilities.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/01-probability-conditioning.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §4.7, PDF p.507; §16.3, PDF p.1322; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

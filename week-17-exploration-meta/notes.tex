@@ -190,6 +190,20 @@ theta_t = theta - inner_lr * grad      # depends on theta through grad
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Adaptation steps are not independent new tasks}
+\begin{example}[Original statistical teaching fixture]
+Three independent held-out tasks give adaptation gains 1, 3 and 5, each summarized after the same adaptation budget. The target is mean gain over the task distribution.
+
+The task mean is 3, deviations are -2, 0 and 2, sample variance is $8/(3-1)=4$, and SE is $2/\sqrt3\approx1.1547$. Reusing twenty adaptation steps per task leaves three independently sampled tasks, not sixty.
+\end{example}
+A large number of within-task transitions can refine a task result without establishing generalization over tasks. A meta-learning claim also needs held-out task selection and a fixed adaptation protocol. Rewarding novelty changes the objective unless external outcomes are evaluated separately.
+
+\paragraph{Check a changed assumption.} Suppose the target distribution shifts toward tasks where adaptation loses 4 units. Can the three-task SE quantify that shift? What should a transfer evaluation sample?
+\paragraph{Check.} No. The SE describes sampling under the original task distribution and protocol. Evaluate explicitly sampled tasks from the new target, with a justified split and a stated shift assumption.
+\paragraph{Statistical foundation.} Siegrist \S~\S~6.2, 8.1, PDF pp.817, 960. Section source: \url{https://stats.libretexts.org/@go/page/10179}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figs/fig_rnd_visits.pdf}

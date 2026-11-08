@@ -15,6 +15,10 @@
 Use beside [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The main calculation is supervised regression with a deliberately frozen target.
 
+**Statistics companion:** [Evaluation episodes do not replace independent DQN training runs](../docs/statistics/03-sampling-uncertainty.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Inspect the chosen-action Q shape, terminal target and target-network update, then run a small frozen-policy evaluation separately from training loss.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -229,6 +233,24 @@ This check isolates masking from optimisation. A training curve cannot explain a
 Only regression agreement on the sampled targets improved. Policy return needs separate evaluation; shared parameters and inaccurate targets can make that relationship indirect.
 
 </details>
+
+## Statistics bridge: Evaluation episodes do not replace independent DQN training runs
+
+**Model and unit.** Three independently trained agents have held-out episode-mean returns 50, 100 and 150. Each mean summarizes the same fixed evaluation budget of twenty episodes.
+
+**Calculate before running.** The run-level mean is 100. Squared deviations sum to 5000, sample SD is $\sqrt{5000/2}=50$, and the estimated SE across training runs is $50/\sqrt3\approx28.868$. There are three independent training outcomes, even though sixty evaluation episodes were played.
+
+**Interpret the result.** Episode repetitions help measure each fixed agent. Training-procedure uncertainty requires independent retraining. Replay transitions also share trajectories and evolving targets, so their count is not the independent-run denominator.
+
+**Change one assumption.** If twelve independent training runs show the same SD, what SE results? Explain why a lower replay TD loss alone cannot establish a higher held-out return.
+
+<details><summary>Check the changed assumption</summary>
+
+The SE becomes $50/\sqrt{12}\approx14.434$. Replay loss measures agreement with sampled bootstrapped targets, while return measures outcomes of the policy on the evaluation distribution.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/03-sampling-uncertainty.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§6.2, 6.5, PDF pp.817, 844; Ross §§9.2–9.4, PDF pp.421–429; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

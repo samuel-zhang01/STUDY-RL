@@ -90,3 +90,25 @@ def test_training_oracle_matches_logged_reward_environment(monkeypatch):
     monkeypatch.setattr(trainer, 'collect_logs', collect)
     result = trainer.train(seed=3, T=2, n_log=20)
     assert all(np.isfinite(v) for v in result.ope_truth.values())
+
+
+def test_training_reports_undefined_snips_without_inventing_zero(monkeypatch):
+    import project.train as trainer
+    def no_oracle_actions(env, n, eps, seed):
+        x = env.sample_context()
+        wrong_action = (env.optimal_action(x)+1) % env.K
+        return [(x, wrong_action, 0., 1/env.K)]*n
+    monkeypatch.setattr(trainer, 'collect_logs', no_oracle_actions)
+    result = trainer.train(seed=3, T=2, n_log=4)
+    assert result.ope['oracle-greedy']['SNIPS'] is None
+    assert 'zero observed target overlap' in result.ope_diagnostics['oracle-greedy']['SNIPS']
+    assert np.isfinite(result.ope_truth['oracle-greedy'])
+
+
+def test_training_does_not_mask_invalid_logged_propensities(monkeypatch):
+    import pytest
+    import project.train as trainer
+    monkeypatch.setattr(trainer, 'collect_logs',
+                        lambda env, n, eps, seed: [(env.sample_context(), 0, 1., 0.)])
+    with pytest.raises(ValueError, match='logged probability'):
+        trainer.train(seed=3, T=2, n_log=4)

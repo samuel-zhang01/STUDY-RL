@@ -14,6 +14,10 @@
 
 Use this guide for returns-to-go, causal masking, and the diffusion noising exercise.
 
+**Statistics companion:** [Conditioning on a lucky return can select a worse action](../docs/statistics/01-probability-conditioning.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Check the return-to-go convention and causal mask, then distinguish conditioning on a recorded return from controlling future environmental luck.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -225,6 +229,24 @@ Label requested and achieved returns as separate quantities in any later rollout
 Not necessarily. Its conditional action distribution can change while attainable returns or dataset coverage limit performance. Inspect actions and support as well as the final scalar return.
 
 </details>
+
+## Statistics bridge: Conditioning on a lucky return can select a worse action
+
+**Model and unit.** In a one-step toy, safe pays 1 deterministically; risky pays 4 with probability 0.1 and 0 otherwise. The behavior policy chooses each action with probability one-half.
+
+**Calculate before running.** A logged return of 4 occurs with probability $0.5(0.1)=0.05$, and every such row chose risky. Thus $P(A=\mathrm{risky}\mid R=4)=1$. Yet choosing risky next time has expected reward $0.1(4)+0.9(0)=0.4$, below the safe reward 1.
+
+**Interpret the result.** The conditional training slice selects both an action and a favorable outcome. A request for return 4 does not force that outcome to recur. Support for a high-return action sequence is different from a guarantee that its environmental outcome can be controlled.
+
+**Change one assumption.** Increase risky success probability to 0.5. Does conditioning on return 4 change, and which action now has the higher expected reward?
+
+<details><summary>Check the changed assumption</summary>
+
+The conditional probability of risky given return 4 remains 1, while risky expected reward becomes 2. The same conditioning pattern can accompany different action quality because the reward law matters.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/01-probability-conditioning.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§2.4, 4.7, PDF pp.181, 507; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

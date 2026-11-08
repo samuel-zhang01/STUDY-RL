@@ -15,6 +15,10 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 For every update, say aloud which policy supplies the next-action value.
 
+**Statistics companion:** [Conditional averaging removes one specific source of noise](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/03-sampling-uncertainty.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Compute SARSA, Q-learning and Expected SARSA targets on one shared transition. Explain the next-action rule before discussing convergence.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -234,6 +238,24 @@ terminal: every target becomes reward -1 and every update becomes 0.5, regardles
 It makes this one target equal. Their targets can differ again on a later exploratory action, and their long-run objectives and data collection still matter.
 
 </details>
+
+## Statistics bridge: Conditional averaging removes one specific source of noise
+
+**Model and unit.** Condition on a fixed observed next state and fixed Q-values (4,-2). The next action has probabilities (0.75,0.25). Immediate reward is 1 and gamma is 0.9.
+
+**Calculate before running.** The sampled continuation has mean $0.75(4)+0.25(-2)=2.5$, second moment $0.75(16)+0.25(4)=13$, and variance $13-2.5^2=6.75$. The full sampled target has mean $1+0.9(2.5)=3.25$ and variance $0.9^2(6.75)=5.4675$. Expected SARSA uses 3.25 directly under this conditioning.
+
+**Interpret the result.** Averaging the next action removes its conditional sampling variance. Random next states, reward noise, estimated Q-values and future control changes remain. This calculation does not establish universally lower final policy error.
+
+**Change one assumption.** Make the next-action probabilities (0.5,0.5). Calculate the continuation mean and variance. Which randomness is still absent from this calculation?
+
+<details><summary>Check the changed assumption</summary>
+
+The continuation mean becomes 1 and variance becomes 9. The calculation still holds the next state and Q-values fixed; it does not describe all randomness of training.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.3, 4.7, PDF pp.460, 507; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

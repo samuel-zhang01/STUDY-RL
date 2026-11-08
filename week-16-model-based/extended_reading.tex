@@ -53,4 +53,9 @@ assumptions and one observation that would challenge your interpretation.
 For imagined transition $z_t,a_t\to z_{t+1}$, declare whether the predicted reward and continuation are indexed by departure or arrival. Compute the final bootstrap before recursing backward through the lambda return. Set continuation to zero on a terminal transition and confirm that later values vanish. This numerical contract is more informative than copying a model name onto a different architecture.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{Shared model bias can hide behind ensemble agreement.} Read bias and regression validation before interpreting world-model agreement. Calculate accumulated discounted error separately from reconstruction loss; retain Dreamer/MuZero primary sources for their particular training objectives and representations.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~4.1, 7.1, PDF pp.439, 896; Ross \S~\S~9.2--9.4, PDF pp.421--429. \url{https://stats.libretexts.org/@go/page/10189}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

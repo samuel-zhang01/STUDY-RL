@@ -1,6 +1,8 @@
 # Current release and maintenance notes
 
 The public course is available at **https://study-rl.samuelzhang.co.uk/**.
+[The .dev address](https://study-rl.samuelzhang.dev/) redirects to the same
+canonical origin so existing browser-local progress remains accessible.
 [GitHub](https://github.com/samuel-zhang01/STUDY-RL) holds the source and downloadable
 notebooks. The October 20 portal revision is based on the existing sanitized
 public history; it does not merge the former private checkout's history.
@@ -35,6 +37,22 @@ make learning-tests lab-tests
 make portal
 make portal-serve
 ```
+
+For a complete new publication, `make portal-release` first executes all 27
+reference notebooks in isolated copied trees, then prepares and builds the
+website, tests it, and verifies source/output/artifact fingerprints. The
+source notebooks stay output-free. The generated execution manifest supplies
+the website's static figures, result tables, recorded settings, and provenance;
+learner code still runs locally in Jupyter. Use `make portal-verify` immediately
+before publishing the exact artifact. A retained `dist/` or an old successful
+notebook run cannot certify changed source code.
+
+The [November upgrade plan](UPGRADE_PLAN.md) defines the 9.8/10 teaching and
+9.5/10 visual review thresholds. Its [textbook validation record](statistics/VALIDATION.md)
+states which probability/statistics sources and numerical cases were checked.
+The [November upgrade review](UPGRADE_REVIEW.md) records the current material,
+notebook and website checks. The October learner review remains dated
+historical evidence.
 
 See [portal development](../portal/README.md) for the browser/accessibility suite,
 [the current adversarial learner review](LEARNER_REVIEW.md) for acceptance evidence,

@@ -37,7 +37,7 @@ test('all equations, local reading links, figures and downloads resolve',()=>{
     if(section)assert.ok(parseHTML(target.html).document.getElementById(section),`${d.path} → ${href}`);
    }
   }
-  for(const img of dom.querySelectorAll('img[src]'))assert.ok(fs.existsSync(path.join(root,img.getAttribute('src'))),`${d.path}: missing image`);
+  for(const img of dom.querySelectorAll('img[src]')){const source=img.getAttribute('src');if(source.startsWith('data:image/png;base64,')){assert.ok(img.getAttribute('alt').length>20);continue;}assert.ok(fs.existsSync(path.join(root,source)),`${d.path}: missing image`);}
   assert.equal(dom.querySelectorAll('.math-fallback').length,0);
  }
 });

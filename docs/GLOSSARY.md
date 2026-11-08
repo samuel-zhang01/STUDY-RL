@@ -6,6 +6,7 @@ define their local notation. For a connected example, see [STUDY_GUIDE.md](STUDY
 **Find a concept:** [Reward timing](#reward-indexing-translate-before-calculating) ·
 [Symbols](#set--function-notation) · [Algorithm names](#algorithms-one-line).
 For a mechanism rather than a definition, use the [visual explanations](CONCEPT_ATLAS.md).
+For uncertainty and evaluation, use the [statistics foundation](statistics/README.md).
 Use your viewer's Find command for an acronym; return to your week's derivation
 to check the symbol's local meaning.
 
@@ -86,6 +87,27 @@ Symbols are reused between papers. $\alpha$ may be a learning rate, SAC
 temperature, or PER exponent; $\lambda$ may be GAE's trace parameter or a cost
 multiplier; $\rho$ may be a policy ratio or a state distribution. Always attach
 the meaning, range, and conditioning to the local derivation.
+
+## Statistical terms for reading experiments
+
+| Term | Meaning and the question it answers |
+|---|---|
+| Estimand | The quantity being estimated, such as expected discounted return of a specified frozen policy on a specified initial-state distribution. Define it before choosing a summary. |
+| Independent unit | The object providing a fresh replicate under the design: a training run, evaluation episode, patient, or task. Many rows from one unit need not provide many independent replicates. |
+| Standard deviation (SD) | Spread of outcomes or run summaries. A band of mean ± SD describes variability; it is not a confidence interval for the mean. |
+| Standard error (SE) | Estimated spread of an estimator across repeated datasets. For independent identically distributed scalar observations, the mean's estimated SE is sample SD divided by the square root of sample count. |
+| Confidence interval | An interval produced by a procedure with a stated repeated-sampling coverage target under assumptions. The realized interval does not assign that frequentist probability to a fixed parameter. |
+| Paired comparison | Analyze within-unit differences when the same task, seed design, or held-out case meaningfully pairs two methods. Matching arbitrary row numbers does not create pairing. |
+| Statistical bootstrap | Resample observed units to approximate sampling variability. Preserve dependence through a justified unit or block design; resampling every transition independently is generally unsuitable for trajectory dependence. |
+| Conditional uncertainty | Uncertainty with some parts held fixed, such as resampling held-out patients after fitting a model. It omits variation from refitting, model selection, or a changed population unless those steps are included. |
+| Effective sample size (ESS) | For nonnegative importance weights, $(\sum_i w_i)^2/\sum_i w_i^2$ measures observed weight concentration when the denominator is positive. It cannot establish population overlap or make missing outcomes observable. |
+| Positivity or support | Every target action with positive probability must have positive logging probability at relevant contexts for standard importance-based identification. Seeing no such action in a finite log is a separate finite-sample coverage problem. |
+| Multiple comparisons | Selecting the best result from many inspected variants changes the interpretation of unadjusted tests or intervals. Keep validation-based selection separate from sealed final evaluation. |
+| CVaR tail mass | For returns, average the worst specified fraction of probability mass; for costs, the dangerous tail is the upper tail. Finite empirical tails may require a fraction of the observation at the cutoff. State the tail convention. |
+
+For calculations and counterexamples, use [sampling uncertainty](statistics/03-sampling-uncertainty.md),
+[comparisons](statistics/04-intervals-comparisons.md), and
+[resampling](statistics/05-resampling-dependence.md).
 
 ## Algorithms (one-line)
 

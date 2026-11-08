@@ -188,6 +188,20 @@ the lambda-return, and updates actor + critic.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Shared model bias can hide behind ensemble agreement}
+\begin{example}[Original statistical teaching fixture]
+A three-step model predicts reward 1 at every step while the true reward is 0.8. Gamma is 0.9, and the horizon and transitions are held fixed.
+
+The model predicts $1+0.9+0.9^2=2.71$. The true value is $0.8(2.71)=2.168$, so the return error is 0.542. Five identical models have ensemble disagreement zero while all share that same error.
+\end{example}
+Agreement measures dispersion among models, not accuracy against the environment. The fixture isolates persistent reward bias; learned transitions and planner-driven distribution shift can create additional errors. Reconstruction loss alone does not bound this return discrepancy.
+
+\paragraph{Check a changed assumption.} Extend the constant reward bias 0.2 indefinitely at gamma=0.9. What return bias follows under this deliberately simple model? Which held-out observations would challenge it?
+\paragraph{Check.} The discounted bias is $0.2/(1-0.9)=2$. Compare predicted and observed rewards and transitions on a separate real-data evaluation protocol, including actions selected by the planner.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.1, 7.1, PDF pp.439, 896; Ross \S~\S~9.2--9.4, PDF pp.421--429. Section source: \url{https://stats.libretexts.org/@go/page/10189}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\textwidth]{figs/fig_dreamer_curve.pdf}

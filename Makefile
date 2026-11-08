@@ -79,7 +79,10 @@ clean:
 
 cleanall: clean
 
-.PHONY: portal portal-content portal-serve study-check
+.PHONY: portal portal-content portal-serve study-check reference-notebooks portal-verify portal-release
+reference-notebooks:
+	$(PY) scripts/execute_reference_notebooks.py --jobs 3
+
 portal-content:
 	$(PY) portal/scripts/prepare_content.py
 
@@ -88,6 +91,14 @@ portal: portal-content
 
 portal-serve:
 	$(PY) -m http.server 8767 --bind 127.0.0.1 --directory portal/dist
+
+portal-verify:
+	cd portal && npm run verify
+
+# Keep execution, preparation, build and verification sequential even with -j.
+portal-release: reference-notebooks
+	$(MAKE) portal PY=$(PY)
+	$(MAKE) portal-verify PY=$(PY)
 
 study-check:
 	node --test study-lab/model.test.cjs

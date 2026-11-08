@@ -568,6 +568,20 @@ resets at every done.
 % =====================================================================
 \chapter{Empirical results}
 
+\section{Statistics bridge: An average-cost budget is different from a tail restriction}
+\begin{example}[Original statistical teaching fixture]
+A fixed policy has episode cost 0 with probability 0.75 and cost 4 with probability 0.25. The expected-cost budget is 1; this is a fully specified toy distribution.
+
+Expected cost is $0.75(0)+0.25(4)=1$, exactly the budget. Cost variance is $0.25(16)-1^2=3$. The worst quarter of episodes all cost 4, so the upper-tail average over that quarter is 4 even though expected cost equals 1.
+\end{example}
+Expected-cost feasibility does not impose a cost limit on every episode or control a separately defined tail metric. In a learned policy, estimating the mean and satisfying the population budget are additional distinct questions. An optimizer or multiplier trace does not certify either by itself.
+
+\paragraph{Check a changed assumption.} Change the cost-4 probability to 0.1. Calculate mean cost and the worst-quarter average, including the zero-cost mass needed to fill that quarter.
+\paragraph{Check.} Mean cost becomes 0.4. The upper quarter contains probability mass 0.1 at cost 4 and 0.15 at cost 0, giving tail average $0.4/0.25=1.6$. Fractional tail mass matters.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.1, 4.3, PDF pp.439, 460. Section source: \url{https://stats.libretexts.org/@go/page/10158}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \section{Setup}
 
 We train PPO-Lagrangian for 80 updates of 512 steps each on the lava grid

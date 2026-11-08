@@ -5,14 +5,20 @@ import {marked} from 'marked';
 import katex from 'katex';
 import sanitizeHtml from 'sanitize-html';
 import {parseHTML} from 'linkedom';
+import {contentFingerprint,interfaceFingerprint,artifactFingerprint,outputFingerprint} from './fingerprints.mjs';
+import {readOutputManifest,safeOutput,outputStatus} from './notebook-outputs.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const OUT=path.join(ROOT,'dist');
 const snapshot=JSON.parse(fs.readFileSync(path.join(ROOT,'generated/documents.json'),'utf8'));
+const preview=process.argv.includes('--preview');
+const buildInputs={content:contentFingerprint(),interface:interfaceFingerprint(),notebookOutputs:outputFingerprint()};
+if(!preview&&(snapshot.source.preparationStable===false||JSON.stringify(snapshot.source.contentFingerprint)!==JSON.stringify(buildInputs.content)))throw new Error('Canonical content changed since preparation. Run make portal-content before building.');
+const execution=readOutputManifest(path.join(ROOT,'..'),{allowStale:preview});
 const docs=snapshot.documents;
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const slug=s=>s.toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu,'').replace(/ /g,'-');
 const idFor=s=>s.replace(/^docs\//,'').replace(/\.[^.]+$/,'').replace(/[\/_]/g,'-').toLowerCase();
-const special={'docs/LEARNING_MAP.md':'#/routes','docs/CONCEPT_ATLAS.md':'#/atlas','docs/PROGRESS.md':'#/progress','study-lab/README.md':'#/labs'};
+const special={'docs/LEARNING_MAP.md':'#/routes','docs/CONCEPT_ATLAS.md':'#/atlas','docs/PROGRESS.md':'#/progress','study-lab/README.md':'#/labs','docs/statistics/README.md':'#/statistics'};
 const route=d=>{
  const match=d.path.match(/^week-(\d+)-[^/]+\/(teaching_guide\.md|notes\.tex|workbook\.ipynb|extended_reading\.tex)$/);
  if(match)return `#/lesson/${match[1]}?view=${({'teaching_guide.md':'guide','notes.tex':'lecture','workbook.ipynb':'workbook','extended_reading.tex':'reading'})[match[2]]}`;
@@ -68,13 +74,20 @@ function markdown(s){
 function cleanGuide(s){
  return s.replace(/^\*\*Course navigation:\*\*.*$/gm,'').replace(/^\[Routes\].*$/gm,'').replace(/^\[Lecture PDF\].*$/gm,'').replace(/^\*\*(?:You are here|Recall first|Visual anchor|Jump within this guide|Try it):\*\*.*$/gm,'').replace(/\n---\n\n\*\*Ready to move on\?[\s\S]*$/,'');
 }
+function notebookOutputLabel(doc,cell){
+ const preceding=doc.cells.slice(0,cell.index-1).filter(c=>c.type==='markdown').at(-1)?.source||'';
+ const heading=[...preceding.matchAll(/^#{1,6}\s+(.+)$/gm)].at(-1)?.[1];
+ const purpose=preceding.split(/\n\s*\n/).find(p=>!/^\s*#/.test(p)&&p.trim().length>20)?.replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/[*`$]/g,'').replace(/\s+/g,' ').trim();
+ const concise=purpose?.replace(/^(?:Goal|Purpose|Predict)\.\s*/i,'').split(/(?<=[.!?])\s+/)[0]?.slice(0,180);
+ return `${(heading||doc.title).replace(/^Statistical investigation\s*[—–-]\s*/,'')} · cell ${cell.index}${concise?'. '+concise:'. Read the matching explanation and interpretation in this workbook.'}`;
+}
 function render(doc){
  let input=doc.body||'';let html='';
  if(doc.format==='code')html=`<pre class="code-file"><code>${escape(input)}</code></pre>`;
- else if(doc.format==='notebook')html='<div class="workbook-notice">Read every exercise and code cell here. Download the weekly bundle to run this notebook with its project files in Jupyter. Supplied reference cells demonstrate an implementation; attempt the exercises before comparing.</div>'+doc.cells.map(c=>`<section class="notebook-cell" id="cell-${c.index}" data-cell="${c.index}"><p class="cell-label">Cell ${c.index} · ${c.type==='code'?'Python':'Explanation'}</p>${c.type==='code'?`<pre><code class="language-python">${escape(c.source)}</code></pre>`:markdown(c.source)}</section>`).join('');
+ else if(doc.format==='notebook')html=outputStatus(execution.notebooks[doc.path])+'<div class="workbook-notice">Read every exercise and code cell here. Download the weekly bundle to run this notebook with its project files in Jupyter. Supplied reference cells demonstrate an implementation; attempt the exercises before comparing.</div>'+doc.cells.map(c=>`<section class="notebook-cell" id="cell-${c.index}" data-cell="${c.index}"><p class="cell-label">Cell ${c.index} · ${c.type==='code'?'Python':'Explanation'}</p>${c.type==='code'?`<pre><code class="language-python">${escape(c.source)}</code></pre>`:markdown(c.source)}${(execution.notebooks[doc.path]?.status==='executed'?execution.notebooks[doc.path]?.cells.find(x=>x.index===c.index)?.outputs||[]:[]).map(output=>safeOutput(output,notebookOutputLabel(doc,c))).join('')}</section>`).join('');
  else if(doc.format==='html')html=input;
  else {if(doc.kind==='guide')input=cleanGuide(input);html=markdown(input);}
- html=sanitizeHtml(html,{allowedTags:sanitizeHtml.defaults.allowedTags.concat(['img','figure','figcaption','details','summary','span','embed','input','section']),allowedAttributes:{'*':['class','id','title','data-cell','data-reference','data-reference-type','aria-hidden','tabindex'],a:['href','title'],img:['src','alt','width','height'],embed:['src'],input:['type','checked','disabled']},allowedSchemes:['http','https','mailto'],allowProtocolRelative:false});
+ html=sanitizeHtml(html,{allowedTags:sanitizeHtml.defaults.allowedTags.concat(['img','figure','figcaption','details','summary','span','embed','input','section']),allowedAttributes:{'*':['class','id','title','data-cell','data-reference','data-reference-type','aria-hidden','aria-label','role','tabindex'],a:['href','title'],img:['src','alt','width','height','loading'],embed:['src'],input:['type','checked','disabled']},allowedSchemes:['http','https','mailto'],allowedSchemesByTag:{img:['http','https','data']},allowProtocolRelative:false});
  const {document}=parseHTML('<html><body><article>'+html+'</article></body></html>');const article=document.querySelector('article');
  // Pre-existing headings are retained so cross-document references keep working.
  const counts=new Map();
@@ -144,7 +157,7 @@ const weeks=titles.map(w=>{const doc=byPath.get(w.path),prefix=w.path.split('/')
 fs.writeFileSync(path.join(OUT,'catalog.json'),JSON.stringify({weeks,tracks:trackNames.map((title,i)=>({title,weeks:trackWeeks[i]})),documents:index.map(({text,...x})=>x),assets:snapshot.assets}));
 fs.writeFileSync(path.join(OUT,'search.json'),JSON.stringify(index.map(({id,title,route,path,kind,text})=>({id,title,route,path,kind,text}))));
 fs.writeFileSync(path.join(OUT,'validation.json'),JSON.stringify({documents:index.length,lessons:weeks.length,mathErrors,unresolved},null,2));
-fs.writeFileSync(path.join(OUT,'release.json'),JSON.stringify(snapshot.source,null,2));
+
 // Local copies keep reading, diagrams and plots independent of CDNs.
 function copyDir(from,to,filter=()=>true){fs.cpSync(from,to,{recursive:true,filter});}
 for(const name of ['mermaid','katex'])copyDir(path.join(ROOT,'node_modules',name,'dist'),path.join(OUT,'vendor',name),(p)=>!p.endsWith('.map'));
@@ -164,3 +177,8 @@ lab=lab.replace('</body>',`<script>const selected=new URLSearchParams(location.s
 fs.writeFileSync(path.join(OUT,'assets/study-lab/index.html'),lab);
 console.log(`Built ${index.length} readable documents; ${weeks.length} weeks; ${mathErrors.length} math errors; ${unresolved.length} unresolved source references.`);
 if(mathErrors.length||unresolved.length)process.exitCode=1;
+else {
+ const finishedInputs={content:contentFingerprint(),interface:interfaceFingerprint(),notebookOutputs:outputFingerprint()};
+ if(!preview&&JSON.stringify(buildInputs)!==JSON.stringify(finishedInputs))throw new Error('Publication inputs changed during the build. Finish edits and notebook execution, then prepare and build again.');
+ fs.writeFileSync(path.join(OUT,'release.json'),JSON.stringify({...snapshot.source,preview,builtAt:new Date().toISOString(),notebookExecutions:{expected:docs.filter(d=>d.kind==='workbook').length,total:Object.keys(execution.notebooks).length,executed:Object.values(execution.notebooks).filter(e=>e.status==='executed').length,bounded:Object.values(execution.notebooks).filter(e=>e.execution_mode==='bounded-reference').length},fingerprints:{...finishedInputs,artifact:artifactFingerprint()}},null,2));
+}

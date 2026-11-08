@@ -60,4 +60,9 @@ gradient. State why neither calculation proves a universal variance reduction.
 Start with exact arithmetic and malformed-answer tests before running optimisation. Keep prompt parsing separate from completion parsing. A deterministic verifier is reproducible, but its accepted language defines exploitable edges. Report valid-answer accuracy, parser failures, response length and reference divergence separately; a reward total alone cannot reveal which mechanism changed.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{Zero-sum coefficients do not imply a zero policy gradient.} Read variance of products/sums with the complete estimator visible. Reconstruct one RLOO baseline identity, then compare full score-weighted gradient samples over independent groups; coefficient variance alone cannot rank full estimators.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~4.3, 4.5, 6.2, PDF pp.460, 478, 817. \url{https://stats.libretexts.org/@go/page/10160}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

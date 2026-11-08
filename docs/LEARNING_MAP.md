@@ -37,6 +37,7 @@ every topic in a week is a prerequisite for every later topic.
 | Your goal | Route | Finish by demonstrating |
 |---|---|---|
 | Build a foundation | **1 → 2 → 3 → 4**, then 5 → 6 | Compute MC, SARSA and Q-learning targets on the same transition; explain why they differ |
+| Rebuild probability and statistics | [Conditioning → expectation → sampling → comparisons](statistics/README.md), alongside the weekly lessons | Explain a conditional mean, choose the independent unit, and interpret an interval without turning it into a guarantee |
 | Understand policy optimisation | **1–4 → 7 → 8 → 9**, then 10 | Explain an advantage, GAE boundary and both signs of PPO clipping |
 | Understand LLM post-training | **1–4 → 7 → 8 → 9 → 18 → 19 → 20 → 21**; add the [practical lab](../llm-lab/README.md) | Distinguish the rollout policy, reference policy, reward and verifier; evaluate a saved model |
 | Learn from logged decisions | **1–4 → 11 → 12**; add **5 → 14 → 15** for offline deep RL | Identify support failures before interpreting an offline estimate |
@@ -80,6 +81,8 @@ and workbook exercise references.
 | Gradients or logs | Work through [the two-action derivative](STUDY_GUIDE.md#3-advantage-and-policy-gradients-compare-an-action-with-the-policy-average), then week 7 | Derive both action scores, `1−p` and `−p` |
 | Tensor shapes | Do the shape question in the prerequisite check; inspect week 5's code bridge | Explain the accidental `[B,B]` broadcast |
 | Probability ratios | Start with [logged support](CONCEPT_ATLAS.md#logged-data-and-support), then week 11 | State which policy generated the action and which policy is being evaluated |
+| Error bars and comparisons | Use [sampling](statistics/03-sampling-uncertainty.md), then [intervals and comparisons](statistics/04-intervals-comparisons.md) | Distinguish SD, SE, and an interval; identify whether runs are genuinely paired |
+| Bootstrap or dependent observations | Read [resampling and dependence](statistics/05-resampling-dependence.md) | Choose the unit to resample and state what is held fixed |
 | Implementation | Try [progressive coding exercises](INTERACTIVE_LEARNING.md) before the full project | Pass a changed-input check using your own function |
 | Installation | Start with reading, browser experiments and standard-library practice | Separate a missing package from a conceptual error |
 
@@ -137,10 +140,11 @@ Save a personal notebook copy before editing. Start with the **bounded first
 investigation** near its top, then:
 
 1. Read the prompt and write a prediction without running the solution cell.
-2. Inspect whether the exercise calls `S.exercise_...` or `ref.exercise_...`.
-   Those names usually invoke supplied reference code. Replace that wrapper's
-   body with your own implementation when practising, and check that the test
-   actually calls your function.
+2. Read the mode instructions at the top. In scaffolded workbooks,
+   `REFERENCE_MODE=True` demonstrates the supplied implementation. Complete
+   the scaffold, choose `False` in setup, restart, and run the learner checks.
+   A guarded reference wrapper must be replaced by your own implementation;
+   an unfinished learner raises `NotImplementedError` without a fallback.
 3. Run the setup cell, your exercise, and its check in order. A cell may rely
    on variables created earlier; execution numbers reveal the order you used.
 4. Change one input as suggested by the guide, predict again, and explain the
@@ -148,11 +152,14 @@ investigation** near its top, then:
 5. Restart the kernel and rerun the required cells from the top. This catches
    results that depended on hidden state left from an earlier attempt.
 
-Week 26 has an explicit `REFERENCE_MODE` switch; choose learner mode only after
-implementing the corresponding functions. Other notebooks do not automatically
-switch away from reference calls. Running every cell is therefore a reproducibility
-check, not a grade for independently solving every exercise. Long training cells
-can wait until you have completed the small calculation and masking checks.
+Scaffolded workbooks explicitly select learner or reference implementations;
+Week 26 also keeps its existing no-fallback learner selection. Some other
+workbooks contain direct experiments rather than a function scaffold: their
+reference calculations remain demonstrations. Read the local instructions,
+write a prediction, and attempt the changed-assumption task yourself. Running
+every cell in default reference mode is a reproducibility check, not a grade
+for independently solving every exercise. Long training cells can wait until
+you have completed the small calculation and masking checks.
 
 | Symptom | Check first |
 |---|---|

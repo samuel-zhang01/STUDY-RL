@@ -636,16 +636,20 @@ def act(self, x):
     return a, p[a]   # propensity is observed, not re-estimated
 \end{minted}
 
-Doubly Robust is six lines:
+The DR arithmetic uses validated rows and finite, correctly shaped reward
+predictions. The reference nuisance model is fitted on an independent uniform
+sample with the same latent environment; see
+\texttt{independent\_logged\_sample} in \texttt{project/ope.py}. Fitting on
+independent data separates evaluation from nuisance fitting; it does not
+remove model misspecification.
 
 \begin{minted}{python}
 def doubly_robust(log, pi, qhat):
     s = 0.0
-    for x, a, r, pb in log:
-        pix = pi(x)
-        baseline = pix @ qhat(x)
-        w = pix[a] / max(pb, 1e-12)
-        s += baseline + w * (r - qhat(x)[a])
+    for x, a, r, pix, w in _checked_entries(log, pi):
+        q = _predictions(qhat, x, pix)
+        baseline = float(pix @ q)
+        s += baseline + w * (r - float(q[a]))
     return s / len(log)
 \end{minted}
 
@@ -747,6 +751,20 @@ prevents a bad LinTS posterior from cascading into a revenue incident.
 % ============================================================================
 \chapter{Empirical results}
 
+\section{Statistics bridge: A defined estimate can still have almost no observed overlap}
+\begin{example}[Original statistical teaching fixture]
+Ten independent logged rows contain exactly one target-action observation. The logger probability for that action is 0.1, the deterministic target always chooses it, and its observed reward is 1.
+
+Weights are $(10,0,\ldots,0)$. IPS is $10/10=1$, SNIPS is $10/10=1$, and weight ESS is $10^2/10^2=1$. An ordinary ten-row bootstrap omits the sole contributing row with probability $(9/10)^{10}\approx0.34868$, making that resample SNIPS undefined.
+\end{example}
+Agreement of two estimates is not evidence of precision. Population support is positive in the fixture, while observed overlap is only one row. More bootstrap draws do not create another target-action outcome; silently discarding undefined resamples changes the reported analysis.
+
+\paragraph{Check a changed assumption.} Clip the weight to 5 and calculate IPS. What did the numerical stabilization change? Which uncertainty is absent if a reward model is frozen during resampling?
+\paragraph{Check.} Clipped IPS is 0.5. Clipping changes the estimator and its bias, rather than adding information. A frozen-model bootstrap omits refitting and model-selection variability; it answers a conditional question.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.1, 7.1, PDF pp.439, 896; Ross \S~15.3, PDF p.683. Section source: \url{https://stats.libretexts.org/@go/page/10189}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 We train LinUCB and LinTS for $T=2000$ rounds on the synthetic insurance bandit
 (\Cref{fig:regret}). The reward means are logistic and feature draws are not the bounded
 linear model of the theorem. These finite synthetic curves illustrate
@@ -755,22 +773,41 @@ behaviour, not a proof of that regret rate.
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.88\linewidth]{figs/fig_regret.pdf}
-\caption{Cumulative regret on the synthetic insurance lead-broker bandit (4 seeds, mean
-$\pm$ std). The dashed reference is $\propto \sqrt{T \log T}$ shape; both
-LinUCB and LinTS track it. Random allocation would give a straight line.}
+\caption{Cumulative pseudo-regret on the synthetic insurance lead-broker bandit,
+mean $\pm$ empirical SD across four seeded environment instances. This spread
+includes changing latent instances and sampled histories, rather than repeated
+estimation of one fixed policy value. The dashed $\sqrt{T\log T}$ curve is a
+visual reference shape, not a verified growth rate or confidence bound for these
+logistic-reward implementations.}
 \label{fig:regret}
 \end{figure}
 
-\Cref{fig:opebias} compares estimators on a synthetic target. Interpret
-bias and variability relative to repeated-sampling ground truth; SNIPS
-bias has no universal sign, and DR has no unconditional variance ordering.
+\Cref{fig:opebias} holds one synthetic reward model and softmax target fixed.
+Each repetition generates a new adaptive logging history and fits a new reward
+nuisance model on a separate independent uniform log from the same environment.
+The independent repetition is the whole log and its fit, not a row from the
+changing logger. The bars' SD is descriptive repeated-experiment spread.
+It is not a confidence interval, and it does not measure variation across
+different latent reward models. SNIPS bias has no universal sign; DR has no
+unconditional variance ordering.
+
+The shared reference integrates the simulator's known target-weighted reward
+means over 50,000 independent fresh contexts. It averages out action and reward
+noise analytically, but retains context Monte Carlo error. Its reported MC SE
+describes numerical integration error, separately from estimator variability.
+The reference is not exact ground truth. Raw estimates, seeds and reference
+metadata are saved alongside the figures in
+\texttt{fig\_ope\_bias.json} and \texttt{fig\_bias\_variance.json}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.88\linewidth]{figs/fig_ope_bias.pdf}
-\caption{OPE estimators for a softmax target on the synthetic insurance bandit (12 seeds).
-Dashed line is the on-policy ground-truth value computed by Monte Carlo on
-fresh contexts.}
+\caption{OPE estimates for one fixed softmax target and fixed synthetic reward
+model: mean $\pm$ sample SD (denominator 11) over twelve independent whole-log and nuisance-fit
+repetitions, with 4000 evaluation rows and 2000 independent uniform fitting rows
+per repetition. The dashed line is one shared 50,000-context MC reference;
+its MC SE is reported separately in the figure and saved metadata. These
+descriptive bars are not confidence intervals.}
 \label{fig:opebias}
 \end{figure}
 
@@ -782,19 +819,51 @@ are at most one. Large weights motivate overlap diagnostics.
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_w_distribution.pdf}
-\caption{Importance-weight distribution. The peaky oracle policy puts mass
-where $\pi_b$ has $\varepsilon/K$ mass, producing weights of order $20$.}
+\caption{Observed importance weights in one 4000-row adaptive log, with six
+actions and exploration $\varepsilon=0.3$. The minimum logging propensity is
+$\varepsilon/K=0.05$, so the oracle-greedy target's weights can reach 20.
+The histogram describes observed overlap; it neither proves population support
+nor supplies an independent-row confidence interval.}
 \label{fig:weights}
 \end{figure}
 
-\Cref{fig:bv} shows SWITCH-DR's bias--variance trade-off. Small $\tau$
-biases the estimator toward the direct method (low variance, possibly
-biased); large $\tau$ recovers pure DR (unbiased, high variance).
+\Cref{fig:bv} uses its own fixed oracle-greedy target and corresponding shared
+MC reference on twenty independently collected adaptive logs, with independent
+nuisance fits. Each threshold is
+evaluated on the same repetitions. Write
+$e_r(\tau)=\widehat V_r(\tau)-V_{\mathrm{ref}}$ and
+$\bar e(\tau)=R^{-1}\sum_r e_r(\tau)$. The finite empirical decomposition is
+\[
+\begin{aligned}
+\underbrace{\frac1R\sum_r e_r^2}_{\text{empirical MSE}}
+&=\underbrace{\bar e^2}_{\text{squared empirical mean error}}\\
+&\quad+\underbrace{\frac1R\sum_r(e_r-\bar e)^2}_{\text{empirical variance, denominator }R}.
+\end{aligned}
+\]
+All three quantities have squared reward units. The squared mean error is
+relative to the shared MC reference, rather than a known population squared
+bias. An $R-1$ sample variance would not satisfy this particular identity.
+For errors $(-0.1,0.1,0.2)$, the terms are
+$1/50=1/225+7/450=0.02$.
+
+Small $\tau$ removes some weighted residual corrections and can introduce
+model-dependent bias; neither variance nor MSE has a universal monotone ordering.
+When $\tau$ includes every observed weight, SWITCH equals DR on that log.
+Mean-correctness arguments for DR require the stated support and conditional
+propensity or reward-model assumptions; they do not make a finite repeated-log
+average equal the numerical reference. Its MC error shifts all errors together,
+so it contributes uncertainty to the empirical squared-error summaries.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.88\linewidth]{figs/fig_bias_variance.pdf}
-\caption{SWITCH-DR bias and variance vs.\ threshold $\tau$.}
+\caption{SWITCH-DR squared mean error, empirical variance (denominator 20), and
+MSE relative to one shared MC reference, across twenty independent whole-log
+and nuisance-fit repetitions for one fixed oracle target and reward model.
+All ordinates have squared reward units and satisfy the finite empirical
+decomposition. The comparison is conditional on this model, target, logger,
+fitting protocol and numerical reference; it establishes no universal threshold
+ranking or exact population bias.}
 \label{fig:bv}
 \end{figure}
 
@@ -886,18 +955,24 @@ Summary:
   \item \textbf{E1} ($\star$) Compute the UCB1 bonus for $t=100$, $n_a=10$.
   \item \textbf{E2} ($\star$) Implement the KL-UCB upper-confidence solver.
   \item \textbf{E3} ($\star\star$) Bernoulli Thompson Sampling on a 3-armed
-        bandit; confirm $O(\log T)$ regret growth empirically.
+        bandit; compare finite-horizon curves across independent runs with the
+        theoretical assumptions. Explain why the plot cannot confirm an
+        asymptotic $O(\log T)$ rate.
   \item \textbf{E4} ($\star\star$) Train LinUCB on the synthetic insurance bandit; report
         cumulative regret.
   \item \textbf{E5} ($\star\star$) Collect $\varepsilon$-greedy logs; compute
         IPS and SNIPS for a uniform target.
   \item \textbf{E6} ($\star\star$) Doubly Robust against the softmax target;
-        compare to the on-policy truth.
+        compare to a fresh-context MC reference and report its MC SE separately.
   \item \textbf{E7} ($\star$) Effective sample size of importance weights.
-  \item \textbf{E8} ($\star\star$) SWITCH-DR; vary $\tau$; observe bias/variance.
+  \item \textbf{E8} ($\star\star$) SWITCH-DR; vary $\tau$ on independent
+        repetitions of a fixed target/model and calculate empirical squared
+        mean error, variance with denominator $R$, and MSE.
   \item \textbf{E9} ($\star\star\star$, \emph{open-ended}, \emph{synthetic insurance objective}) For three counterfactual policies
         (uniform, softmax-true, oracle-greedy) compare SNIPS, DR, and
-        SWITCH-DR estimates against on-policy ground truth. Write a one-page
+        SWITCH-DR estimates against their own fresh-context MC references.
+        Hold each target/model fixed across independent whole-log repetitions
+        and report reference MC error separately. Write a one-page bounded
         recommendation memo to the synthetic insurance allocation team.
 \end{itemize}
 

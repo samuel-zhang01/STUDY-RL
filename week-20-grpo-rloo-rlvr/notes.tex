@@ -551,6 +551,20 @@ and measured memory. No unpinned copy-and-paste trainer is claimed here.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Zero-sum coefficients do not imply a zero policy gradient}
+\begin{example}[Original statistical teaching fixture]
+For a realized four-completion group, rewards are (0,0,0,1), centered coefficients are (-0.25,-0.25,-0.25,0.75), and scalar score gradients are (1,1,1,-3). These are a constructed group, not repeated-gradient measurements.
+
+The centered coefficients sum to zero, but their score-weighted average is $[(-0.25)(1)+(-0.25)(1)+(-0.25)(1)+0.75(-3)]/4=-0.75$. RLOO coefficients multiply these centered coefficients by $4/3$, giving gradient -1 for this group.
+\end{example}
+A coefficient variance compares numbers before multiplication by scores. Full gradient variance needs repeated independently sampled groups under a fixed policy and prompt protocol. Completions share a prompt, and a claim across prompts requires an additional prompt-level sampling design.
+
+\paragraph{Check a changed assumption.} Set every score to the same number while keeping these coefficients. What gradient follows? Does that special case prove a lower-variance estimator generally?
+\paragraph{Check.} The gradient is zero because the common score factors out of the zero coefficient sum. It is a special realized configuration, not a variance theorem across possible groups.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.3, 4.5, 6.2, PDF pp.460, 478, 817. Section source: \url{https://stats.libretexts.org/@go/page/10160}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_grpo_accuracy.pdf}
@@ -571,12 +585,15 @@ the $p(1-p)$ Bernoulli bound at $p \sim 0.65$.}
 
 \section{What changes if we drop SFT?}
 
-If we set \texttt{sft\_warmup\_steps=0} the GRPO curve sits flat at zero:
-the verifier never fires, the group baseline is always zero, the advantage
-is identically zero, and the gradient is zero. This is the standard
-\emph{cold-start} pathology of RLVR. DeepSeek-R1-Zero famously bypassed it
-on a large base model; for tiny models, a short SFT bootstrap is the
-canonical fix.
+Set \texttt{sft\_warmup\_steps=0} and inspect the sampled group rewards before
+interpreting the curve. A group whose rewards are all zero has zero centered
+reward coefficients, so its reward-weighted update vanishes. Whether the
+verifier ever awards a nonzero reward depends on the initial model, sampling
+procedure and task; it is not a universal consequence of disabling warmup.
+Compare warmup and no-warmup with a fixed evaluation protocol across independent
+training runs. The supplied small-model experiment can illustrate sparse
+learning signals; it does not establish that SFT is necessary for every RLVR
+system or reproduce a large-model research result.
 
 % ===========================================================================
 \begin{safetyangle}

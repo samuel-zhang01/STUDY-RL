@@ -60,4 +60,9 @@ assumptions and one observation that would challenge your interpretation.
 Recompute an undiscounted return-to-go by backward summation, then change the mathematical convention to $G_t=r_t+\gamma G_{t+1}$. The target update becomes $(G_t-r_t)/\gamma$ for $\gamma>0$. The shipped helper uses $\gamma=1$; label any discounted extension explicitly. Compare requested and achieved returns on held-out episodes.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{Conditioning on a lucky return can select a worse action.} Read conditional probability using the lucky-return counterexample. Separate observed conditional fit from intervention performance; use Decision Transformer and diffusion-policy sources for architecture/training, without treating return conditioning as an attainment guarantee.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~2.4, 4.7, PDF pp.181, 507. \url{https://stats.libretexts.org/@go/page/10132}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

@@ -17,6 +17,7 @@ from .ope import (
     doubly_robust,
     switch_dr,
     RidgeRewardModel,
+    independent_logged_sample,
 )
 
 
@@ -93,7 +94,8 @@ def exercise_6_dr_softmax(n: int = 800, beta: float = 4.0, seed: int = 0) -> flo
         r = env.step(x, a)
         logger.update(x, a, r)
         log.append((x, a, r, pb))
-    qhat = RidgeRewardModel(K=env.K, d=env.d).fit(log)
+    fit_log = independent_logged_sample(env, max(100, n//2), seed+10001)
+    qhat = RidgeRewardModel(K=env.K, d=env.d).fit(fit_log)
 
     def pi(x: np.ndarray) -> np.ndarray:
         logits = beta * env.theta @ x
@@ -121,7 +123,8 @@ def exercise_8_switch_dr(n: int = 800, tau: float = 10.0, seed: int = 0) -> floa
         r = env.step(x, a)
         logger.update(x, a, r)
         log.append((x, a, r, pb))
-    qhat = RidgeRewardModel(K=env.K, d=env.d).fit(log)
+    fit_log = independent_logged_sample(env, max(100, n//2), seed+10001)
+    qhat = RidgeRewardModel(K=env.K, d=env.d).fit(fit_log)
 
     def pi(x: np.ndarray) -> np.ndarray:
         a = int(np.argmax(env.theta @ x))
@@ -146,7 +149,8 @@ def exercise_9_synthetic_ope(n: int = 1500, seed: int = 0) -> Tuple[float, float
         r = env.step(x, a)
         logger.update(x, a, r)
         log.append((x, a, r, pb))
-    qhat = RidgeRewardModel(K=env.K, d=env.d).fit(log)
+    fit_log = independent_logged_sample(env, max(100, n//2), seed+10001)
+    qhat = RidgeRewardModel(K=env.K, d=env.d).fit(fit_log)
     from .train import softmax_policy, true_policy_value
 
     pi = softmax_policy(env, beta=4.0)

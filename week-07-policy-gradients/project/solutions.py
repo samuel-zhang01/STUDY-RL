@@ -95,6 +95,9 @@ def snips_estimator(
     V_SNIPS(pi_e) = sum_i w_i r_i / sum_i w_i, where w_i = pi_e(a_i|s_i)/pi_b(a_i|s_i).
     Biased but consistent under overlap and suitable moment assumptions.
     It can have lower variance than IPS; this is not a universal guarantee.
+    Inputs may be log probability masses or log densities. A continuous
+    density can exceed one, so a positive log density is valid. Observed
+    log values alone cannot establish normalization or population support.
     """
     behaviour_log_probs = np.asarray(behaviour_log_probs, dtype=np.float64)
     target_log_probs = np.asarray(target_log_probs, dtype=np.float64)
@@ -102,12 +105,14 @@ def snips_estimator(
     if (rewards.ndim != 1 or rewards.size == 0 or
             behaviour_log_probs.shape != rewards.shape or target_log_probs.shape != rewards.shape):
         raise ValueError("Inputs must be nonempty one-dimensional arrays of equal shape")
+    if not np.all(np.isfinite(rewards)):
+        raise ValueError("Rewards must be finite")
     if not np.all(np.isfinite(behaviour_log_probs)):
-        raise ValueError("Logged actions must have finite nonzero behaviour probabilities")
+        raise ValueError("Logged actions must have finite nonzero behaviour masses or densities")
     log_w = target_log_probs - behaviour_log_probs
     if np.any(np.isnan(log_w)) or np.any(np.isposinf(log_w)) or not np.any(np.isfinite(log_w)):
         raise ValueError("SNIPS requires finite ratios and positive total target weight")
     # Common rescaling cancels in SNIPS; unlike clipping it preserves the
     # estimator exactly, even for extreme but supported log-ratios.
     w = np.exp(log_w - np.max(log_w))
-    return float((w * rewards).sum() / w.sum())
+    return float(np.dot(w / w.sum(), rewards))

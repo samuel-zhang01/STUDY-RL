@@ -28,6 +28,13 @@ gradient calculations are staged references: return to them in weeks 2, 3–4 an
 Chain-rule and tensor-shape checks become relevant when you reach policy
 gradients and neural networks. They need not delay a first bandit experiment.
 
+The [textbook-linked statistics route](statistics/README.md) follows the same
+principle: conditioning and expectation support weeks 1–4; sampling and
+comparisons become essential when you report experimental results; importance
+weighting, validation, and dependence support logged-policy and causal work.
+Return to the [source map](statistics/SOURCES.md) for the underlying textbook
+sections after working through the course's small original examples.
+
 ## One delivery story, four different sources of evidence
 
 The shared two-step task has invented teaching rewards. At the start, **stop**

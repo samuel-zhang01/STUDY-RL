@@ -15,6 +15,10 @@
 Use alongside [the notes](notes.tex) and [the workbook](workbook.ipynb).
 This is a synthetic educational matching problem, not a validated production hiring system.
 
+**Statistics companion:** [A small subgroup can dominate uncertainty in a safety audit](../docs/statistics/04-intervals-comparisons.md) · [Related foundation](../docs/statistics/09-statistical-claims.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Freeze the capstone policy and eligibility rules, define reward and cost metrics, then audit held-out groups with their own denominators.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -232,6 +236,24 @@ gap would miss before choosing an operating point.
 Yes. Recommending everyone or nobody makes both groups’ recommendation rates equal. Capacity, relevance, qualification and utility metrics are necessary to interpret that number.
 
 </details>
+
+## Statistics bridge: A small subgroup can dominate uncertainty in a safety audit
+
+**Model and unit.** Two subgroups show zero failures in 100 and 10 independent Bernoulli evaluations respectively. Assume a stable failure probability within each subgroup for this interval illustration.
+
+**Calculate before running.** With zero failures, the exact one-sided 95% upper bound is $1-0.05^{1/n}$. At $n=100$ it is about 0.02951; at $n=10$ it is about 0.25887. Identical observed rates of zero therefore leave very different subgroup uncertainty.
+
+**Interpret the result.** Neither subgroup has established a failure probability below a one-percent budget. Pooling can obscure weak subgroup evidence, and searching many subgroup definitions on the same data introduces selection. The Bernoulli bound also requires the stated independent-unit assumptions.
+
+**Change one assumption.** What bound results at 1,000 independent zero-failure trials? Would repeated decisions from ten customers justify treating the trial count as 1,000?
+
+<details><summary>Check the changed assumption</summary>
+
+The bound becomes $1-0.05^{1/1000}\approx0.002991$. Repeated customer decisions may be dependent; preserve customer clustering and state the population to which the bound applies.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/04-intervals-comparisons.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §8.1, PDF p.960; Ross §7.3, PDF p.309; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

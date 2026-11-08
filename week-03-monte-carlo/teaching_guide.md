@@ -15,6 +15,10 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Track reward timing and visit timing separately throughout this week.
 
+**Statistics companion:** [Four completed episodes are four units, not every visit](../docs/statistics/03-sampling-uncertainty.md) · [Related foundation](../docs/statistics/05-resampling-dependence.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Compute returns backward, select first visits forward, and average one state-action return per contributing episode before adding off-policy weights.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -232,6 +236,24 @@ separately; one estimator need not win on both.
 Its denominator is zero, so it is undefined. This sample contains no target-weighted evidence; replacing the denominator by epsilon does not make its policy value zero.
 
 </details>
+
+## Statistics bridge: Four completed episodes are four units, not every visit
+
+**Model and unit.** For a fixed policy, take independent episodic returns 0, 2, 4 and 6 from the same state-action evaluation protocol. These four numbers are a fixture rather than a measured learning curve.
+
+**Calculate before running.** The mean is 3. Squared deviations sum to $9+1+1+9=20$, so sample SD is $\sqrt{20/3}\approx2.582$ and estimated SE is $\sqrt{20/3}/\sqrt4\approx1.291$. SD describes return spread; SE describes uncertainty in this four-episode mean under independence.
+
+**Interpret the result.** Repeated visits inside an episode can share the same later rewards. Counting them as independent episodes understates uncertainty. First-visit selection and backward return computation are separate operations, as the earlier example shows.
+
+**Change one assumption.** Suppose sixteen independent episodes have the same observed SD. What SE results? Would copying each of the original four returns four times supply that evidence?
+
+<details><summary>Check the changed assumption</summary>
+
+The planning SE is $2.582/4\approx0.6455$. Copying returns supplies no new independent episode; the four-episode unit count remains four.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/03-sampling-uncertainty.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§6.2, 6.5, PDF pp.817, 844; Ross §15.3, PDF p.683; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

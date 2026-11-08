@@ -15,6 +15,10 @@
 Read this before workbook exercises 1–3; return to the code bridge before training.
 The goal is to predict the direction of an update before trusting its loss curve.
 
+**Statistics companion:** [A positive four-seed average need not resolve a PPO comparison](../docs/statistics/04-intervals-comparisons.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Predict the clipped objective for both advantage signs, then separate the objective shape from measured KL and held-out return.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -227,6 +231,24 @@ all actual ratios were kept inside the drawn vertical boundaries.
 Yes. Critic and entropy losses, shared parameters, optimiser state, and other samples can still move it. A plateau concerns that sample’s policy-surrogate derivative.
 
 </details>
+
+## Statistics bridge: A positive four-seed average need not resolve a PPO comparison
+
+**Model and unit.** Suppose a prespecified paired comparison produces independent run-pair return differences -2, 1, 2 and 3. Assume a normal model for differences only for the interval illustration.
+
+**Calculate before running.** The mean difference is 1. Squared deviations sum to $9+0+1+4=14$, so sample variance is $14/3$ and SE is $\sqrt{(14/3)/4}\approx1.0801$. With $t_{3,0.975}\approx3.182$, a 95% paired t interval is approximately $1\pm3.437=[-2.44,4.44]$.
+
+**Interpret the result.** The fixture does not resolve even the sign of the mean difference under its model. Pairing requires a justified matched design. Choosing the best checkpoint on these same outcomes would make the stated prespecified interval a different analysis.
+
+**Change one assumption.** Define a practically meaningful gain before another run. Why should increasing minibatch epochs on the same rollout not count as more independent training seeds?
+
+<details><summary>Check the changed assumption</summary>
+
+Optimization epochs reuse sampled data. Independent training repetitions change the independent-run evidence count; extra epochs may change the procedure being compared but do not create independent outcomes.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/04-intervals-comparisons.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §8.2, PDF p.966; Ross §7.3, PDF p.309; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

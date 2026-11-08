@@ -85,6 +85,35 @@ chain rule before week 7. Practise a tool when its track needs it.
 
 </details>
 
+## Statistical reasoning grows with the course
+
+Use the [probability and statistics foundation](statistics/README.md) when a
+weekly claim introduces a new kind of uncertainty. Read one bridge when you
+need it; you do not need to finish a statistics textbook before starting RL.
+
+| Question you need to answer | Bridge | Check before moving on |
+|---|---|---|
+| What does this conditional average mean? | [Conditioning](statistics/01-probability-conditioning.md) and [expectation](statistics/02-expectation-variance.md) | Name the population and the event being conditioned on. |
+| What varies between runs? | [Sampling and uncertainty](statistics/03-sampling-uncertainty.md) | Separate outcome spread from uncertainty in an estimated mean. |
+| Is one policy's result better? | [Intervals and comparisons](statistics/04-intervals-comparisons.md) | State the independent unit and calculate a difference on matching units when the design is paired. |
+| Can I resample these rows? | [Resampling and dependence](statistics/05-resampling-dependence.md) | Preserve whole episodes, training runs, or patients when their rows are dependent. |
+| Did fitting leak into evaluation? | [Regression and validation](statistics/06-regression-validation.md) | Separate fitting, selection, and final evaluation data. |
+| Can a log evaluate a new policy? | [Importance weighting](statistics/07-importance-weighting.md) | Check logging probabilities and population support before interpreting weights. |
+| Can I reuse a fixed-sample interval while exploring? | [Adaptive data](statistics/08-adaptive-data.md) | Explain what changed when actions or stopping depend on observed results. |
+| What does this experiment establish? | [Statistical claims](statistics/09-statistical-claims.md) | Bound the conclusion to its data, assumptions, and evaluation design. |
+
+**Tiny distinction.** Suppose 25 independent evaluation episodes of one frozen
+policy have sample standard deviation 10 return units. Its estimated mean has
+standard error $10/\sqrt{25}=2$ return units. Ten describes spread between
+episodes; two describes estimated uncertainty in that policy's mean under this
+sampling design. Neither quantity measures how a new training seed might
+change the learned policy. Twenty-five timesteps from one trajectory do not
+automatically provide the same evidence.
+
+Keep a result record with the quantity, unit, data-generating policy, split,
+number of independent units, uncertainty method, and one limitation. This
+record makes a plot explainable before adding more algorithms.
+
 ## One decision problem across several algorithms
 
 This is a synthetic two-step delivery task. Numbers are invented for teaching.

@@ -15,6 +15,10 @@
 Read with [the notes](notes.tex) and [the workbook](workbook.ipynb).
 The examples are small constrained optimisation problems, not safety certificates for trained agents.
 
+**Statistics companion:** [An average-cost budget is different from a tail restriction](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/09-statistical-claims.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Define reward, cost, discounting and budget on the same occupancy convention, then inspect the multiplier update and held-out cost separately.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -228,6 +232,24 @@ or high costs and whether the requested tail fraction lands between sample count
 The multiplier has reward-per-cost units. If every cost and budget is scaled by a positive factor, the corresponding penalty coefficient must be inversely scaled to represent the same tradeoff.
 
 </details>
+
+## Statistics bridge: An average-cost budget is different from a tail restriction
+
+**Model and unit.** A fixed policy has episode cost 0 with probability 0.75 and cost 4 with probability 0.25. The expected-cost budget is 1; this is a fully specified toy distribution.
+
+**Calculate before running.** Expected cost is $0.75(0)+0.25(4)=1$, exactly the budget. Cost variance is $0.25(16)-1^2=3$. The worst quarter of episodes all cost 4, so the upper-tail average over that quarter is 4 even though expected cost equals 1.
+
+**Interpret the result.** Expected-cost feasibility does not impose a cost limit on every episode or control a separately defined tail metric. In a learned policy, estimating the mean and satisfying the population budget are additional distinct questions. An optimizer or multiplier trace does not certify either by itself.
+
+**Change one assumption.** Change the cost-4 probability to 0.1. Calculate mean cost and the worst-quarter average, including the zero-cost mass needed to fill that quarter.
+
+<details><summary>Check the changed assumption</summary>
+
+Mean cost becomes 0.4. The upper quarter contains probability mass 0.1 at cost 4 and 0.15 at cost 0, giving tail average $0.4/0.25=1.6$. Fractional tail mass matters.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.1, 4.3, PDF pp.439, 460; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

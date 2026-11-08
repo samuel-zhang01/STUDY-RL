@@ -285,22 +285,40 @@ class BlackjackEnv:
 
 The workbook helper below handles one-step rows (the bandit special case).
 For a trajectory, construct the product of action ratios explicitly before
-applying the trajectory-level formula. Its numerical floors avoid division
-errors but do not validate coverage; check support and a positive total
-weight before interpreting a result.
+applying the trajectory-level formula. The helper validates observed
+probabilities and rejects an all-zero target-weight sum as undefined. These
+checks cannot establish support for actions absent from the log; inspect the
+logging design separately.
 
 \begin{codebox}
 \begin{minted}{python}
 # project/solutions.py (excerpt)
 def exercise_5_weighted_is(rewards, target_prob, logged_prob):
-    r  = np.asarray(rewards, dtype=float)
-    w  = np.asarray(target_prob) / np.maximum(np.asarray(logged_prob), 1e-12)
-    return float((w * r).sum() / max(w.sum(), 1e-12))
+    r = np.asarray(rewards, dtype=float)
+    w = importance_diagnostics(target_prob, logged_prob)["weights"]
+    if r.shape != w.shape or not np.isfinite(r).all():
+        raise ValueError("finite returns must match logged probabilities")
+    w = w / w.max()  # diagnostics already rejected zero overlap
+    return float(np.dot(w, r) / w.sum())
 \end{minted}
 \end{codebox}
 
 % =============================================================================
 \chapter{Empirical results}
+
+\section{Statistics bridge: Four completed episodes are four units, not every visit}
+\begin{example}[Original statistical teaching fixture]
+For a fixed policy, take independent episodic returns 0, 2, 4 and 6 from the same state-action evaluation protocol. These four numbers are a fixture rather than a measured learning curve.
+
+The mean is 3. Squared deviations sum to $9+1+1+9=20$, so sample SD is $\sqrt{20/3}\approx2.582$ and estimated SE is $\sqrt{20/3}/\sqrt4\approx1.291$. SD describes return spread; SE describes uncertainty in this four-episode mean under independence.
+\end{example}
+Repeated visits inside an episode can share the same later rewards. Counting them as independent episodes understates uncertainty. First-visit selection and backward return computation are separate operations, as the earlier example shows.
+
+\paragraph{Check a changed assumption.} Suppose sixteen independent episodes have the same observed SD. What SE results? Would copying each of the original four returns four times supply that evidence?
+\paragraph{Check.} The planning SE is $2.582/4\approx0.6455$. Copying returns supplies no new independent episode; the four-episode unit count remains four.
+\paragraph{Statistical foundation.} Siegrist \S~\S~6.2, 6.5, PDF pp.817, 844; Ross \S~15.3, PDF p.683. Section source: \url{https://stats.libretexts.org/@go/page/10179}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
 
 \begin{figure}[ht]\centering
 \includegraphics[width=0.92\linewidth]{figs/fig_blackjack_value.pdf}

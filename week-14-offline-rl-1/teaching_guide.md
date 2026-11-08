@@ -14,6 +14,10 @@
 
 Use this guide before expectile, AWR, and CQL exercises; inspect coverage before interpreting returns.
 
+**Statistics companion:** [A held-out split cannot manufacture an unsupported action](../docs/statistics/07-importance-weighting.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Inspect which actions occur in the frozen log, then compare naive extrapolation with the conservative or expectile objective under the same dataset.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -231,6 +235,24 @@ sample weights or constructs an action policy—the two normalisations answer di
 No. The penalty changes an estimate or preference for extrapolation. It does not collect the missing outcome, and formal bounds require additional assumptions.
 
 </details>
+
+## Statistics bridge: A held-out split cannot manufacture an unsupported action
+
+**Model and unit.** Only action A is logged. To isolate missing support, suppose its mean is known to be 0.6. The target chooses A with probability 0.25 and unseen B with probability 0.75.
+
+**Calculate before running.** A world with B mean 0.1 gives target value $0.25(0.6)+0.75(0.1)=0.225$. A world with B mean 0.9 gives $0.25(0.6)+0.75(0.9)=0.825$. Both worlds produce the same A-only logs. If rewards lie in $[0,1]$, the unsupported target contribution alone permits values from 0.15 to 0.90.
+
+**Interpret the result.** The range holds A mean fixed by assumption; finite-sample uncertainty about A would add another issue. A row-level train/test split can check prediction on logged actions, but cannot validate B. Pessimism is an explicit modeling/optimization choice, not observed evidence for B outcomes.
+
+**Change one assumption.** Reduce the target B probability to 0.25. Calculate the corresponding bounded-reward range while A mean remains known. Does narrower uncertainty prove the learned policy is optimal?
+
+<details><summary>Check the changed assumption</summary>
+
+The target value is $0.75(0.6)+0.25q_B$, giving $[0.45,0.70]$. The unsupported component is smaller, but optimality still requires information or assumptions about both actions.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/07-importance-weighting.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§2.4, 7.1, PDF pp.181, 896; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

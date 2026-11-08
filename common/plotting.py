@@ -39,9 +39,13 @@ def use_rl_style() -> None:
 
 
 def shaded(ax, x, ys, label=None, color=None, alpha=0.18, agg="mean"):
-    """Plot mean (or median) ± std/IQR band across seeds.
+    """Plot a descriptive spread band across the rows of ``ys``.
 
-    ys: array of shape (n_seeds, n_steps).
+    ``ys`` has shape (n_runs, n_steps). ``agg="mean"`` shows the row mean
+    plus/minus empirical row SD (ddof=0); ``agg="median"`` shows the middle
+    50 percent of rows. Neither band is a confidence interval or a standard
+    error. Repeated timesteps are not additional independent runs. The caller
+    must label the run unit, sample count, and band definition in the figure.
     """
     ys = np.asarray(ys)
     if agg == "mean":

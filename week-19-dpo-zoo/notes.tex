@@ -439,6 +439,20 @@ not certify an arbitrary current TRL API or a fixed GPU training time.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: A preference probability depends on the label-noise model}
+\begin{example}[Original statistical teaching fixture]
+A latent preference favors an answer with probability 0.8. Independently, an annotator flips the intended binary label with probability 0.2. This simple symmetric-noise model is a teaching assumption.
+
+The observed positive-label probability is $0.8(0.8)+0.2(0.2)=0.68$. Its log odds are $\log(0.68/0.32)\approx0.75377$, whereas the latent preference log odds are $\log(0.8/0.2)\approx1.38629$.
+\end{example}
+Even infinite data from these annotators estimate the observed-label mechanism, not the unobserved noiseless preference without extra assumptions. A preference-loss margin does not automatically become a calibrated task reward or a universal measure of human preference.
+
+\paragraph{Check a changed assumption.} Set the flip probability to 0.5, then to zero. What observed probabilities result? Can more pairs identify an unknown latent preference and unknown flip rate from one observed probability?
+\paragraph{Check.} They become 0.5 and 0.8. With both latent probability and flip rate unknown, one observed probability cannot identify both; more of the same observations only refine that probability.
+\paragraph{Statistical foundation.} Siegrist \S~\S~2.4, 4.7, 7.3, PDF pp.181, 507, 917. Section source: \url{https://stats.libretexts.org/@go/page/10163}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \autoref{fig:loss}, \autoref{fig:margin} and \autoref{fig:acc} show
 the bake-off on the toy preference dataset. All six variants drive
 the pairwise accuracy from chance ($\approx 0.5$) toward $1.0$ in

@@ -338,6 +338,20 @@ class NoisyLinear(nn.Module):
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: A return distribution is not an uncertainty interval for its mean}
+\begin{example}[Original statistical teaching fixture]
+A fixed policy has returns -1, 0 and 1 with probabilities 0.25, 0.5 and 0.25. Assume independent evaluation episodes for the mean-uncertainty calculation.
+
+The return mean is 0 and variance is $0.25(1)+0.5(0)+0.25(1)=0.5$. Its SD is $\sqrt{0.5}\approx0.7071$. The sampling SD of the mean across 100 independent episodes is instead $\sqrt{0.5/100}\approx0.07071$.
+\end{example}
+Distributional RL models variation of returns conditional on state and action. That outcome spread is different from epistemic uncertainty about learned probabilities or the mean. A wide categorical support is not a 95\% confidence interval.
+
+\paragraph{Check a changed assumption.} Quadruple the independent evaluation episodes. What happens to the return distribution and the sampling SD of its mean?
+\paragraph{Check.} The modeled return distribution is unchanged. The sampling SD of the mean halves to approximately 0.03536 under the same independence and fixed-policy assumptions.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.3, 6.2, PDF pp.460, 817. Section source: \url{https://stats.libretexts.org/@go/page/10158}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.98\linewidth]{figs/fig_rainbow_ablation.pdf}

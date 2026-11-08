@@ -45,7 +45,7 @@ conditions and one condition your local experiment does not reproduce.
 
 \paragraph{What to learn.} Combines a model-based target-policy value with an importance-weighted residual correction. Correct propensity or reward-model conditions give the double-robustness property.
 
-\paragraph{What the result requires.} Overlap and appropriate fitting/evaluation separation still matter. A poor model can inflate variance, so there is no unconditional dominance over IPS. Consistency is not the same as finite-sample unbiasedness.
+\paragraph{What the result requires.} Overlap and appropriate fitting/evaluation separation still matter. A poor model can inflate variance, so there is no unconditional dominance over IPS. Consistency is not the same as finite-sample unbiasedness. With adaptive logging, the relevant recorded probability is conditional on the decision history; an IID-row variance formula needs a separate justification. The supplied empirical figures instead use independent repetitions of complete logs and separate nuisance fits, conditional on one fixed reward model and target.
 
 \paragraph{Notebook investigation.} Use \texttt{exercise\_6\_dr\_softmax}. Set the fitted reward to zero and check recovery of IPS. Then perturb reward predictions while keeping logged propensities exact.
 
@@ -100,4 +100,21 @@ Return to the teaching guide's notebook investigation for the local function
 names, expected checks and interpretation questions. Source code and notebooks
 are available together in the course repository; the web reader is the entry
 point and the downloaded notebook is the execution workspace.
+\section*{Statistics reading bridge}
+\textbf{A defined estimate can still have almost no observed overlap.} Read estimator bias and bootstrap resampling together. Inspect zero-total-weight resamples explicitly, and separate a conditional fixed-model interval from uncertainty across the complete nuisance-fitting and policy-selection pipeline.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~4.1, 7.1, PDF pp.439, 896; Ross \S~15.3, PDF p.683. \url{https://stats.libretexts.org/@go/page/10189}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
+\paragraph{Read the empirical comparison carefully.} The reference figures keep
+the latent environment and target fixed, regenerate whole adaptive logs and
+independent uniform fitting samples, and use one shared 50,000-context Monte
+Carlo value with its MC SE. A numerical reference is not exact ground truth.
+For SWITCH, the plotted identity is empirical MSE equals squared empirical mean
+error plus variance with denominator $R$, all in squared reward units. It is
+not an assertion that the population bias or variance was known. Reconstruct
+the identity for errors $(-0.1,0.1,0.2)$: $1/50=1/225+7/450$.
+Then explain how changing the latent model between repetitions would mix
+across-environment variability with fixed-target estimation error. A threshold
+that reduces error on one finite fixture need not be best on another.
+
 \end{document}

@@ -80,6 +80,9 @@ reports/
 !syllabus.pdf
 workbook.executed.ipynb
 
+# Local reference books are sources for original lessons, not course downloads.
+textbooks/
+
 # Small, reproducible teaching fixtures (large training data remains ignored).
 !llm-lab/data/
 !llm-lab/data/*.jsonl

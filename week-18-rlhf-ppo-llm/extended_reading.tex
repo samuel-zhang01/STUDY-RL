@@ -74,4 +74,9 @@ assumptions and one observation that would challenge your interpretation.
 Before running a policy update, hand-calculate a two-comparison Bradley--Terry loss, the per-token reference log ratio, and the final-token reward. Verify terminal value masking in GAE. Record the preference model, reference model and rollout-policy snapshots separately so their roles cannot collapse into one variable.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{Twenty preference pairs may contain only two prompt units.} Read dependence and empirical resampling before presenting preference accuracy intervals. Report prompt and pair counts separately, preserve prompt clusters, and retain RLHF primary references for reward modeling and KL-regularized policy optimization.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~4.5, 6.2, PDF pp.478, 817; Ross \S~15.3, PDF p.683. \url{https://stats.libretexts.org/@go/page/10160}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

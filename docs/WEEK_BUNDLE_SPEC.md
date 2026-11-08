@@ -89,6 +89,11 @@ that every existing bundle already satisfies every requirement below.
   reference implementation. A separate learner attempt can use
   `# YOUR CODE HERE` and raise `NotImplementedError`; say that this incomplete
   attempt is expected to stop. Do not call a reference run a graded submission.
+- For scaffolded exercises, provide an explicit `REFERENCE_MODE` or equivalent
+  selection and make the same checks call the selected implementation. Learner
+  mode must stop on unfinished work instead of falling back to a reference.
+  Verify at least one core check with a deliberately wrong learner and a
+  correct learner; an assertion against the reference alone is insufficient.
 - Use a fresh kernel and the week directory as the execution working directory.
   Preserve existing notebook cell IDs, metadata, and outputs on targeted edits.
 - Plots use `RL_PALETTE`; figures saved to `figs/` so the LaTeX can include them.

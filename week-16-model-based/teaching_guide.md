@@ -14,6 +14,10 @@
 
 Use this guide before Gaussian KL, lambda-return, and the world-model exercises.
 
+**Statistics companion:** [Shared model bias can hide behind ensemble agreement](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/06-regression-validation.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Compute a short imagined return with the correct continuation masks, then compare imagined rewards and state predictions with held-out real transitions.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -235,6 +239,24 @@ initial history and action sequence; exercise 6's first/last policy return does 
 The representation can preserve pixels while missing action-dependent reward or transition details. Planning needs accurate consequences under the policy’s proposed actions, including their coverage.
 
 </details>
+
+## Statistics bridge: Shared model bias can hide behind ensemble agreement
+
+**Model and unit.** A three-step model predicts reward 1 at every step while the true reward is 0.8. Gamma is 0.9, and the horizon and transitions are held fixed.
+
+**Calculate before running.** The model predicts $1+0.9+0.9^2=2.71$. The true value is $0.8(2.71)=2.168$, so the return error is 0.542. Five identical models have ensemble disagreement zero while all share that same error.
+
+**Interpret the result.** Agreement measures dispersion among models, not accuracy against the environment. The fixture isolates persistent reward bias; learned transitions and planner-driven distribution shift can create additional errors. Reconstruction loss alone does not bound this return discrepancy.
+
+**Change one assumption.** Extend the constant reward bias 0.2 indefinitely at gamma=0.9. What return bias follows under this deliberately simple model? Which held-out observations would challenge it?
+
+<details><summary>Check the changed assumption</summary>
+
+The discounted bias is $0.2/(1-0.9)=2$. Compare predicted and observed rewards and transitions on a separate real-data evaluation protocol, including actions selected by the planner.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.1, 7.1, PDF pp.439, 896; Ross §§9.2–9.4, PDF pp.421–429; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

@@ -527,6 +527,20 @@ candidates, not selection rates conditional on group eligibility.
 % ============================================================================
 \chapter{Empirical results}
 
+\section{Statistics bridge: Cross-fitting cannot repair two misspecified nuisance models}
+\begin{example}[Original statistical teaching fixture]
+For one context, target action A has true logger probability 0.5 and reward mean 0.6. A misspecified fitted logger uses 0.25 for A, while a fitted reward model predicts 0.8.
+
+The DR conditional bias contribution is $(1-b/\widehat b)(\widehat q-q)=(1-0.5/0.25)(0.8-0.6)=-0.2$. Thus the expected estimate is $0.6-0.2=0.4$ in this fixture. Correcting either nuisance makes the product zero under the remaining identification assumptions.
+\end{example}
+Independent fitting or cross-fitting separates evaluation outcomes from fitting noise; it does not make either model correct. A frozen-model bootstrap describes conditional variation, and does not include the entire fitting and policy-selection pipeline unless those steps are repeated.
+
+\paragraph{Check a changed assumption.} Keep the reward-model error 0.2 but set the fitted propensity to 0.5. Then explain why an ESS threshold cannot detect all reward-model or propensity misspecification.
+\paragraph{Check.} The bias term becomes zero because the propensity ratio is correct. ESS only describes concentration of supplied observed weights; it cannot verify that those propensities are correct or that reward predictions generalize.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.7, 7.1, PDF pp.507, 896; Ross \S~15.3, PDF p.683. Section source: \url{https://stats.libretexts.org/@go/page/10189}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 We ran the Phase-1 demo on 400 candidates $\times$ 60 jobs, $T=1500$
 logged decisions, $k=10$ shortlist, $\varepsilon=0.05$ uniform mass to
 guarantee overlap. Results below are from

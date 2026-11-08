@@ -14,6 +14,10 @@
 
 Use this guide before exercises 5–9. The estimator is only as meaningful as its sampling assumptions.
 
+**Statistics companion:** [A defined estimate can still have almost no observed overlap](../docs/statistics/07-importance-weighting.md) · [Related foundation](../docs/statistics/05-resampling-dependence.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Compute IPS and SNIPS on a tiny log, check target support, then add a reward-model correction fitted independently of evaluation rows.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -157,9 +161,9 @@ A reward model can extrapolate to B, but that is a modeling assumption.
 ## Code bridge
 
 - [ope.py](project/ope.py): `ips`, `snips`, and `doubly_robust` correspond to the formulas.
-  `snips` floors its denominator: detect zero target overlap before interpreting its returned zero.
-- `RidgeRewardModel.fit` is a convenient nuisance model; the workbook's same-log fit is a demo.
-  Split the log to study evaluation validity, and report the split along with estimates.
+  `snips` rejects an all-zero target-weight sum as undefined; inspect population support and observed overlap before interpreting any estimate.
+- `RidgeRewardModel.fit` is a convenient nuisance model. The reference DR/Direct/SWITCH paths now fit it on an independently generated uniform log with the same latent reward parameters and context law.
+  `independent_logged_sample` separates nuisance fitting from evaluation; record that split. This toy split does not make a misspecified reward model correct.
 - `ips_variance` estimates variance of the mean under independent rows.
   Adaptive logging, clustered users, or delayed outcomes require a matching uncertainty analysis.
 - [agents.py](project/agents.py): `EpsilonGreedyLogger.propensities` is the full action distribution.
@@ -218,10 +222,13 @@ information for this target. Report maximum weight and ESS alongside IPS/SNIPS.
 
 Add the guide's two-world fixture: logger always A, target always B. No amount of repeated A data
 can distinguish reward 0 from reward 1 for B. This is stronger than a numerical warning about a
-small denominator. The current helper's denominator floor must not be interpreted as an answer.
-For exercise 6, create a training/evaluation split before fitting the reward model; keep the target
-fixed while evaluating. Comparing that estimate with the same-log demonstration teaches which
-assumption changed, without guaranteeing one particular sample moves up or down.
+small denominator. The current SNIPS helper raises `ValueError` when total observed target weight
+is zero; record the undefined estimate instead of substituting a policy value.
+For exercise 6, inspect `independent_logged_sample`: the reference now fits the reward model on
+an independent uniform sample with the same latent environment, then holds that fitted model
+and target fixed on the evaluation log. Compare with a deliberately labeled same-log fit only as
+an extension. State which fitting/evaluation assumption changes, without predicting that one
+particular sample must move up or down.
 
 <details>
 <summary>Check your interpretation: Can excellent ESS rule out confounding or a wrongly recorded propensity?</summary>
@@ -229,6 +236,48 @@ assumption changed, without guaranteeing one particular sample moves up or down.
 No. ESS describes weight concentration. It does not validate the logging mechanism, outcome definition, causal assumptions, or policy-selection split.
 
 </details>
+
+## Read the static OPE figures as repeated experiments
+
+Each static OPE comparison holds **one latent reward model and one target policy fixed**. The 12-repetition estimator bars use a fixed softmax target; the separate 20-log SWITCH comparison uses a fixed oracle-greedy target. Each repetition generates a new adaptive logging history and fits a new reward nuisance model on a separate uniform-logger sample from that same environment. The independent repetition is the **whole log plus its independent fit**, rather than an individual row of the changing logger. The bars show mean estimate ± descriptive sample SD (denominator 11); they are not confidence intervals or a comparison across different latent environments.
+
+Each target has its own reference, averaging the simulator's known target-weighted reward means over 50,000 independently generated fresh contexts. This integrates out action/reward sampling, but still has **context Monte Carlo error**. The saved reference SE describes that integration error, not the uncertainty of an OPE estimator. Sharing one target's reference across its repetitions keeps that comparison consistent; it does not make the reference exact. The producer saves estimates, seeds and reference details in `figs/fig_ope_bias.json` and `figs/fig_bias_variance.json`.
+
+For the 20-log SWITCH experiment, write each error against its oracle-target reference as $e_r=\widehat V_r-V_{ref}$. Define $\bar e=R^{-1}\sum_r e_r$. The finite empirical identity is
+
+$$\frac1R\sum_r e_r^2=\bar e^2+\frac1R\sum_r(e_r-\bar e)^2.$$
+
+The plotted quantities are **empirical MSE**, **squared empirical mean error**, and **empirical variance with denominator $R$**. They all have squared reward units. This denominator is 20 for the finite decomposition; it serves a different purpose from the sample-SD denominator 11 in the 12-repetition bars. The variance is descriptive across the repeated log-and-fit experiments; the squared mean error is not a known population squared bias. Monte Carlo error in the shared reference shifts all errors together and affects the squared-error summaries.
+
+**Calculate a tiny case:** for errors $(-0.1,0.1,0.2)$, the mean error is $1/15$, its square is $1/225$, variance with denominator three is $7/450$, and MSE is $1/50$. Thus $1/225+7/450=1/50=0.02$. Using an $R-1$ sample variance would break this particular finite decomposition.
+
+**Predict before changing the threshold:** increasing SWITCH's threshold includes more weighted residual corrections. Once it exceeds every observed weight, the computation equals DR on that log. A smaller threshold can introduce model-dependent bias; neither its variance nor the MSE must improve monotonically. A correct conditional-propensity argument can justify DR's mean under its assumptions, but does not make its observed 12- or 20-log mean equal the reference.
+
+<details><summary>Transfer check: would changing the latent reward parameters in every repetition still estimate the same fixed-policy error distribution?</summary>
+
+No. It would mix variability across environments and target values with estimator variation. Either hold the environment and target fixed, as these figures do, or define a new across-environment estimand and center each estimate on its own appropriately computed value. Neither design makes adaptive rows independent. A shared noisy reference also leaves numerical uncertainty about the common centering value; report its Monte Carlo SE separately.
+
+</details>
+
+See [sampling units](../docs/statistics/03-sampling-uncertainty.md), [resampling and dependence](../docs/statistics/05-resampling-dependence.md), and [estimation assumptions](../docs/statistics/07-importance-weighting.md). These figures describe finite synthetic repeated experiments; the reading pack supplies the algorithm-specific assumptions.
+
+## Statistics bridge: A defined estimate can still have almost no observed overlap
+
+**Model and unit.** Ten independent logged rows contain exactly one target-action observation. The logger probability for that action is 0.1, the deterministic target always chooses it, and its observed reward is 1.
+
+**Calculate before running.** Weights are $(10,0,\ldots,0)$. IPS is $10/10=1$, SNIPS is $10/10=1$, and weight ESS is $10^2/10^2=1$. An ordinary ten-row bootstrap omits the sole contributing row with probability $(9/10)^{10}\approx0.34868$, making that resample SNIPS undefined.
+
+**Interpret the result.** Agreement of two estimates is not evidence of precision. Population support is positive in the fixture, while observed overlap is only one row. More bootstrap draws do not create another target-action outcome; silently discarding undefined resamples changes the reported analysis.
+
+**Change one assumption.** Clip the weight to 5 and calculate IPS. What did the numerical stabilization change? Which uncertainty is absent if a reward model is frozen during resampling?
+
+<details><summary>Check the changed assumption</summary>
+
+Clipped IPS is 0.5. Clipping changes the estimator and its bias, rather than adding information. A frozen-model bootstrap omits refitting and model-selection variability; it answers a conditional question.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/07-importance-weighting.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.1, 7.1, PDF pp.439, 896; Ross §15.3, PDF p.683; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

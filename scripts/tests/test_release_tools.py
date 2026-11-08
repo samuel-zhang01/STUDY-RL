@@ -39,6 +39,13 @@ def test_links_must_exist_inside_release_tree(tmp_path):
     assert check_release.check_links("[outside](../outside.md)", source, tmp_path)
 
 
+def test_reference_books_are_not_release_material(tmp_path):
+    book = tmp_path / "textbooks" / "reference.pdf"
+    book.parent.mkdir()
+    book.write_bytes(b"Local reference only")
+    assert check_release.check_path(book, tmp_path)
+
+
 def test_html_assets_and_browser_sources_receive_release_checks(tmp_path):
     page = tmp_path / "index.html"
     page.write_text('<script src="missing.js"></script><a href="https://example.com">External</a>')

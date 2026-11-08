@@ -369,6 +369,20 @@ includes remaining time in its state and terminates at the horizon.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Conditional averaging removes one specific source of noise}
+\begin{example}[Original statistical teaching fixture]
+Condition on a fixed observed next state and fixed Q-values (4,-2). The next action has probabilities (0.75,0.25). Immediate reward is 1 and gamma is 0.9.
+
+The sampled continuation has mean $0.75(4)+0.25(-2)=2.5$, second moment $0.75(16)+0.25(4)=13$, and variance $13-2.5^2=6.75$. The full sampled target has mean $1+0.9(2.5)=3.25$ and variance $0.9^2(6.75)=5.4675$. Expected SARSA uses 3.25 directly under this conditioning.
+\end{example}
+Averaging the next action removes its conditional sampling variance. Random next states, reward noise, estimated Q-values and future control changes remain. This calculation does not establish universally lower final policy error.
+
+\paragraph{Check a changed assumption.} Make the next-action probabilities (0.5,0.5). Calculate the continuation mean and variance. Which randomness is still absent from this calculation?
+\paragraph{Check.} The continuation mean becomes 1 and variance becomes 9. The calculation still holds the next state and Q-values fixed; it does not describe all randomness of training.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.3, 4.7, PDF pp.460, 507. Section source: \url{https://stats.libretexts.org/@go/page/10163}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \section{CliffWalking bake-off}
 
 \begin{figure}[h]

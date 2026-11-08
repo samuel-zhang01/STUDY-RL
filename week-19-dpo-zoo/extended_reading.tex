@@ -74,4 +74,9 @@ assumptions and one observation that would challenge your interpretation.
 For each objective, write a function signature listing label type, reference scores, temperature, margin and length convention. Then compare losses on identical synthetic inputs. Equal loss values across different objectives are not comparable units of human preference quality; use held-out evaluations and inspect failure modes.
 
 \noindent\textbf{Evidence boundary.} Source identities and the central claims above were checked against primary material. These annotations do not reproduce every proof, training run or empirical result. Use the original paper for theorem assumptions and experimental details; use \texttt{project/} and the workbook for the exact course implementation.
+\section*{Statistics reading bridge}
+\textbf{A preference probability depends on the label-noise model.} Read conditional expectation and maximum likelihood with an explicit label-noise mechanism. Distinguish fitting observed preferences from identifying latent utility, while keeping the DPO/IPO/ORPO primary sources for their distinct objectives.
+
+\textbf{Checked textbook locations:} Siegrist \S~\S~2.4, 4.7, 7.3, PDF pp.181, 507, 917. \url{https://stats.libretexts.org/@go/page/10163}. These locations support the probability and estimation concepts; the algorithm-specific results remain attributed to the primary readings above. The course source catalog distinguishes the original textbook from its supplied instructor manual and records PDF-viewer pagination.
+
 \end{document}

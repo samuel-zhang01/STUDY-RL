@@ -15,6 +15,10 @@
 Use this beside [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Read each **Predict** prompt before uncovering the arithmetic.
 
+**Statistics companion:** [A posterior mean is not the observed success fraction](../docs/statistics/08-adaptive-data.md) · [Related foundation](../docs/statistics/03-sampling-uncertainty.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Update one arm mean, explain chosen-action feedback, then distinguish the estimate from uncertainty about its reward law. Leave LinUCB and trajectory OPE for the later route.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -182,8 +186,9 @@ from context or evaluate a different policy from logged actions.
 
 - `SyntheticLeadBrokerBandit.expected_reward` uses a sigmoid. Linear LinUCB is
   therefore a modelling approximation here, not an exact instance of its linear theorem.
-- `exercise_8_snips` normalises importance weights. A numerical denominator floor
-  cannot recover outcomes for actions absent from the logging policy's support.
+- `exercise_8_snips` validates observed probabilities and normalises importance
+  weights; it rejects an all-zero target-weight sum as undefined. Validation cannot
+  recover outcomes for actions absent from the logging policy's support.
 
 ## Optional theory: what the regret result does and does not say
 
@@ -251,6 +256,24 @@ Its count can stay fixed while the global round t increases, increasing log(t) i
 
 </details>
 
+## Statistics bridge: A posterior mean is not the observed success fraction
+
+**Model and unit.** Use independent stationary Bernoulli rewards and an explicitly chosen Beta prior for one arm. This is a probability-model illustration, not an algorithm ranking.
+
+**Calculate before running.** After three successes and one failure, a Beta$(1,1)$ prior becomes Beta$(4,2)$. The observed success fraction is $3/4$, but the posterior mean is $4/6=2/3$ and posterior variance is $4(2)/(6^2(7))=2/63\approx0.031746$. With a Beta$(10,10)$ prior, the same observations give Beta$(13,11)$, mean $13/24\approx0.541667$.
+
+**Interpret the result.** The data are identical; the posterior changes because the prior is part of the model. A posterior variance is not the frequentist SE of the observed success fraction, and a UCB exploration bonus is another object again.
+
+**Change one assumption.** Replace the prior by Beta(2,2). Calculate the new mean and explain whether a smaller posterior spread would establish lower deployed regret.
+
+<details><summary>Check the changed assumption</summary>
+
+The posterior is Beta$(5,3)$, with mean $5/8=0.625$. A posterior summary under this reward model does not establish deployed regret or protection against a changing reward law.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/08-adaptive-data.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §7.4, PDF p.929; §6.2, PDF p.817; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
+
 ## Retrieve and transfer
 
 <details><summary>1. Why not divide an arm's update by the total round number?</summary>
@@ -267,7 +290,8 @@ other persistent state that affects reward. Those consequences need modelling.
 
 <details><summary>3. Optional week 11 transfer: can clipping repair an action with no logged support?</summary>
 
-No. Clipping prevents division errors but supplies no counterfactual evidence.
+No. Clipping can limit valid large weights, but it cannot repair a zero logging
+probability or supply counterfactual evidence.
 Coverage is a property of data collection, not a denominator repair.
 </details>
 

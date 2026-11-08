@@ -76,15 +76,15 @@ export function mountPlot(host, id) {
       color:[colors.green,colors.amber,colors.blue,colors.violet], textStyle:{fontFamily:'Inter, ui-sans-serif, system-ui, sans-serif',color:colors.ink},
       tooltip:{trigger:'axis',renderMode:'richText',confine:true}, grid:{top:30,right:20,bottom:48,left:40,containLabel:true},
       legend:{show:false},
-      xAxis:{type:'value',nameLocation:'middle',nameGap:29,axisLabel:{fontSize:10,color:colors.muted},splitLine:{show:false},axisLine:{lineStyle:{color:'#bacab4'}}},
-      yAxis:{type:'value',axisLabel:{fontSize:10,color:colors.muted},splitLine:{lineStyle:{color:'#e8eee1'}}},
+      xAxis:{type:'value',nameLocation:'middle',nameGap:29,axisLabel:{fontSize:12,color:colors.muted},splitLine:{show:false},axisLine:{lineStyle:{color:'#bacab4'}}},
+      yAxis:{type:'value',axisLabel:{fontSize:12,color:colors.muted},splitLine:{lineStyle:{color:'#e8eee1'}}},
       aria:{enabled:false}, ...description};
   }
   function paint(index, option, description) {
     const element = query(`[data-chart="${index}"]`);
     element.setAttribute('aria-label', description);
-    if(option.yAxis?.name) option.yAxis={...option.yAxis,nameTextStyle:{align:'left',fontSize:10}};
-    if(option.xAxis?.name) option.xAxis={...option.xAxis,nameTextStyle:{fontSize:10}};
+    if(option.yAxis?.name) option.yAxis={...option.yAxis,nameTextStyle:{align:'left',fontSize:12}};
+    if(option.xAxis?.name) option.xAxis={...option.xAxis,nameTextStyle:{fontSize:12}};
     if(charts[index]) charts[index].setOption(options(option), {notMerge:true});
   }
   function legend(index, items) {
@@ -150,7 +150,7 @@ export function mountPlot(host, id) {
       });
       paint(0,{grid:{top:12,right:12,left:12,bottom:54},legend:{show:false},tooltip:{trigger:'item',renderMode:'richText',formatter:p=>{const s=p.data.state;return GRID.walls.includes(s)?'Wall':isTerminal(s)?`${s===GRID.goal?'Goal +1':'Trap −1'} on entry; future value 0`:`State ${coordinate(s)}\nV after ${step} sweeps: ${f(values[s],5)}\nNext optimal backup: ${f(next[s],5)}`;}},
         xAxis:{type:'category',data:[0,1,2,3,4],position:'top',show:false,splitArea:{show:true}},yAxis:{type:'category',data:[0,1,2,3],inverse:true,show:false},
-        visualMap:{min:-1,max:1,orient:'horizontal',left:'center',bottom:2,itemWidth:15,itemHeight:150,inRange:{color:['#d8ab8d','#fafbf1','#8eb88b']},text:['+1','−1'],textStyle:{color:colors.muted,fontSize:10}},
+        visualMap:{min:-1,max:1,orient:'horizontal',left:'center',bottom:2,itemWidth:15,itemHeight:150,inRange:{color:['#d8ab8d','#fafbf1','#8eb88b']},text:['+1','−1'],textStyle:{color:colors.muted,fontSize:12}},
         series:[{name:'State value',type:'heatmap',data,label:{show:true},emphasis:{disabled:true}}]},
         `A 5-column 4-row value grid after ${step} sweeps. Selected state ${coordinate(selected)} has value ${f(values[selected])}; next backup is ${f(best)}. All states and actions are available in the tables.`);
       paint(1,{xAxis:{type:'value',min:0,max:40,name:'Completed sweep',nameLocation:'middle',nameGap:28},yAxis:{type:'value',min:0,max:1,name:'Maximum change'},series:[line('Bellman residual',Array.from({length:step+1},(_,k)=>[k,residualAt(k)]))]},
@@ -226,7 +226,7 @@ export function mountPlot(host, id) {
       paint(0,{xAxis:{type:'value',min:0,max:1,name:'Target probability π(B)',nameLocation:'middle',nameGap:28},yAxis:{type:'value',name:'Mean reward / estimate',min:0},
         series:[line('Simulator truth',curve.map(p=>[p.p,p.truth]),{lineStyle:{color:colors.ink,type:'dashed',width:2}}),line('IPS',curve.map(p=>[p.p,p.ips]),{lineStyle:{color:colors.green,width:3}}),line('Self-normalised',curve.map(p=>[p.p,p.snips]),{lineStyle:{color:colors.blue,width:2,type:'dotted'}}),line(`Clipped, c=${f(cap)}`,curve.map(p=>[p.p,p.clipped]),{lineStyle:{color:colors.amber,width:2}}),{name:'Selected target',type:'scatter',data:[[target,x.truth]],symbolSize:10,itemStyle:{color:colors.violet},markLine:{silent:true,symbol:['none','none'],label:{show:false},lineStyle:{color:colors.violet,type:'dashed'},data:[{xAxis:target}]}}]},
         `At target B probability ${f(target)}, true value is ${f(x.truth)}; IPS ${x.supported?f(x.ips):'unsupported'}, self-normalised IPS ${x.supported?f(x.snips):'unsupported'}, clipped IPS ${x.supported?f(x.clipped):'unsupported'}.`);
-      paint(1,{legend:{show:false},grid:{top:30,left:45,bottom:46,right:16,containLabel:true},xAxis:{type:'category',data:log.map(r=>r.i),name:'Logged row (chronological)',nameLocation:'middle',nameGap:28,axisLabel:{interval:49,fontSize:10}},yAxis:{type:'value',min:0,name:'Importance weight',max:Math.max(1,largest*1.1)},series:[{name:'Weight',type:'bar',barCategoryGap:'0%',data:log.map((row,i)=>({value:x.weights[i],itemStyle:{color:row.action===1?colors.green:colors.amber}}))}]},
+      paint(1,{legend:{show:false},grid:{top:30,left:45,bottom:46,right:16,containLabel:true},xAxis:{type:'category',data:log.map(r=>r.i),name:'Logged row (chronological)',nameLocation:'middle',nameGap:28,axisLabel:{interval:49,fontSize:12}},yAxis:{type:'value',min:0,name:'Importance weight',max:Math.max(1,largest*1.1)},series:[{name:'Weight',type:'bar',barCategoryGap:'0%',data:log.map((row,i)=>({value:x.weights[i],itemStyle:{color:row.action===1?colors.green:colors.amber}}))}]},
         `Largest observed weight is ${f(largest)}. A rows are amber and B rows green; the aggregate counts, rewards, and weights are in the table. ESS is ${f(x.ess,1)}.`);
       setCaption(0,'Every point reuses the same 200-row log. The vertical line selects your target. Unsupported estimates are omitted. Unnormalised IPS can exceed 1; a single log’s closeness to truth does not rank estimators.');
       setCaption(1,`A rows: ${x.summary[0].count} (amber). B rows: ${x.summary[1].count} (green). Largest weight ${f(largest)}. A weight can be zero when the target never chooses that action.`);

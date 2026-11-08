@@ -14,6 +14,10 @@
 
 Use this guide before exercises 1–4, then connect its second example to MAPPO.
 
+**Statistics companion:** [A win rate depends on the role distribution](../docs/statistics/04-intervals-comparisons.md) · [Related foundation](../docs/statistics/05-resampling-dependence.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Check the player perspective at selection, leaf evaluation and backup; evaluate against a frozen opponent with balanced roles before interpreting self-play progress.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -219,6 +223,24 @@ random-opponent benchmark is too weak to diagnose a perspective error reliably.
 When the game is not alternating two-player zero-sum under this storage convention—for example an extra turn, cooperative rewards, or player-indexed values. Track whose payoff each number represents.
 
 </details>
+
+## Statistics bridge: A win rate depends on the role distribution
+
+**Model and unit.** Against a fixed opponent, an invented evaluation observes 40 wins in 50 first-player games and 10 wins in 50 second-player games. The target schedule gives each role equal weight.
+
+**Calculate before running.** The role-specific rates are $40/50=0.8$ and $10/50=0.2$. Their equal-role average is $0.5(0.8)+0.5(0.2)=0.5$. Reporting only the first-player games would give 0.8 and answer another question. A target schedule with 75% first-player games gives $0.75(0.8)+0.25(0.2)=0.65$.
+
+**Interpret the result.** Opponent, side, opening position and draw handling belong in the metric. Two legs sharing an opening or opponent seed can be a matched unit; do not pretend every move is an independent match. A rising self-play score can also reflect a changing opponent.
+
+**Change one assumption.** Specify the draw score and role distribution before another evaluation. Which comparison requires a frozen opponent, and which question would justify opponent diversity?
+
+<details><summary>Check the changed assumption</summary>
+
+A fixed-opponent improvement comparison should hold the opponent protocol fixed. Generalization over opponents requires an explicitly sampled opponent population; those opponents and match groupings become part of the independent-unit design.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/04-intervals-comparisons.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.1, 4.5, PDF pp.439, 478; Ross §7.3, PDF p.309; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieval and transfer
 

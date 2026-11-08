@@ -15,6 +15,10 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 The key distinction is between a scalar loss and its parameter gradient.
 
+**Statistics companion:** [An unbiased policy-gradient sample can still be mostly noise](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/03-sampling-uncertainty.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Enumerate the two-action score-function gradient and check the ascent/loss sign, then add a baseline and explain its action-independence condition.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -236,6 +240,24 @@ to using no baseline, which disproves a universal variance-reduction claim.
 The advantages multiply different score gradients. Their probability-weighted sum can be zero while the probability-weighted sum of those products is positive.
 
 </details>
+
+## Statistics bridge: An unbiased policy-gradient sample can still be mostly noise
+
+**Model and unit.** A one-step Bernoulli policy chooses the rewarding action with probability 0.2. Its score-function gradient sample is 0.8 with probability 0.2 and 0 with probability 0.8.
+
+**Calculate before running.** The gradient mean is $0.2(0.8)=0.16$, second moment is $0.2(0.8^2)=0.128$, and variance is $0.128-0.16^2=0.1024$. Averaging 25 independent samples gives sampling SD $\sqrt{0.1024/25}=0.064$; 100 independent samples give 0.032.
+
+**Interpret the result.** Unbiasedness concerns the average over repeated samples; it does not make each update accurate or positive. Correlated tokens or states are not automatically independent gradient samples. Baseline comparison must examine complete gradient vectors, not only reward coefficients.
+
+**Change one assumption.** At the same batch size, a baseline halves the full gradient variance. By what factor does the sampling SD shrink? Does halving coefficient variance prove this premise?
+
+<details><summary>Check the changed assumption</summary>
+
+The sampling SD is multiplied by $1/\sqrt2\approx0.7071$. Coefficients are multiplied by score vectors, so their variance alone does not establish variance reduction of the full gradient.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§4.3, 4.7, 6.2, PDF pp.460, 507, 817; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

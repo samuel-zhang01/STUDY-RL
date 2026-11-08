@@ -15,6 +15,10 @@
 Read this beside [the notes](notes.tex), then attempt [the workbook](workbook.ipynb).
 The numerical examples below are constructed teaching cases, not training results.
 
+**Statistics companion:** [Adaptation steps are not independent new tasks](../docs/statistics/04-intervals-comparisons.md) · [Related foundation](../docs/statistics/08-adaptive-data.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Separate novelty reward from task reward, then specify what information is available during adaptation and evaluate on held-out tasks.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -223,6 +227,24 @@ how quickly an agent learns unknown means from bandit feedback.
 Yes. Intrinsic reward changes the optimisation signal. Record external goal hits separately, and compare equal interaction budgets before calling a method more useful.
 
 </details>
+
+## Statistics bridge: Adaptation steps are not independent new tasks
+
+**Model and unit.** Three independent held-out tasks give adaptation gains 1, 3 and 5, each summarized after the same adaptation budget. The target is mean gain over the task distribution.
+
+**Calculate before running.** The task mean is 3, deviations are -2, 0 and 2, sample variance is $8/(3-1)=4$, and SE is $2/\sqrt3\approx1.1547$. Reusing twenty adaptation steps per task leaves three independently sampled tasks, not sixty.
+
+**Interpret the result.** A large number of within-task transitions can refine a task result without establishing generalization over tasks. A meta-learning claim also needs held-out task selection and a fixed adaptation protocol. Rewarding novelty changes the objective unless external outcomes are evaluated separately.
+
+**Change one assumption.** Suppose the target distribution shifts toward tasks where adaptation loses 4 units. Can the three-task SE quantify that shift? What should a transfer evaluation sample?
+
+<details><summary>Check the changed assumption</summary>
+
+No. The SE describes sampling under the original task distribution and protocol. Evaluate explicitly sampled tasks from the new target, with a justified split and a stated shift assumption.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/04-intervals-comparisons.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §§6.2, 8.1, PDF pp.817, 960; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

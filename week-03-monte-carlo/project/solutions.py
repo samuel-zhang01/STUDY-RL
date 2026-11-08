@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 import numpy as np
+from common.statistics import importance_weights, importance_diagnostics
 
 from .blackjack import BlackjackEnv
 from .recruitment import RecruitmentMDP
@@ -114,7 +115,9 @@ def exercise_4_ordinary_is(
     V = mean( pi/pi_b * r ).
     """
     r = np.asarray(rewards, dtype=float)
-    w = np.asarray(target_prob, dtype=float) / np.maximum(np.asarray(logged_prob, dtype=float), 1e-12)
+    w = importance_weights(target_prob, logged_prob)
+    if r.shape != w.shape or not np.isfinite(r).all():
+        raise ValueError("finite returns must match logged probabilities")
     return float((w * r).mean())
 
 
@@ -125,8 +128,11 @@ def exercise_5_weighted_is(
     rewards: List[float], target_prob: List[float], logged_prob: List[float]
 ) -> float:
     r = np.asarray(rewards, dtype=float)
-    w = np.asarray(target_prob, dtype=float) / np.maximum(np.asarray(logged_prob, dtype=float), 1e-12)
-    return float((w * r).sum() / max(w.sum(), 1e-12))
+    w = importance_diagnostics(target_prob, logged_prob)["weights"]
+    if r.shape != w.shape or not np.isfinite(r).all():
+        raise ValueError("finite returns must match logged probabilities")
+    w = w/w.max()
+    return float(np.dot(w, r)/w.sum())
 
 
 # ============================================================================

@@ -254,6 +254,20 @@ def critic_update(batch, actor, q1, q2, q1_tgt, q2_tgt, log_alpha,
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: The minimum of two unbiased critics can be biased}
+\begin{example}[Original statistical teaching fixture]
+Both critics estimate a true scalar value 5 with independent errors +1 or -1, each equally likely. This artificial error model isolates the minimum operation.
+
+The four equally likely critic pairs are $(4,4),(4,6),(6,4),(6,6)$. Their minima are $4,4,4,6$, with mean $18/4=4.5$. Each individual critic has mean 5, but their minimum has bias -0.5.
+\end{example}
+Clipped double estimates can counter overestimation without being generically unbiased or guaranteeing a better final policy. Critic errors are often correlated because they share replay data and targets; the fixture explicitly assumed independence.
+
+\paragraph{Check a changed assumption.} Make both errors identical on every draw. What is the expected minimum? Does this show that a low empirical critic disagreement certifies accuracy?
+\paragraph{Check.} The minimum is then the shared critic estimate, with mean 5 in this fixture. Both critics could instead share a large systematic bias, so agreement alone does not certify accuracy.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.1, 7.1, PDF pp.439, 896. Section source: \url{https://stats.libretexts.org/@go/page/10189}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/sac_pendulum.pdf}

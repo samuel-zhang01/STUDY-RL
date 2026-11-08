@@ -340,6 +340,20 @@ and an alerting channel.
 % =====================================================================
 \chapter{Empirical results}
 
+\section{Statistics bridge: A small subgroup can dominate uncertainty in a safety audit}
+\begin{example}[Original statistical teaching fixture]
+Two subgroups show zero failures in 100 and 10 independent Bernoulli evaluations respectively. Assume a stable failure probability within each subgroup for this interval illustration.
+
+With zero failures, the exact one-sided 95\% upper bound is $1-0.05^{1/n}$. At $n=100$ it is about 0.02951; at $n=10$ it is about 0.25887. Identical observed rates of zero therefore leave very different subgroup uncertainty.
+\end{example}
+Neither subgroup has established a failure probability below a one-percent budget. Pooling can obscure weak subgroup evidence, and searching many subgroup definitions on the same data introduces selection. The Bernoulli bound also requires the stated independent-unit assumptions.
+
+\paragraph{Check a changed assumption.} What bound results at 1,000 independent zero-failure trials? Would repeated decisions from ten customers justify treating the trial count as 1,000?
+\paragraph{Check.} The bound becomes $1-0.05^{1/1000}\approx0.002991$. Repeated customer decisions may be dependent; preserve customer clustering and state the population to which the bound applies.
+\paragraph{Statistical foundation.} Siegrist \S~8.1, PDF p.960; Ross \S~7.3, PDF p.309. Section source: \url{https://stats.libretexts.org/@go/page/10200}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
   \centering
   \includegraphics[width=\linewidth]{figs/fig_iql_curves.pdf}

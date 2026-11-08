@@ -687,6 +687,20 @@ out = train(seed=0, az_iters=12, mappo_episodes=60, coord_episodes=200)
 % =============================================================================
 \chapter{Empirical results}
 
+\section{Statistics bridge: A win rate depends on the role distribution}
+\begin{example}[Original statistical teaching fixture]
+Against a fixed opponent, an invented evaluation observes 40 wins in 50 first-player games and 10 wins in 50 second-player games. The target schedule gives each role equal weight.
+
+The role-specific rates are $40/50=0.8$ and $10/50=0.2$. Their equal-role average is $0.5(0.8)+0.5(0.2)=0.5$. Reporting only the first-player games would give 0.8 and answer another question. A target schedule with 75\% first-player games gives $0.75(0.8)+0.25(0.2)=0.65$.
+\end{example}
+Opponent, side, opening position and draw handling belong in the metric. Two legs sharing an opening or opponent seed can be a matched unit; do not pretend every move is an independent match. A rising self-play score can also reflect a changing opponent.
+
+\paragraph{Check a changed assumption.} Specify the draw score and role distribution before another evaluation. Which comparison requires a frozen opponent, and which question would justify opponent diversity?
+\paragraph{Check.} A fixed-opponent improvement comparison should hold the opponent protocol fixed. Generalization over opponents requires an explicitly sampled opponent population; those opponents and match groupings become part of the independent-unit design.
+\paragraph{Statistical foundation.} Siegrist \S~\S~4.1, 4.5, PDF pp.439, 478; Ross \S~7.3, PDF p.309. Section source: \url{https://stats.libretexts.org/@go/page/10160}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.85\linewidth]{figs/fig_az_winrate.pdf}

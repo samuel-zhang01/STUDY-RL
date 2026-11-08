@@ -15,6 +15,10 @@
 Use with [the workbook](workbook.ipynb) and [the notes](notes.tex).
 Keep three ideas separate: the advantage estimate, the update direction, and its size.
 
+**Statistics companion:** [GAE residuals can be strongly correlated](../docs/statistics/02-expectation-variance.md) · [Related foundation](../docs/statistics/05-resampling-dependence.md) · [Textbook source map](../docs/statistics/SOURCES.md).
+
+**Bounded first route:** Calculate a short GAE recurrence with separate terminal and episode-boundary masks; explain the endpoint bootstrap before tuning lambda.
+
 ## Learning bridge
 
 Follow [the staged learning path](../docs/LEARNING_PATH.md) when a topic is new.
@@ -252,6 +256,24 @@ reset. A zero terminal mask and a zero trace-continuation mask serve different j
 Telescoping removes intermediate values but leaves the endpoint bootstrap. It disappears only when the segment reaches true termination or that endpoint value is zero.
 
 </details>
+
+## Statistics bridge: GAE residuals can be strongly correlated
+
+**Model and unit.** Consider two zero-mean TD residuals, each with variance 1 and covariance 0.8. For a two-term advantage, gamma=0.9 and lambda=0.95 give coefficient c=0.855.
+
+**Calculate before running.** For $A=\delta_0+c\delta_1$, variance is $1+c^2+2c(0.8)=1+0.731025+1.368=3.099025$. Dropping the covariance would report only 1.731025, despite using the same marginal residual variances.
+
+**Interpret the result.** Adjacent residuals share trajectory information and value estimates. A longer trace does not turn them into independent evidence. Changing lambda changes weighting and can change both bias and variance, rather than imposing a universal ordering.
+
+**Change one assumption.** Set the covariance to zero while holding both variances fixed. What changes? Would a bootstrap that shuffles individual time steps preserve the original design?
+
+<details><summary>Check the changed assumption</summary>
+
+The variance becomes 1.731025. Shuffling independent time steps destroys the original covariance; preserve independent trajectories or use a justified dependence model.
+
+</details>
+
+Work through the [foundation lesson](../docs/statistics/02-expectation-variance.md) and the statistics investigation near the end of the [workbook](workbook.ipynb). Textbook grounding: Siegrist §4.5, PDF p.478; Ross §15.3, PDF p.683; [edition and page details](../docs/statistics/SOURCES.md). These are course-created numerical fixtures, not new benchmark measurements.
 
 ## Retrieve and transfer
 

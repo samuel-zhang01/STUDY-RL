@@ -300,6 +300,20 @@ index explicitly.
 
 \chapter{Empirical results}
 
+\section{Statistics bridge: Evaluation episodes do not replace independent DQN training runs}
+\begin{example}[Original statistical teaching fixture]
+Three independently trained agents have held-out episode-mean returns 50, 100 and 150. Each mean summarizes the same fixed evaluation budget of twenty episodes.
+
+The run-level mean is 100. Squared deviations sum to 5000, sample SD is $\sqrt{5000/2}=50$, and the estimated SE across training runs is $50/\sqrt3\approx28.868$. There are three independent training outcomes, even though sixty evaluation episodes were played.
+\end{example}
+Episode repetitions help measure each fixed agent. Training-procedure uncertainty requires independent retraining. Replay transitions also share trajectories and evolving targets, so their count is not the independent-run denominator.
+
+\paragraph{Check a changed assumption.} If twelve independent training runs show the same SD, what SE results? Explain why a lower replay TD loss alone cannot establish a higher held-out return.
+\paragraph{Check.} The SE becomes $50/\sqrt{12}\approx14.434$. Replay loss measures agreement with sampled bootstrapped targets, while return measures outcomes of the policy on the evaluation distribution.
+\paragraph{Statistical foundation.} Siegrist \S~\S~6.2, 6.5, PDF pp.817, 844; Ross \S~\S~9.2--9.4, PDF pp.421--429. Section source: \url{https://stats.libretexts.org/@go/page/10179}. The course statistics companion records the supplied editions and one-based PDF pages. This fixture is not a newly measured project result.
+
+
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.95\linewidth]{figs/fig_dqn_lunar_curve.pdf}
